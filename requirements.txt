@@ -1,0 +1,7 @@
+azure-identity>=1.15.0
+azure-mgmt-authorization>=4.0.0
+azure-mgmt-consumption>=10.0.0
+azure-mgmt-costmanagement>=4.0.0
+azure-mgmt-keyvault>=10.3.0
+azure-mgmt-resource>=23.0.0
+azure-mgmt-storage>=21.0.0

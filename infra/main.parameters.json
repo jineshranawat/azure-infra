@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "uksouth"
+    },
+    "learner": {
+      "value": "demo"
+    },
+    "ownerEmail": {
+      "value": "learner@example.com"
+    },
+    "principalObjectId": {
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    "budgetStartDate": {
+      "value": "2026-06-01"
+    }
+  }
+}
