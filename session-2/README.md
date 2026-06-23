@@ -67,23 +67,27 @@ orchestrate.cmd --run-pipeline
 
 **Re-run (idempotent):** same command — SDK `create_or_update`, RBAC check-before-create, upload overwrite.
 
+**Manual portal steps (read → do → verify):** [MANUAL-LAB.md](MANUAL-LAB.md) — Storage upload, ADF linked service, datasets, pipeline trigger, and verification tables.
+
 ---
 
 ## C. Two-hour schedule
 
 | Time | Block | Activity | Portal |
 |------|-------|----------|--------|
-| 0:00–0:20 | **1 — ADF anatomy** | Theory: pipeline, dataset, linked service, IR | ADF → Author |
-| 0:20–0:50 | **2 — Bronze ingest** | Run `orchestrate.cmd`; trace upload in storage | Storage → bronze containers |
-| 0:50–1:20 | **3 — Pipeline as code** | Open `adf_pipeline.py`; re-run deploy | ADF → datasets + pipeline |
-| 1:20–1:45 | **4 — Operate** | `--run-pipeline`; morning check output | ADF → Monitor → Pipeline runs |
-| 1:45–2:00 | **5 — Cost & checkpoint** | ADF idle cost; watermark; deliverables | Cost Management → RG filter |
+| 0:00–0:20 | **1 — ADF anatomy** | Theory + [MANUAL-LAB §D](MANUAL-LAB.md#a-find-your-resources-5-min) linked service | ADF → Manage |
+| 0:20–0:50 | **2 — Bronze ingest** | `orchestrate.cmd` + [MANUAL-LAB §C](MANUAL-LAB.md#c-verify-storage-after-orchestratecmd-10-min) verify storage | Storage → bronze |
+| 0:50–1:20 | **3 — Pipeline as code** | `adf_pipeline.py` + [MANUAL-LAB §E](MANUAL-LAB.md#e-adf--datasets--pipeline-15-min) verify in Author | ADF → datasets + pipeline |
+| 1:20–1:45 | **4 — Operate** | [MANUAL-LAB §F](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min) Trigger now + Monitor | ADF → Monitor |
+| 1:45–2:00 | **5 — Checkpoint** | [MANUAL-LAB §I](MANUAL-LAB.md#i-end-to-end-verification-checklist) full checklist | Cost Management |
 
-Trainer detail: [GUIDE.md](GUIDE.md)
+Trainer detail: [GUIDE.md](GUIDE.md) | **Portal handout:** [MANUAL-LAB.md](MANUAL-LAB.md)
 
 ---
 
 ## D. Deliverables checklist
+
+Use [MANUAL-LAB.md §I](MANUAL-LAB.md#i-end-to-end-verification-checklist) for portal verification tables.
 
 - [ ] `orchestrate.cmd` exits 0
 - [ ] `bronze/incoming/transactions/<run_id>/sample_transactions.csv` exists
@@ -105,6 +109,7 @@ Trainer detail: [GUIDE.md](GUIDE.md)
 | `scripts/watermark_store.py` | Incremental control file |
 | `scripts/morning_check.py` | Pipeline run report |
 | `data/sample_transactions.csv` | Synthetic banking feed |
+| `MANUAL-LAB.md` | **Portal steps: read, do, verify** (Storage + ADF) |
 
 ---
 
