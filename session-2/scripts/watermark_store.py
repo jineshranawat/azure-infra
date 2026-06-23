@@ -9,6 +9,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
+from azure.core.exceptions import ResourceExistsError
 from azure.identity import DefaultAzureCredential
 from azure.storage.filedatalake import DataLakeServiceClient
 
@@ -45,7 +46,10 @@ def write_watermark(storage_account: str, run_id: str, loaded_path: str) -> dict
     fs = DataLakeServiceClient(account_url=account_url, credential=credential).get_file_system_client(
         "bronze"
     )
-    fs.create_directory("_control", exist_ok=True)
+    try:
+        fs.create_directory("_control")
+    except ResourceExistsError:
+        pass
     file_client = fs.get_file_client(WATERMARK_PATH)
     data = json.dumps(body, indent=2).encode()
     file_client.upload_data(data, overwrite=True)

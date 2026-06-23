@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bank of England — Azure ETL Build, Operate &amp; Support (60h)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#08312e;--ink-2:#0b3d3a;--ink-3:#0f4d49;
+    --parch:#f5f1e8;--parch-2:#efe9db;--paper:#fbf9f3;
+    --brass:#a9803a;--brass-lt:#c79a52;
+    --slate:#2c3a38;--slate-2:#52605d;--line:#d9d1be;
+    --py:#1f6f6b;--lab:#8a5a2b;--nfr:#7a2f3a;--cost:#4a5a2a;--dev:#43386b;
+    --white:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',system-ui,sans-serif;color:var(--slate);background:var(--parch);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+  .hero{background:var(--ink);color:var(--parch);padding:64px 0 56px;position:relative;overflow:hidden;border-bottom:3px solid var(--brass)}
+  .hero::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 88% 8%, rgba(169,128,58,.22), transparent 42%),repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 1px, transparent 1px 64px);pointer-events:none}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--brass-lt);margin-bottom:20px}
+  .hero h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(32px,5vw,58px);line-height:1.02;letter-spacing:-.02em;color:var(--white);max-width:20ch}
+  .hero .sub{margin-top:22px;max-width:64ch;font-size:18px;color:#cfe0dc}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
+  .chip{font-family:'JetBrains Mono',monospace;font-size:12.5px;border:1px solid rgba(199,154,82,.5);color:var(--brass-lt);padding:7px 13px;border-radius:2px;letter-spacing:.04em}
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:40px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1)}
+  .stat{background:var(--ink-2);padding:18px 20px}
+  .stat .n{font-family:'Space Grotesk';font-weight:700;font-size:30px;color:var(--brass-lt)}
+  .stat .l{font-size:12.5px;color:#a9c0bb;letter-spacing:.02em;margin-top:2px}
+
+  .shell{display:grid;grid-template-columns:236px 1fr;gap:44px;padding:54px 0 80px}
+  nav.rail{position:sticky;top:24px;align-self:start;height:max-content}
+  .rail h4{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--slate-2);margin-bottom:14px}
+  .rail a{display:block;text-decoration:none;color:var(--slate);font-size:14px;padding:8px 12px;border-left:2px solid var(--line);transition:.15s}
+  .rail a span{font-family:'JetBrains Mono';font-size:11px;color:var(--brass);margin-right:8px}
+  .rail a:hover{border-left-color:var(--brass);background:var(--parch-2);color:var(--ink)}
+  .rail .legend{margin-top:24px;font-size:12px;color:var(--slate-2)}
+  .rail .legend div{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .dot{width:10px;height:10px;border-radius:2px;flex:none}
+
+  .panel{background:var(--paper);border:1px solid var(--line);padding:30px 32px;margin-bottom:26px;border-radius:3px}
+  .panel.dark{background:var(--ink-2);color:var(--parch);border-color:var(--ink-3)}
+  .panel.dark h2,.panel.dark h3{color:var(--white)}
+  .panel.dark p{color:#cfe0dc}
+  h2.section{font-family:'Space Grotesk';font-weight:700;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);margin-bottom:6px}
+  .panel h3{font-family:'Space Grotesk';font-weight:600;font-size:24px;color:var(--ink);letter-spacing:-.01em;margin-bottom:14px}
+  .panel p{margin-bottom:12px}.panel p:last-child{margin-bottom:0}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:8px 18px;font-size:14.5px;margin-top:8px}
+  .kv b{font-family:'JetBrains Mono';font-size:12.5px;color:var(--ink);white-space:nowrap}
+  .panel.dark .kv b{color:var(--brass-lt)}
+  .nfr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:6px}
+  .nfr-card{border:1px solid rgba(255,255,255,.14);padding:14px 16px;border-radius:3px;background:rgba(255,255,255,.03)}
+  .nfr-card .t{font-family:'Space Grotesk';font-weight:600;color:var(--brass-lt);font-size:15px;margin-bottom:4px}
+  .nfr-card .d{font-size:13px;color:#bcd1cc;line-height:1.5}
+  .note{border-left:3px solid var(--brass);background:var(--parch-2);padding:14px 18px;font-size:14px;color:var(--slate);border-radius:0 3px 3px 0;margin-top:14px}
+  .note b{color:var(--ink)}
+  .panel.dark .note{background:rgba(255,255,255,.05);border-left-color:var(--brass-lt);color:#cfe0dc}
+  .panel.dark .note b{color:var(--brass-lt)}
+
+  /* account comparison table */
+  .acct{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px}
+  .acct th,.acct td{text-align:left;padding:11px 13px;border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+  .acct th{font-family:'Space Grotesk';font-weight:600;color:var(--brass-lt);font-size:12.5px;letter-spacing:.02em}
+  .acct td.opt{font-family:'Space Grotesk';font-weight:600;color:var(--white);white-space:nowrap}
+  .verdict{font-family:'JetBrains Mono';font-size:10.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:3px;color:#fff;display:inline-block}
+  .v-best{background:#3c6e44}.v-ok{background:#7a6326}.v-no{background:#7a2f3a}
+
+  .day{margin:0 0 8px;scroll-margin-top:24px}
+  .day-head{display:flex;align-items:baseline;gap:18px;padding:30px 0 18px;border-bottom:2px solid var(--ink);margin-bottom:6px}
+  .day-head .num{font-family:'Space Grotesk';font-weight:700;font-size:13px;letter-spacing:.2em;color:var(--brass);text-transform:uppercase}
+  .day-head h2{font-family:'Space Grotesk';font-weight:700;font-size:clamp(23px,3.2vw,32px);color:var(--ink);letter-spacing:-.02em;line-height:1.05}
+  .day-head .hrs{margin-left:auto;font-family:'JetBrains Mono';font-size:12.5px;color:var(--slate-2)}
+  .day-blurb{font-size:15px;color:var(--slate-2);max-width:76ch;margin:0 0 22px}
+
+  .hour{display:grid;grid-template-columns:64px 1fr;border:1px solid var(--line);border-radius:4px;background:var(--paper);margin-bottom:14px;overflow:hidden}
+  .hour .gutter{background:var(--ink-2);color:var(--white);display:flex;flex-direction:column;align-items:center;padding:16px 0}
+  .hour .gutter .hn{font-family:'Space Grotesk';font-weight:700;font-size:21px;width:40px;height:40px;border:1.5px solid var(--brass);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--brass-lt)}
+  .hour .gutter .hl{font-family:'JetBrains Mono';font-size:9px;letter-spacing:.12em;color:#7fa39d;margin-top:8px;writing-mode:vertical-rl;text-orientation:mixed}
+  .hour .body{padding:18px 22px 20px}
+  .hour h4{font-family:'Space Grotesk';font-weight:600;font-size:18px;color:var(--ink);letter-spacing:-.01em;margin-bottom:6px}
+  .hour .obj{font-size:14px;color:var(--slate-2);font-style:italic;margin-bottom:12px}
+  .row{display:flex;gap:10px;font-size:13.8px;margin-bottom:7px;align-items:flex-start}
+  .row .tag{flex:none;font-family:'JetBrains Mono';font-size:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:3px;margin-top:2px;width:78px;text-align:center;color:#fff}
+  .tag.detail{background:var(--slate)}.tag.lab{background:var(--lab)}.tag.py{background:var(--py)}
+  .tag.nfr{background:var(--nfr)}.tag.cost{background:var(--cost)}.tag.boe{background:var(--brass)}.tag.dev{background:var(--dev)}
+  .row .txt{color:var(--slate)}
+  .row .txt code{font-family:'JetBrains Mono';font-size:12px;background:var(--parch-2);padding:1px 5px;border-radius:3px;color:var(--ink-3)}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .stack-list{font-size:13.5px}
+  .stack-list li{list-style:none;padding:7px 0;border-bottom:1px dashed var(--line);display:flex;gap:12px}
+  .stack-list li:last-child{border-bottom:none}
+  .stack-list .pkg{font-family:'JetBrains Mono';font-size:12px;color:var(--ink-3);flex:none;width:205px}
+  footer{background:var(--ink);color:#9fbcb6;padding:30px 0;font-size:13px;text-align:center;border-top:3px solid var(--brass)}
+  footer b{color:var(--brass-lt)}
+
+  @media(max-width:880px){
+    .shell{grid-template-columns:1fr;gap:0}nav.rail{display:none}
+    .stat-row{grid-template-columns:repeat(2,1fr)}.twocol{grid-template-columns:1fr}.stack-list .pkg{width:auto}
+    .acct,.acct tbody,.acct tr,.acct td{display:block;width:100%}.acct thead{display:none}
+    .acct td{border-bottom:none;padding:3px 0}.acct tr{border-bottom:1px solid rgba(255,255,255,.14);padding:12px 0}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Bank of England · Data Platform Enablement</div>
+    <h1>Azure ETL: Build, Operate &amp; Support</h1>
+    <p class="sub">A 60-hour, lab-driven curriculum that takes engineers from developer foundations to running a regulated data platform on Azure Storage, Data Factory, Databricks and Microsoft Purview — with a full software-engineering track (testing, CI/CD, framework design) and Python as the language of both the pipelines and their operation.</p>
+    <div class="hero-meta">
+      <span class="chip">Dev foundations</span>
+      <span class="chip">ADLS Gen2</span>
+      <span class="chip">Data Factory</span>
+      <span class="chip">Databricks</span>
+      <span class="chip">Purview</span>
+      <span class="chip">Testing · CI/CD</span>
+      <span class="chip">FinOps</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="n">60</div><div class="l">contact hours</div></div>
+      <div class="stat"><div class="n">8</div><div class="l">modules · Day 0–7</div></div>
+      <div class="stat"><div class="n">40+</div><div class="l">hands-on labs</div></div>
+      <div class="stat"><div class="n">£0</div><div class="l">target lab spend</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="shell">
+
+  <nav class="rail">
+    <h4>Programme</h4>
+    <a href="#brief"><span>00</span>How to read this</a>
+    <a href="#accounts"><span>00</span>Accounts &amp; environment</a>
+    <a href="#nfr"><span>00</span>NFR framework</a>
+    <a href="#day0"><span>D0</span>Dev &amp; Cloud Foundations</a>
+    <a href="#day1"><span>D1</span>Identity &amp; Storage</a>
+    <a href="#day2"><span>D2</span>Data Factory</a>
+    <a href="#day3"><span>D3</span>Databricks Lakehouse</a>
+    <a href="#day4"><span>D4</span>Purview &amp; Governance</a>
+    <a href="#day5"><span>D5</span>Operate · Support · Cost</a>
+    <a href="#day6"><span>D6</span>Engineering Excellence</a>
+    <a href="#day7"><span>D7</span>Advanced &amp; Capstone</a>
+    <a href="#stack"><span>++</span>Toolchain</a>
+    <a href="#assess"><span>++</span>Assessment</a>
+    <div class="legend">
+      <div><span class="dot" style="background:var(--slate)"></span>Detail / theory</div>
+      <div><span class="dot" style="background:var(--lab)"></span>Hands-on lab</div>
+      <div><span class="dot" style="background:var(--py)"></span>Python / tooling</div>
+      <div><span class="dot" style="background:var(--dev)"></span>Developer / code craft</div>
+      <div><span class="dot" style="background:var(--nfr)"></span>NFR focus</div>
+      <div><span class="dot" style="background:var(--cost)"></span>Cost / FinOps</div>
+      <div><span class="dot" style="background:var(--brass)"></span>BoE / regulatory</div>
+    </div>
+  </nav>
+
+  <main>
+
+    <section id="brief" class="panel">
+      <h2 class="section">Orientation</h2>
+      <h3>How to read this programme</h3>
+      <p>This is a <b>build-and-operate</b> course. It assumes a mixed-ability cohort, so it opens with a developer-and-cloud foundations day (Day 0) that levels everyone up, threads a <b>software-engineering lens</b> through the stack days, and closes with a dedicated engineering-excellence module (Days 6–7) on testing, CI/CD and framework design. Throughout, Python is the common control plane — for writing the pipelines and for operating, monitoring and remediating them.</p>
+      <div class="kv">
+        <b>Audience</b><span>Data engineers and developers — including those new to Azure or to data engineering — who will build and run the platform.</span>
+        <b>Day 0</b><span>Beginner-friendly ramp: dev environment, Python for data, Git, SQL, cloud &amp; Azure fundamentals. Confident teams can fast-track it.</span>
+        <b>Delivery</b><span>~35% instruction, ~65% guided labs. Each day ends in an integrated lab; the artefact compounds across the week.</span>
+        <b>Outcome</b><span>Able to design, code, test, deploy, govern, cost-control and support an end-to-end Azure ETL platform — to an engineering standard.</span>
+      </div>
+    </section>
+
+    <!-- ACCOUNTS & ENVIRONMENT -->
+    <section id="accounts" class="panel dark">
+      <h2 class="section" style="color:var(--brass-lt)">Decision</h2>
+      <h3>Should every learner use a personal account &amp; card? No — here's the better way</h3>
+      <p>For a regulated, corporate cohort, having each learner spin up a <b>personal Azure account on a personal card</b> is the wrong default: billing is fragmented (so you can't teach or practise central cost monitoring — the whole point of this course), it creates compliance exposure for a central bank, free credits expire on different dates so the cohort drifts, and Databricks Free Edition is for non-commercial use. Choose the environment to fit the goal:</p>
+      <table class="acct">
+        <thead><tr><th>Option</th><th>Best for</th><th>Cost &amp; control</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="opt">Governed training subscription<br>(corporate tenant)</td>
+            <td>The BoE cohort. Per-learner resource group or sandbox subscription under a management group.</td>
+            <td>Central billing; Azure Policy guardrails; budgets, auto-shutdown, nightly teardown. You teach FinOps on the lab estate itself.</td>
+            <td><span class="verdict v-best">Recommended</span></td>
+          </tr>
+          <tr>
+            <td class="opt">Microsoft Learn sandboxes</td>
+            <td>Beginner fundamentals on Day 0 and early labs. No card, time-boxed, free.</td>
+            <td>Free, fully isolated, expires automatically. Limited service coverage.</td>
+            <td><span class="verdict v-best">Free ramp</span></td>
+          </tr>
+          <tr>
+            <td class="opt">Databricks Free Edition</td>
+            <td>All Databricks labs (serverless + Unity Catalog included).</td>
+            <td>Free, quota-limited. Non-commercial use only; production maps to Azure Databricks Premium.</td>
+            <td><span class="verdict v-ok">Free, caveat</span></td>
+          </tr>
+          <tr>
+            <td class="opt">Local dev / GitHub Codespaces</td>
+            <td>Day 0 + Day 6–7 pure-Python coding, testing, CI/CD.</td>
+            <td>Free tier / negligible; no Azure spend for code craft work.</td>
+            <td><span class="verdict v-best">Free</span></td>
+          </tr>
+          <tr>
+            <td class="opt">Managed lab provider<br>(Skillable / CloudLabs / Apporto)</td>
+            <td>Turn-key hosted classrooms if BoE prefers an outsourced lab estate.</td>
+            <td>Paid per learner; central admin &amp; monitoring built in. Microsoft-recommended successors to Azure Lab Services.</td>
+            <td><span class="verdict v-ok">If outsourcing</span></td>
+          </tr>
+          <tr>
+            <td class="opt">Personal account + personal card</td>
+            <td>Individual self-paced upskilling only — never the cohort standard.</td>
+            <td>No central control, fragmented billing, compliance exposure, uneven credits.</td>
+            <td><span class="verdict v-no">Avoid for corp</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note"><b>Don't build on Azure Lab Services.</b> It is retiring on 28 June 2027 and new sign-ups are already disabled — Microsoft directs training customers to Skillable, CloudLabs by Spektra Systems and Apporto, or to DevTest Labs / AVD for VM scenarios. This course's data-engineering labs are best served by a governed subscription plus the free tiers above, not VM-classroom tooling.</div>
+      <div class="note"><b>Keeping the labs at ~£0.</b> Azure free-tier allowances for Storage/ADF, Databricks Free Edition, and Purview (Data Map scanning is free; only a few governed assets on the Basic tier are metered, then torn down) keep spend negligible. Budgets + auto-teardown are mandatory and are themselves a taught skill.</div>
+    </section>
+
+    <section id="nfr" class="panel dark">
+      <h2 class="section" style="color:var(--brass-lt)">The lens</h2>
+      <h3>Non-functional requirements for a central bank</h3>
+      <p>A central bank's platform is judged on <b>trust</b>. These eight NFRs are the recurring lens; every lab is tagged against the ones it exercises, and the trade-offs (CAP/PACELC, cost vs. resilience, latency vs. consistency) are made explicit.</p>
+      <div class="nfr-grid">
+        <div class="nfr-card"><div class="t">Security &amp; residency</div><div class="d">UK region pinning, encryption, private endpoints, least-privilege identity, Key Vault secrets.</div></div>
+        <div class="nfr-card"><div class="t">Auditability &amp; lineage</div><div class="d">Source-to-serve traceability; immutable audit logs; who-changed-what.</div></div>
+        <div class="nfr-card"><div class="t">Availability &amp; resilience</div><div class="d">Zone/region redundancy, graceful degradation, no single points of failure.</div></div>
+        <div class="nfr-card"><div class="t">Recoverability</div><div class="d">Defined RPO/RTO, tested restores, Delta time-travel, control-plane backup.</div></div>
+        <div class="nfr-card"><div class="t">Data quality &amp; integrity</div><div class="d">Validation at ingest, schema enforcement, reconciliation, dead-letter handling.</div></div>
+        <div class="nfr-card"><div class="t">Observability</div><div class="d">Metrics, logs, traces, alerting; mean-time-to-detect over vanity dashboards.</div></div>
+        <div class="nfr-card"><div class="t">Scalability &amp; performance</div><div class="d">Elastic compute, partitioning, predictable throughput under load.</div></div>
+        <div class="nfr-card"><div class="t">Cost governance</div><div class="d">Tagging, budgets, anomaly detection, unit economics per pipeline.</div></div>
+      </div>
+    </section>
+
+    <!-- ===================== DAY 0 ===================== -->
+    <section id="day0" class="day">
+      <div class="day-head"><div><div class="num">Day Zero</div><h2>Developer &amp; Cloud Foundations</h2></div><div class="hrs">Hours 01–08</div></div>
+      <p class="day-blurb">The leveller. Set up a real developer environment, write Python the way production data code demands, learn the Git and SQL that everything else assumes, and build a correct mental model of Azure before touching a single service. Confident engineers can compress this day; beginners leave it able to keep pace with the rest.</p>
+
+      <div class="hour"><div class="gutter"><div class="hn">1</div><div class="hl">DEV</div></div><div class="body">
+        <h4>The data engineer's development environment</h4>
+        <p class="obj">Objective: a clean, reproducible local setup that mirrors how professionals actually work.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">VS Code + extensions; Python install; virtual environments with <code>uv</code> / <code>venv</code>; project layout (<code>src/</code>, <code>tests/</code>, <code>pyproject.toml</code>); managing config &amp; <code>.env</code> safely.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Scaffold a project repo, create an isolated env, install dependencies, run a hello-world data script.</span></div>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Why reproducible environments matter: "works on my machine" is an outage waiting to happen.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">2</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Python that production data code needs</h4>
+        <p class="obj">Objective: write Python that's readable, typed, and fails loudly and safely.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Type hints; <code>dataclasses</code> / <code>pydantic</code> for config &amp; schemas; structured <code>logging</code> (not <code>print</code>); exceptions, retries, context managers; functions &amp; modules.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Refactor a messy script into typed, logged, testable functions with a config object.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Observability &amp; integrity start in the code: good logs and validation are operational features.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">3</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Git &amp; collaborative development</h4>
+        <p class="obj">Objective: work in a team's codebase without breaking it.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Repos, commits, branches, merges, conflict resolution; <code>.gitignore</code>; pre-commit hooks; intro to trunk-based development and why short-lived branches beat long ones.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Clone, branch, commit, open a change, resolve a conflict; add a pre-commit formatter/linter.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">Change as code: every platform change is reviewable and auditable — a regulatory asset.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">4</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>SQL for data engineering</h4>
+        <p class="obj">Objective: read and write the SQL the rest of the course relies on.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Joins, filtering, aggregation, CTEs, window functions, set operations; reading complex queries (you'll read far more than you write).</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Solve a graded set of query challenges against a sample banking dataset.</span></div>
+        <div class="row"><span class="tag py">Python</span><span class="txt">Where SQL ends and PySpark begins — the same logic in both, previewed.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">5</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>Cloud &amp; Azure fundamentals</h4>
+        <p class="obj">Objective: a correct mental model of how Azure is organised and governed.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Tenants, management groups, subscriptions, resource groups, resources; regions &amp; residency; RBAC; the portal vs. CLI vs. SDK vs. infrastructure-as-code.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Tour the governed training subscription; inspect the management-group guardrails and budgets that bound the labs.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">How a governed subscription gives the central cost view personal accounts can't.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">6</div><div class="hl">PYTHON</div></div><div class="body">
+        <h4>Authentication model &amp; SDK setup</h4>
+        <p class="obj">Objective: get Python talking to Azure the right way — no credentials in code.</p>
+        <div class="row"><span class="tag py">Python</span><span class="txt"><code>az login</code>; <code>azure-identity</code> <code>DefaultAzureCredential</code>; service principals vs. managed identity vs. user; the credential chain explained.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Authenticate from a notebook/script and make a first authorised Azure call.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Security: the auth pattern reused unchanged across every service this week.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">7</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>Data formats &amp; why they matter</h4>
+        <p class="obj">Objective: choose the right file format — a decision that drives cost and speed.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">CSV / JSON / Parquet / Avro / Delta; row vs. columnar; schema-on-read vs. schema-on-write; compression; partitioning; the cost of bad format choices.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Convert a CSV feed to Parquet; measure size, read speed and query cost difference.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">Format and compression as direct levers on storage and compute spend.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">8</div><div class="hl">LAB</div></div><div class="body">
+        <h4>The developer inner loop for data — foundations lab</h4>
+        <p class="obj">Objective: combine the day into the workflow every later lab will use.</p>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Build a small local pipeline (read → transform → write Parquet) with config, logging, a Git history and a first test; develop locally on sample data before any cloud.</span></div>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Local-first development: prove logic on a sample, then deploy — faster and far cheaper than debugging in the cloud.</span></div>
+      </div></div>
+    </section>
+
+    <!-- ===================== DAY 1 ===================== -->
+    <section id="day1" class="day">
+      <div class="day-head"><div><div class="num">Day One</div><h2>Foundations, Identity &amp; Azure Storage</h2></div><div class="hrs">Hours 09–16</div></div>
+      <p class="day-blurb">Stand up the estate correctly from the first command: UK-region landing zone, identity and secrets before any data, then ADLS Gen2 as the lake foundation — operated entirely from Python — finishing with the medallion zone design the rest of the week builds on.</p>
+
+      <div class="hour"><div class="gutter"><div class="hn">9</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>The platform in one picture: why this stack, for this bank</h4>
+        <p class="obj">Objective: see the whole ETL value chain and the operating responsibilities before any one tool.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">End-to-end flow: source → ADF → ADLS (Bronze) → Databricks (Silver/Gold) → Purview → consumers. Data, control and observability planes.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">What "regulated data platform" means: residency, audit, the cost of a wrong number. NFR lens pinned for the week.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">10</div><div class="hl">LAB</div></div><div class="body">
+        <h4>Landing zone: resource groups, regions, tagging</h4>
+        <p class="obj">Objective: provision a clean, governable, cost-attributable estate.</p>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Create resource groups pinned to UK regions; apply a mandatory tagging schema (<code>env</code>, <code>owner</code>, <code>costcentre</code>, <code>data-class</code>).</span></div>
+        <div class="row"><span class="tag py">Python</span><span class="txt"><code>azure-mgmt-resource</code> to script resource-group creation and tag enforcement — reproducible, not click-built.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">Set the first budget + spend alert before any service exists — guardrail-first.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">11</div><div class="hl">PYTHON</div></div><div class="body">
+        <h4>Identity &amp; secrets: Entra ID, managed identity, Key Vault</h4>
+        <p class="obj">Objective: establish the auth model the whole stack reuses.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Service principals vs. managed identities; RBAC role assignment; Key Vault as the single source of secrets.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Create a Key Vault; store a connection secret; assign least-privilege roles scoped to one resource group.</span></div>
+        <div class="row"><span class="tag py">Python</span><span class="txt"><code>azure-identity</code> + <code>azure-keyvault-secrets</code>; one credential object reused across Storage, ADF and Databricks.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">12</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>ADLS Gen2 deep dive: the lake foundation</h4>
+        <p class="obj">Objective: understand the storage substrate everything writes to.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Blob vs. ADLS Gen2; hierarchical namespace; containers, directories, access tiers (hot/cool/cold/archive); redundancy (LRS/ZRS/GRS/RA-GRS).</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Create a storage account with hierarchical namespace; lay out container structure; set default tier.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Resilience vs. cost in redundancy choice; PACELC framing of geo-replication.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">13</div><div class="hl">PYTHON</div></div><div class="body">
+        <h4>Operating Storage from Python</h4>
+        <p class="obj">Objective: do real storage operations the way an operator does — in code, idempotently.</p>
+        <div class="row"><span class="tag py">Python</span><span class="txt"><code>azure-storage-file-datalake</code> / <code>azure-storage-blob</code>: list, upload, download, move, metadata; directory ops on the hierarchical namespace.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Write a parametrised loader to a run-stamped Bronze path; generate a scoped SAS for time-boxed access.</span></div>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Make the loader idempotent and unit-test its path logic — re-runs must not duplicate.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">14</div><div class="hl">NFR</div></div><div class="body">
+        <h4>Storage security &amp; the audit posture</h4>
+        <p class="obj">Objective: harden storage to a standard a regulator would accept.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Encryption (platform vs. customer-managed keys); private endpoints &amp; firewall; disabling public access; immutable/WORM policies; soft delete.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Lock the account to selected networks; enable soft delete + versioning; apply time-based immutability to an audit container.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">WORM + soft delete map to record-keeping obligations; tamper-evidence as a control.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">15</div><div class="hl">COST</div></div><div class="body">
+        <h4>Storage cost &amp; lifecycle automation</h4>
+        <p class="obj">Objective: make data tier and expire itself so it never silently accrues cost.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Cost drivers: capacity by tier, transactions, egress, redundancy. Lifecycle policies (auto-tier, auto-delete).</span></div>
+        <div class="row"><span class="tag py">Python</span><span class="txt">Push a lifecycle policy via SDK; script a storage-footprint report totalling capacity and projected monthly cost per container.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">Free-tier limits that keep lab storage at £0.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">16</div><div class="hl">LAB</div></div><div class="body">
+        <h4>Day-1 integrated lab: the medallion lake</h4>
+        <p class="obj">Objective: leave with a secured, tagged, cost-guarded Bronze/Silver/Gold lake.</p>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Stand up Bronze/Silver/Gold containers with per-zone access &amp; retention; load raw data via the Python loader; write the zone contract as a runbook entry.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">All eight NFRs reviewed against the lake you built; gaps logged.</span></div>
+      </div></div>
+    </section>
+
+    <!-- ===================== DAY 2 ===================== -->
+    <section id="day2" class="day">
+      <div class="day-head"><div><div class="num">Day Two</div><h2>Azure Data Factory: Orchestration &amp; Ingestion</h2></div><div class="hrs">Hours 17–24</div></div>
+      <p class="day-blurb">Make ingestion repeatable, observable and recoverable. Build pipelines by hand to learn the model, then define them as code, with banking-grade incremental loading, error handling and run-history monitoring from Python.</p>
+
+      <div class="hour"><div class="gutter"><div class="hn">17</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>ADF anatomy: the orchestration model</h4>
+        <p class="obj">Objective: speak ADF fluently — pipelines, activities, datasets, linked services, integration runtimes.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">How the pieces compose; control flow vs. data movement; the three IR types and when each applies.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Provision ADF; connect a linked service to Day-1 storage using the Key Vault secret.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Self-hosted IR for sources inside a private bank network (residency + connectivity).</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">18</div><div class="hl">LAB</div></div><div class="body">
+        <h4>First pipeline: parametrised copy</h4>
+        <p class="obj">Objective: move data reliably with a pipeline that's reused, not rebuilt.</p>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Build a copy activity (source → Bronze); parametrise path, file name and target so one pipeline serves many feeds.</span></div>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Datasets vs. linked services; mapping; fault tolerance; staging.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Integrity: row-count validation; what fault tolerance should and shouldn't skip.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">19</div><div class="hl">PYTHON</div></div><div class="body">
+        <h4>Pipelines as code: ADF from Python &amp; IaC</h4>
+        <p class="obj">Objective: stop clicking — define, deploy and version pipelines programmatically.</p>
+        <div class="row"><span class="tag py">Python</span><span class="txt"><code>azure-mgmt-datafactory</code>: create/update linked services, datasets, pipelines from code; trigger a run and poll status.</span></div>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">ARM/Bicep export; promote one definition dev→prod; pipeline change = reviewed code commit, not a portal edit.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">Change control as a regulatory asset: reviewable, auditable, repeatable.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">20</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>Ingestion patterns for banking data</h4>
+        <p class="obj">Objective: choose the right load pattern per feed and defend it.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Full vs. incremental; high-watermark tracking; CDC concepts; late-arriving &amp; out-of-order data; idempotency.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Implement watermark-based incremental ingestion via a control table; re-run to prove no duplication.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Consistency vs. freshness (PACELC) for reference vs. transactional feeds.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">21</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>Transform in ADF vs. push to Databricks</h4>
+        <p class="obj">Objective: know where transformation belongs — and the cost of getting it wrong.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Mapping data flows (Spark under the hood) vs. orchestrating a Databricks job; the decision rule (complexity, reuse, skill, cost).</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Build a small mapping data flow; compare its cost signature with the equivalent notebook call.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">Data-flow compute is billed per cluster-hour — when it's the wrong tool financially.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">22</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>Triggers, dependencies &amp; error handling</h4>
+        <p class="obj">Objective: make pipelines run on time and fail safely.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Schedule / tumbling-window / event triggers; activity dependencies; retry policies; timeouts.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Add retry + failure branches that route bad files to a dead-letter path and raise an alert instead of failing silently.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Resilience: graceful degradation; recoverability via re-runnable windows.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">23</div><div class="hl">PYTHON</div></div><div class="body">
+        <h4>Monitoring ingestion from Python</h4>
+        <p class="obj">Objective: answer "did last night's loads succeed?" without opening the portal.</p>
+        <div class="row"><span class="tag py">Python</span><span class="txt">Query pipeline &amp; activity-run history via SDK; build a daily run-status summary; emit diagnostics to Log Analytics.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Write a "morning check" script: last 24h runs, failures, durations, records moved — the seed of the support runbook.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Observability: alert on failure, not on dashboard absence.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">24</div><div class="hl">COST</div></div><div class="body">
+        <h4>ADF cost model &amp; Day-2 integrated lab</h4>
+        <p class="obj">Objective: ship a production-shaped ingestion pipeline that's observed and budgeted.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">ADF pricing: activity runs, data movement (DIUs), data-flow vCore-hours, IR. Keeping the free-tier allowance.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Assemble Day-2 work into one orchestrated pipeline: ingest → validate → Bronze → dead-letter → alert → run report.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">Attribute the pipeline's cost via tags; add to budget; note free-tier headroom.</span></div>
+      </div></div>
+    </section>
+
+    <!-- ===================== DAY 3 ===================== -->
+    <section id="day3" class="day">
+      <div class="day-head"><div><div class="num">Day Three</div><h2>Databricks: Lakehouse &amp; Transformation</h2></div><div class="hrs">Hours 25–32</div></div>
+      <p class="day-blurb">Turn raw Bronze into trustworthy Gold. PySpark and Delta for ACID transformation, Unity Catalog for governance, orchestration back into ADF, and the performance + cost levers that decide sustainability. Labs use Databricks Free Edition (serverless + Unity Catalog); production differences flagged throughout.</p>
+
+      <div class="hour"><div class="gutter"><div class="hn">25</div><div class="hl">LAB</div></div><div class="body">
+        <h4>The lakehouse &amp; the workspace</h4>
+        <p class="obj">Objective: get oriented and understand the compute model that drives cost.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Lakehouse concept; workspace, notebooks, jobs; compute types (all-purpose/jobs/SQL/serverless); Photon. Free Edition is serverless-only.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Create a Free Edition workspace; run a first serverless notebook; connect to lake data conceptually.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">Production mapping: Azure Databricks Premium (Standard tier retired — new Standard blocked on Azure from Apr 2026), private networking, compliance profiles.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">26</div><div class="hl">PYTHON</div></div><div class="body">
+        <h4>PySpark fundamentals</h4>
+        <p class="obj">Objective: manipulate data at scale with the DataFrame API.</p>
+        <div class="row"><span class="tag py">Python</span><span class="txt">DataFrames; lazy evaluation; transformations vs. actions; select/filter/join/groupBy/window; reading multiple formats; the execution model.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Read Bronze; clean, type-cast, deduplicate and derive into a Silver DataFrame.</span></div>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Structure transformations as small, testable functions — not one monolithic notebook cell.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">27</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>Delta Lake: ACID on the lake</h4>
+        <p class="obj">Objective: get transactional guarantees on file storage — the basis of trust.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Delta transaction log; ACID; schema enforcement &amp; evolution; <code>MERGE</code> upsert; time travel; <code>VACUUM</code> &amp; retention.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Write Silver as Delta; MERGE upsert; query an earlier version with time travel; evolve schema safely.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">CAP class: Delta is CP/EC — consistent snapshots downstream; recoverability via time travel.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">28</div><div class="hl">LAB</div></div><div class="body">
+        <h4>Medallion architecture, end to end</h4>
+        <p class="obj">Objective: implement the Bronze→Silver→Gold contract as Delta tables.</p>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Bronze (raw, append-only) → Silver (cleansed, conformed) → Gold (aggregated, business-ready); build a Gold table for a sample reporting need.</span></div>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">What belongs in each layer; quality gates between layers; reprocessing strategy.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Data quality: expectation checks at the Silver boundary; quarantine failing rows.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">29</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>Unity Catalog: governance inside the lakehouse</h4>
+        <p class="obj">Objective: control who sees what and prove provenance — inside Databricks.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Three-level namespace (catalog.schema.table); metastore; grants &amp; RBAC; column/row-level security &amp; masking; built-in lineage. Free Edition includes Unity Catalog.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Register Silver/Gold as managed tables; grant a read-only role; mask a sensitive column; inspect lineage.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">Unity Catalog (in-platform) vs. Purview (estate-wide) — fully reconciled on Day 4.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">30</div><div class="hl">PYTHON</div></div><div class="body">
+        <h4>Orchestration: ADF ↔ Databricks from code</h4>
+        <p class="obj">Objective: run notebooks as governed, scheduled, monitored jobs.</p>
+        <div class="row"><span class="tag py">Python</span><span class="txt"><code>databricks-sdk</code>: create &amp; trigger jobs, pass parameters, poll run state, pull logs; call a Databricks job from an ADF activity.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Wire Day-2's ADF pipeline to trigger the Silver→Gold notebook; pass the run date; capture the outcome back in ADF.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Observability: job success/failure on the same monitoring surface as ADF.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">31</div><div class="hl">NFR</div></div><div class="body">
+        <h4>Performance tuning &amp; scalability</h4>
+        <p class="obj">Objective: make transformations fast and predictable — performance is a cost lever.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Partitioning &amp; the small-files problem; <code>OPTIMIZE</code> + Z-order / liquid clustering; caching; broadcast joins; skew; autoscaling.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Diagnose a slow Gold build with the Spark UI; apply OPTIMIZE + partitioning; measure before/after.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Scalability &amp; performance; the direct link between tuning and DBU spend.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">32</div><div class="hl">COST</div></div><div class="body">
+        <h4>Databricks cost control &amp; Day-3 integrated lab</h4>
+        <p class="obj">Objective: ship the full transformation layer with cost guardrails built in.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">The DBU model; cluster policies; auto-termination; serverless vs. classic; spot/job compute in production. Free Edition quotas as a natural guardrail.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Run the end-to-end Bronze→Gold job orchestrated from ADF; record usage; document cost per run.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">Production guardrails: node-size-capping cluster policies, mandatory auto-termination, workspace budget alerts.</span></div>
+      </div></div>
+    </section>
+
+    <!-- ===================== DAY 4 ===================== -->
+    <section id="day4" class="day">
+      <div class="day-head"><div><div class="num">Day Four</div><h2>Microsoft Purview: Governance, Lineage &amp; Compliance</h2></div><div class="hrs">Hours 33–40</div></div>
+      <p class="day-blurb">Govern the whole estate, not one platform. Catalogue and classify sources, build the glossary, trace end-to-end lineage across ADF and Databricks, automate it from Python via the Atlas API, and map controls to a central bank's obligations — keeping cost near zero by metering only a handful of governed assets.</p>
+
+      <div class="hour"><div class="gutter"><div class="hn">33</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>Purview &amp; the case for estate-wide governance</h4>
+        <p class="obj">Objective: understand what Purview adds above per-platform governance.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Data Map vs. Unified Catalog; governance domains, data products, critical data elements; how Purview, Unity Catalog and storage controls layer.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Provision Purview; orient in the portal; confirm Data Map scanning/cataloguing is free.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">Why a central bank needs one queryable map of every asset across the estate.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">34</div><div class="hl">LAB</div></div><div class="body">
+        <h4>Registering sources &amp; scanning</h4>
+        <p class="obj">Objective: get the estate into the Data Map automatically.</p>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Register ADLS, ADF and Databricks (Unity Catalog) as sources; configure and run scans; review discovered assets.</span></div>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Scan rule sets; scheduled vs. on-demand; managed vs. self-hosted IR for private sources.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">Scanned assets in the Data Map are free — build a wide catalogue at no cost.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">35</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>Glossary, classification &amp; sensitivity</h4>
+        <p class="obj">Objective: make the catalogue meaningful and flag sensitive data.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Business glossary; built-in &amp; custom classifications; sensitivity labels; PII / regulated-data detection; ownership &amp; stewardship.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Define glossary terms; auto- and manually classify columns; tag a dataset as regulated and assign a steward.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Classification drives access policy and DLP downstream.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">36</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>End-to-end lineage</h4>
+        <p class="obj">Objective: answer "where did this number come from?" across the stack.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">How lineage is captured from ADF and Databricks; reading the graph; gaps and custom lineage.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Trace a Gold column back through Silver, Bronze and ADF to source; identify and document a lineage gap.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">Lineage as a regulatory deliverable: demonstrable provenance for reported figures.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">37</div><div class="hl">PYTHON</div></div><div class="body">
+        <h4>Automating Purview from Python</h4>
+        <p class="obj">Objective: treat the catalogue as code — bulk ops and custom lineage at scale.</p>
+        <div class="row"><span class="tag py">Python</span><span class="txt">Atlas REST API (the durable path) for entities, classifications, lineage; <code>azure-purview-*</code> clients; bulk-tagging &amp; reporting via <code>requests</code> + token auth.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Push a custom lineage edge Purview didn't auto-capture; bulk-apply a classification; export a catalogue report.</span></div>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Version-control governance metadata; make catalogue updates a reviewable, repeatable job.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">38</div><div class="hl">BOE</div></div><div class="body">
+        <h4>Data quality, DLP &amp; regulatory mapping</h4>
+        <p class="obj">Objective: connect platform controls to named obligations.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Purview data-quality rules (DGPU-metered); DLP concepts; mapping controls to frameworks (BCBS 239 principles, UK GDPR / DPA, records retention).</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Define data-quality rules on a governed dataset on the Basic tier; review the health dashboard.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">DGPUs are the metered unit; Basic tier is a few $/day — govern a small set, then tear down.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">39</div><div class="hl">NFR</div></div><div class="body">
+        <h4>Access policies &amp; governance workflows</h4>
+        <p class="obj">Objective: operationalise governance as a repeatable process.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Data-access request &amp; approval; data-product certification; stewardship; how policy decisions propagate to platforms.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Publish a certified data product; run a mock access-request approval; document the governance operating rhythm.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">Separation of duties: who curates, who approves, who operates — into the support model.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">40</div><div class="hl">COST</div></div><div class="body">
+        <h4>Governance cost model &amp; Day-4 integrated lab</h4>
+        <p class="obj">Objective: leave with a governed, lineage-complete estate and a clear cost picture.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Purview's two meters — governed assets/day and DGPUs; forecasting from asset count; what to govern vs. merely catalogue.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Govern only certified Gold products; verify lineage source-to-serve; produce a governance &amp; cost summary; tear down chargeable resources.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">Confirm Purview spend stayed within the credit; capture the production forecast.</span></div>
+      </div></div>
+    </section>
+
+    <!-- ===================== DAY 5 ===================== -->
+    <section id="day5" class="day">
+      <div class="day-head"><div><div class="num">Day Five</div><h2>Operate, Support &amp; Cost</h2></div><div class="hrs">Hours 41–48</div></div>
+      <p class="day-blurb">Everything converges on running the platform in anger: a consolidated NFR view, real observability with KQL, the support &amp; incident model, Python ops automation, FinOps, disaster recovery and hardening — then a fault-injection lab where teams operate and support a live, deliberately-broken pipeline.</p>
+
+      <div class="hour"><div class="gutter"><div class="hn">41</div><div class="hl">NFR</div></div><div class="body">
+        <h4>The consolidated NFR &amp; trade-off framework</h4>
+        <p class="obj">Objective: reason about the platform as a system, not four tools.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Walk the eight NFRs across the built estate; CAP/PACELC at each boundary; a lean trade-off log (Target → Model → Answer) capturing each decision and its driving constraint.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Complete the trade-off log for the Days 0–4 platform; every choice traced to a requirement.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">"No castles in the air" — untraceable choices are revisited.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">42</div><div class="hl">PYTHON</div></div><div class="body">
+        <h4>Observability: Monitor, Log Analytics &amp; KQL</h4>
+        <p class="obj">Objective: build the single pane the support team actually watches.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Routing diagnostics from Storage, ADF, Databricks, Purview into Log Analytics; KQL for run health, latency, errors; alerts &amp; action groups.</span></div>
+        <div class="row"><span class="tag py">Python</span><span class="txt"><code>azure-monitor-query</code> to run KQL from code; assemble a cross-service health summary.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Build a platform health dashboard + alerts for pipeline failure, SLA breach and cost anomaly.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">43</div><div class="hl">BOE</div></div><div class="body">
+        <h4>The support model: runbooks, incidents, SLAs</h4>
+        <p class="obj">Objective: define how the platform is supported, day and night.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Support tiers (L1/L2/L3); incident severity &amp; response; SLAs/SLOs; the runbook as the unit of operational knowledge; on-call &amp; escalation; blameless post-incident review.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Author two runbooks — "pipeline failed overnight" and "data-quality alert" — from the tooling built earlier.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">DORA-style targets: change-failure rate, MTTR &lt; 1 hour.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">44</div><div class="hl">PYTHON</div></div><div class="body">
+        <h4>Python automation for operations</h4>
+        <p class="obj">Objective: automate the toil — health checks, remediation, notifications.</p>
+        <div class="row"><span class="tag py">Python</span><span class="txt">A small ops toolkit: scheduled health check, auto-retry of a failed pipeline, dead-letter reprocessor, alert-to-chat notifier; packaged and parametrised.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Wire the toolkit so a failure triggers diagnosis → safe auto-remediation → human notification with context.</span></div>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Package the toolkit as an installable module with tests — ops code is real code.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">45</div><div class="hl">COST</div></div><div class="body">
+        <h4>FinOps: cost monitoring as a discipline</h4>
+        <p class="obj">Objective: own the platform's unit economics, not just its uptime.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Cost Management + budgets; tag-based attribution; anomaly detection; cost per pipeline / per dataset; reservations &amp; savings plans (production).</span></div>
+        <div class="row"><span class="tag py">Python</span><span class="txt"><code>azure-mgmt-costmanagement</code> / Cost APIs to pull spend by tag into a weekly cost report and anomaly alert.</span></div>
+        <div class="row"><span class="tag cost">Cost</span><span class="txt">Estate-wide budget + anomaly alert; reconcile actual vs. forecast.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">46</div><div class="hl">NFR</div></div><div class="body">
+        <h4>Resilience, backup &amp; disaster recovery</h4>
+        <p class="obj">Objective: define and test what happens when something fails for real.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">RPO/RTO; storage redundancy &amp; failover; Delta time-travel &amp; restore; backing up the control plane as code; region-failure thinking.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Simulate table corruption; recover via Delta time travel; restore a deleted pipeline from its code definition; record RPO/RTO achieved.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">An untested recovery is a hope, not a plan.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">47</div><div class="hl">BOE</div></div><div class="body">
+        <h4>Security &amp; compliance hardening</h4>
+        <p class="obj">Objective: bring the estate to a defensible, auditable state.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">End-to-end review (identity, network, encryption, secrets, immutability); audit-log retention; least-privilege re-check; data-residency confirmation.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Run a security checklist over the whole platform; remediate the top findings.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Security &amp; auditability as continuous properties, not annual events.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">48</div><div class="hl">LAB</div></div><div class="body">
+        <h4>Operate-and-support capstone</h4>
+        <p class="obj">Objective: prove operations under realistic pressure.</p>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Teams run the full ingest→transform→govern→serve pipeline; instructors inject faults (bad file, schema drift, slow job, cost spike, failed scan). Teams detect, triage and remediate with their runbooks and tooling, then write the post-incident note.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Assessed against the eight NFRs; automated vs. manual handling; cost vs. budget.</span></div>
+      </div></div>
+    </section>
+
+    <!-- ===================== DAY 6 ===================== -->
+    <section id="day6" class="day">
+      <div class="day-head"><div><div class="num">Day Six</div><h2>Engineering Excellence: Testing, Quality &amp; Delivery</h2></div><div class="hrs">Hours 49–56</div></div>
+      <p class="day-blurb">The developer track. Stop writing scripts and start engineering: design pipelines as software, test the code and the data, automate build-test-deploy through CI/CD, package for repeatable deployment, and debug with discipline. This is what separates a demo from a platform a central bank can trust.</p>
+
+      <div class="hour"><div class="gutter"><div class="hn">49</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Designing pipelines as software</h4>
+        <p class="obj">Objective: build frameworks, not one-off scripts.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Modularity &amp; separation of concerns; config-driven design; idempotency &amp; re-runnability; pure functions vs. side effects; the "abstract → particularise" pattern in code.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Refactor a Day-3 notebook into a structured, config-driven module with clear interfaces.</span></div>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Why a reusable framework beats N copied notebooks — maintenance, consistency, governance.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">50</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Unit testing data code</h4>
+        <p class="obj">Objective: test transformation logic in seconds, locally, before any cloud run.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt"><code>pytest</code>: fixtures, parametrize, assertions; testing PySpark transforms with <code>chispa</code>; mocking Azure SDK calls; test coverage and what's worth testing.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Write a test suite for the refactored module; catch a deliberately-seeded logic bug with a failing test.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Integrity: a tested transform is a trustworthy transform.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">51</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Data quality &amp; contract testing</h4>
+        <p class="obj">Objective: test the data, not just the code.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Expectations as code (Great Expectations / DQ rules); schema/data contracts between producers and consumers; quarantine vs. fail strategies.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Add expectation checks at the Silver boundary; break the contract upstream and watch the gate catch it.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">Data contracts make data-quality obligations explicit and enforceable.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">52</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Integration &amp; end-to-end pipeline testing</h4>
+        <p class="obj">Objective: prove the pieces work together, not just in isolation.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Test data management; ephemeral test environments; smoke tests post-deploy; the testing pyramid for data (many unit, fewer integration, few E2E).</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Run an integration test of ingest→transform against a small fixed dataset with known expected output.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Verification (matches spec) vs. validation (serves the need) — both exercised.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">53</div><div class="hl">DEV</div></div><div class="body">
+        <h4>CI/CD for data platforms</h4>
+        <p class="obj">Objective: automate build → test → deploy so releases are boring and safe.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">GitHub Actions / Azure DevOps pipelines; lint + test on every commit; environment promotion (dev→test→prod); secrets in CI; approval gates.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Build a CI workflow that runs the test suite on push and blocks merge on failure; add a deploy stage.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">Automated, gated, audited deployment is a change-control and compliance win.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">54</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Packaging &amp; deployment automation</h4>
+        <p class="obj">Objective: ship the same artefact, the same way, every time.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Python wheels; Databricks Asset Bundles for jobs/notebooks; Bicep/ARM for ADF &amp; infrastructure; deploying Day-2 pipelines &amp; Day-3 jobs from the CI pipeline.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Package the transformation module; deploy a Databricks job + ADF pipeline via a bundle/IaC from CI.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Recoverability: redeploy the whole platform from source.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">55</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Debugging &amp; performance profiling</h4>
+        <p class="obj">Objective: find and fix failures fast — the core support skill.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Reading stack traces &amp; Spark logs; the Spark UI deep dive (stages, shuffles, spills); common failure modes (OOM, skew, serialization, bad joins) and their fixes.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Debug three pre-broken jobs from their symptoms; explain root cause and the fix for each.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Observability + performance feed directly into support MTTR.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">56</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Code review, trunk-based dev &amp; feature flags — engineering lab</h4>
+        <p class="obj">Objective: adopt a team delivery discipline that ships safely and often.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Review standards (what to look for); short-lived branches; trunk-based development; deploy ≠ release; feature flags for data changes; branch-by-abstraction for large refactors.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Submit and review a teammate's change against a checklist; merge to trunk through CI; toggle a change behind a flag.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">High-trust internal teams ship faster with fast CI + flags than with heavy gating — defended with DORA evidence.</span></div>
+      </div></div>
+    </section>
+
+    <!-- ===================== DAY 7 ===================== -->
+    <section id="day7" class="day">
+      <div class="day-head"><div><div class="num">Day Seven</div><h2>Advanced Patterns &amp; Developer Capstone</h2></div><div class="hrs">Hours 57–60</div></div>
+      <p class="day-blurb">A short, sharp finish: where batch isn't enough, building a reusable framework, treating reliability as code, and a capstone that takes a brand-new feed from design through code, tests, CI/CD and operation — reviewed against the engineering standard set this week.</p>
+
+      <div class="hour"><div class="gutter"><div class="hn">57</div><div class="hl">DETAIL</div></div><div class="body">
+        <h4>Beyond batch: event-driven &amp; streaming</h4>
+        <p class="obj">Objective: know when streaming is justified — and the new failure modes it brings.</p>
+        <div class="row"><span class="tag detail">Detail</span><span class="txt">Event-driven ingestion; Structured Streaming &amp; Auto Loader concepts; exactly-once thinking; checkpointing; when batch is the right, cheaper answer.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Convert a batch Bronze ingest to an incremental Auto Loader stream; reason about the trade-offs.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Latency vs. cost vs. complexity — streaming is not free.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">58</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Build a metadata-driven ingestion framework</h4>
+        <p class="obj">Objective: turn the week's patterns into one reusable, config-driven engine.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">A control table / config describing each feed; one generic pipeline driven by metadata; adding a new feed = a config row, not new code.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Extend the framework to onboard a second feed purely by configuration; prove it with tests.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">The Curation-Framework idea: abstract the pattern once, particularise per feed — scales across regions and teams.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">59</div><div class="hl">DEV</div></div><div class="body">
+        <h4>Reliability as code: SRE for data</h4>
+        <p class="obj">Objective: make observability and reliability part of the codebase.</p>
+        <div class="row"><span class="tag dev">Dev</span><span class="txt">Observability-as-code (alerts &amp; dashboards in source); SLOs &amp; error budgets for pipelines; infrastructure-as-code for the whole estate; runbooks linked to alerts.</span></div>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Define an SLO for a Gold table's freshness; codify the alert and its runbook link.</span></div>
+        <div class="row"><span class="tag nfr">NFR</span><span class="txt">Reliability targets that are measured, not aspirational.</span></div>
+      </div></div>
+
+      <div class="hour"><div class="gutter"><div class="hn">60</div><div class="hl">LAB</div></div><div class="body">
+        <h4>Developer capstone: design → code → test → deploy → operate</h4>
+        <p class="obj">Objective: prove the full engineering lifecycle on a new requirement.</p>
+        <div class="row"><span class="tag lab">Lab</span><span class="txt">Teams take a fresh feed requirement: define the contract &amp; NFRs, build it on the framework, write tests, ship it through CI/CD, then monitor and support it — reviewed against this week's engineering standards.</span></div>
+        <div class="row"><span class="tag boe">BoE</span><span class="txt">Wrap-up: production-readiness gaps, the path from free sandbox to Bank-grade estate, and a 30/60/90-day adoption plan.</span></div>
+      </div></div>
+    </section>
+
+    <!-- TOOLCHAIN -->
+    <section id="stack" class="panel" style="margin-top:40px">
+      <h2 class="section">Reference</h2>
+      <h3>Python &amp; developer toolchain across the programme</h3>
+      <p>One environment builds and operates the whole stack; the same <code>DefaultAzureCredential</code> threads through every Azure library.</p>
+      <div class="twocol">
+        <ul class="stack-list">
+          <li><span class="pkg">uv / venv · pyproject</span><span>Reproducible environments &amp; project layout</span></li>
+          <li><span class="pkg">azure-identity</span><span>Unified auth — managed identity / SP</span></li>
+          <li><span class="pkg">azure-keyvault-secrets</span><span>Read secrets, never hard-code</span></li>
+          <li><span class="pkg">azure-mgmt-resource</span><span>Resource groups, tags, provisioning</span></li>
+          <li><span class="pkg">azure-storage-file-datalake</span><span>ADLS Gen2 file &amp; directory ops</span></li>
+          <li><span class="pkg">azure-mgmt-datafactory</span><span>Pipelines, datasets, triggers as code</span></li>
+          <li><span class="pkg">pyspark</span><span>DataFrame transformation, Delta ops</span></li>
+          <li><span class="pkg">databricks-sdk · DAB</span><span>Jobs, runs, asset-bundle deployment</span></li>
+        </ul>
+        <ul class="stack-list">
+          <li><span class="pkg">requests + Atlas API</span><span>Purview entities, classifications, lineage</span></li>
+          <li><span class="pkg">azure-monitor-query</span><span>KQL against Log Analytics from code</span></li>
+          <li><span class="pkg">azure-mgmt-costmanagement</span><span>Spend by tag, budgets, anomalies</span></li>
+          <li><span class="pkg">pytest · chispa</span><span>Unit-testing Python &amp; PySpark</span></li>
+          <li><span class="pkg">great-expectations</span><span>Data-quality &amp; contract testing</span></li>
+          <li><span class="pkg">GitHub Actions / Azure DevOps</span><span>CI/CD build-test-deploy</span></li>
+          <li><span class="pkg">Bicep / ARM</span><span>Infrastructure &amp; ADF as code</span></li>
+          <li><span class="pkg">pre-commit · ruff</span><span>Formatting, linting, hooks</span></li>
+        </ul>
+      </div>
+      <div class="note"><b>Verify at delivery.</b> Free-tier credits, service tiers and SDK names change. Confirm Azure free-account / governed-subscription terms, Databricks Free Edition limits and Purview meter rates at the start of each cohort and refresh the cost figures.</div>
+    </section>
+
+    <!-- ASSESSMENT -->
+    <section id="assess" class="panel dark">
+      <h2 class="section" style="color:var(--brass-lt)">Evaluation</h2>
+      <h3>How learners are assessed</h3>
+      <div class="kv">
+        <b>Day-0 check</b><span>A short foundations checkpoint confirms everyone can develop locally before Day 1 — early support for those who need it.</span>
+        <b>Daily labs</b><span>Each integrated lab graded pass/fail against a checklist; the artefact carries forward.</span>
+        <b>Code quality</b><span>Day 6–7: tests present and passing, module structure, CI green, review feedback addressed.</span>
+        <b>Runbooks</b><span>Would a tired on-call engineer succeed with them — clarity and completeness.</span>
+        <b>Two capstones</b><span>Operate-and-support (Day 5) under injected faults; build-and-ship (Day 7) through the full lifecycle.</span>
+        <b>NFR &amp; cost defence</b><span>Every choice traced to a requirement; estate kept within budget with a production cost forecast.</span>
+      </div>
+      <div class="note"><b>Verification vs. validation.</b> Verification asks "did we build it right?" (matches spec). Validation asks "did we build the right thing?" (serves the Bank's need). Both capstones test both.</div>
+    </section>
+
+  </main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <b>Azure ETL: Build, Operate &amp; Support</b> · 60 hours · Day 0–7 · Bank of England Data Platform Enablement<br>
+    Delivery outline — confirm live free-tier, governed-subscription and pricing terms per cohort before delivery.
+  </div>
+</footer>
+
+</body>
+</html>

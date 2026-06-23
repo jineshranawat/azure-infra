@@ -6,15 +6,15 @@ import json
 import logging
 import subprocess
 
-from _config import SessionConfig
+from _config import SessionConfig, find_az
 
 logger = logging.getLogger(__name__)
 
 STORAGE_BLOB_DATA_CONTRIBUTOR = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
 
 
-def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, check=False, text=True, capture_output=True)
+def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run([find_az(), *args], check=False, text=True, capture_output=True)
 
 
 def ensure_adf_storage_rbac(
@@ -25,7 +25,7 @@ def ensure_adf_storage_rbac(
     """Grant ADF system-assigned MI Storage Blob Data Contributor on the lake account."""
     show = _run(
         [
-            "az", "datafactory", "show",
+            "datafactory", "show",
             "--resource-group", cfg.resource_group,
             "--factory-name", data_factory,
         ]
@@ -45,7 +45,7 @@ def ensure_adf_storage_rbac(
 
     existing = _run(
         [
-            "az", "role", "assignment", "list",
+            "role", "assignment", "list",
             "--assignee-object-id", principal_id,
             "--scope", scope,
             "--query", "length(@)",
@@ -58,7 +58,7 @@ def ensure_adf_storage_rbac(
 
     _run(
         [
-            "az", "role", "assignment", "create",
+            "role", "assignment", "create",
             "--role", "Storage Blob Data Contributor",
             "--assignee-object-id", principal_id,
             "--assignee-principal-type", "ServicePrincipal",

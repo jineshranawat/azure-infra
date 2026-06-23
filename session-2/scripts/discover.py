@@ -7,7 +7,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
-from _config import SessionConfig
+from _config import SessionConfig, find_az
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,7 @@ class Estate:
 
 def _az_json(args: list[str]) -> Any:
     result = subprocess.run(
-        ["az", *args, "-o", "json"],
+        [find_az(), *args, "-o", "json"],
         check=True,
         text=True,
         capture_output=True,

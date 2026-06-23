@@ -20,10 +20,10 @@ from azure.mgmt.datafactory.models import (
     DelimitedTextDataset,
     DelimitedTextSink,
     DelimitedTextSource,
-    DelimitedTextWriteSettings,
     AzureBlobFSLinkedService,
     LinkedServiceReference,
     LinkedServiceResource,
+    ParameterSpecification,
     PipelineResource,
     ActivityPolicy,
 )
@@ -109,19 +109,19 @@ def ensure_adf_artifacts(
         inputs=[DatasetReference(reference_name=SOURCE_DATASET, type="DatasetReference", parameters={"incoming_folder": {"value": "@pipeline().parameters.incoming_folder", "type": "Expression"}})],
         outputs=[DatasetReference(reference_name=SINK_DATASET, type="DatasetReference", parameters={"loaded_folder": {"value": "@pipeline().parameters.loaded_folder", "type": "Expression"}})],
         source=DelimitedTextSource(store_settings=AzureBlobFSReadSettings(recursive=True)),
-        sink=DelimitedTextSink(write_settings=AzureBlobFSWriteSettings(copy_behavior="MergeFiles")),
+        sink=DelimitedTextSink(
+            store_settings=AzureBlobFSWriteSettings(copy_behavior="MergeFiles")
+        ),
         policy=ActivityPolicy(retry=1, retry_interval_in_seconds=30, timeout="0.12:00:00"),
     )
 
     pipeline = PipelineResource(
-        properties={
-            "activities": [copy],
-            "parameters": {
-                "incoming_folder": {"type": "String"},
-                "loaded_folder": {"type": "String"},
-            },
-            "annotations": ["session-2", "bronze-copy"],
-        }
+        activities=[copy],
+        parameters={
+            "incoming_folder": ParameterSpecification(type="String"),
+            "loaded_folder": ParameterSpecification(type="String"),
+        },
+        annotations=["session-2", "bronze-copy"],
     )
     adf.pipelines.create_or_update(rg, data_factory, PIPELINE_NAME, pipeline)
     logger.info("Pipeline '%s' ready (idle cost ~£0)", PIPELINE_NAME)

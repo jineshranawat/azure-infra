@@ -10,6 +10,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
+from azure.core.exceptions import ResourceExistsError
 from azure.identity import DefaultAzureCredential
 from azure.storage.filedatalake import DataLakeServiceClient
 
@@ -38,7 +39,10 @@ def upload_bronze_feed(
     credential = DefaultAzureCredential()
     service = DataLakeServiceClient(account_url=account_url, credential=credential)
     fs = service.get_file_system_client("bronze")
-    fs.create_directory("_control", exist_ok=True)
+    try:
+        fs.create_directory("_control")
+    except ResourceExistsError:
+        pass
 
     payload = SAMPLE_CSV.read_bytes()
     file_client = fs.get_file_client(incoming_path)

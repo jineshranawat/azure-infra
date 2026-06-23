@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+import platform
 import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -38,6 +40,27 @@ def _load_dotenv(path: Path) -> dict[str, str]:
         key, _, raw = line.partition("=")
         values[key.strip()] = raw.strip().strip('"').strip("'")
     return values
+
+
+def find_az() -> str:
+    """Resolve Azure CLI on Windows (az.cmd) and POSIX (az on PATH)."""
+    az = shutil.which("az")
+    if az:
+        return az
+    if platform.system() == "Windows":
+        win_az = (
+            Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
+            / "Microsoft SDKs"
+            / "Azure"
+            / "CLI2"
+            / "wbin"
+            / "az.cmd"
+        )
+        if win_az.is_file():
+            return str(win_az)
+    raise SystemExit(
+        "Azure CLI not found. Run from repo root: orchestrate.cmd --install-cli"
+    )
 
 
 def load_config() -> SessionConfig:
