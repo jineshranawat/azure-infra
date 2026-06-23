@@ -168,7 +168,6 @@ infra/platform-services.bicep  → ADF, Synapse, Purview, Fabric, Databricks
 scripts/verify_cost.py       → SKU + MTD gate
 scripts/fabric_workspace.py  → Fabric workspace (check-before-create)
 scripts/teardown.py          → delete RG
-.cursorrules                 → standing guardrails
 ```
 
 ### Build order (never change)

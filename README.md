@@ -215,7 +215,6 @@ Optional trainer speed flag: `--skip-setup` skips venv/pip when already installe
 | Fabric workspace API | `scripts/fabric_workspace.py` |
 | Teardown | `scripts/teardown.py` |
 | Windows bootstrap helper | `scripts/setup-windows.ps1` |
-| Guardrails for AI + humans | `.cursorrules` |
 
 ---
 
@@ -268,4 +267,3 @@ Details: [docs/GOVERNANCE-DEPLOY.md](docs/GOVERNANCE-DEPLOY.md)
 | `docs/TRAINER-NOTES.md` | Trainer master guide |
 | `docs/CLASS-GUIDE.md` | Timed learner blocks |
 | `docs/WORKFLOW-AND-CODE.md` | Code + portal walkthrough |
-| `.cursorrules` | Standing guardrails |

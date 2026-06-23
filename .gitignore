@@ -1,5 +1,12 @@
+# Local environment — never commit
 .env
 .venv/
+
+# Cursor IDE local state — never commit
+.cursor/
+.cursorrules
+
+# Python caches
 __pycache__/
 *.pyc
 .pytest_cache/
