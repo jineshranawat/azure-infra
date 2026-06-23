@@ -453,6 +453,7 @@ Details: [docs/GOVERNANCE-DEPLOY.md](docs/GOVERNANCE-DEPLOY.md)
 | `docs/TRAINER-NOTES.md` | Trainer master guide |
 | `docs/CLASS-GUIDE.md` | Timed learner blocks |
 | `docs/WORKFLOW-AND-CODE.md` | Code + portal walkthrough |
+| `session-2/` | **Session 2** — ADF ingestion lab (2 h, [azure.html](azure.html) Day 2) |
 
 ---
 

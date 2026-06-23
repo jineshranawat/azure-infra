@@ -5,3 +5,5 @@ azure-mgmt-costmanagement>=4.0.0
 azure-mgmt-keyvault>=10.3.0
 azure-mgmt-resource>=23.0.0
 azure-mgmt-storage>=21.0.0
+azure-mgmt-datafactory>=9.0.0
+azure-storage-file-datalake>=12.14.0
