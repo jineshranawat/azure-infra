@@ -2,14 +2,9 @@
 
 **Duration:** 2 hours practical | **Source:** [azure.html](../azure.html) Day 2 (Hours 17–24, compressed)
 
-**Prerequisite:** Class-1 + ADF deployed from repo root:
+**Prerequisite:** Class-1 + ADF deployed from repo root (`orchestrate.cmd`).
 
-```text
-cd ..
-orchestrate.cmd
-```
-
----
+**Navigation:** [COVERAGE-MAP.md](../COVERAGE-MAP.md) — steps 10–12 | **UI lab:** [MANUAL-LAB.md](MANUAL-LAB.md)
 
 ## A. What & why (read first)
 

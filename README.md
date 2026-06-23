@@ -4,9 +4,11 @@ Training lab for a governed, low-cost Azure data platform. **Windows only.**
 
 | Doc | Link |
 |-----|------|
+| **Coverage map (start here)** | **[COVERAGE-MAP.md](COVERAGE-MAP.md)** — step-by-step: which session, doc, command, portal |
 | Trainers | [docs/TRAINER-NOTES.md](docs/TRAINER-NOTES.md) |
 | Timed class | [docs/CLASS-GUIDE.md](docs/CLASS-GUIDE.md) |
 | Code + portal | [docs/WORKFLOW-AND-CODE.md](docs/WORKFLOW-AND-CODE.md) |
+| Session 2 (ADF) | [session-2/MANUAL-LAB.md](session-2/MANUAL-LAB.md) |
 
 ---
 
@@ -453,7 +455,8 @@ Details: [docs/GOVERNANCE-DEPLOY.md](docs/GOVERNANCE-DEPLOY.md)
 | `docs/TRAINER-NOTES.md` | Trainer master guide |
 | `docs/CLASS-GUIDE.md` | Timed learner blocks |
 | `docs/WORKFLOW-AND-CODE.md` | Code + portal walkthrough |
-| `session-2/` | **Session 2** — ADF lab + [manual portal steps](session-2/MANUAL-LAB.md) |
+| `COVERAGE-MAP.md` | **Master index** — session, doc, command, portal step-by-step |
+| `session-2/` | Session 2 — ADF lab + [manual portal steps](session-2/MANUAL-LAB.md) |
 
 ---
 

@@ -2,7 +2,7 @@
 
 Master guide for trainers delivering Class 1 + platform services. Learners use **`orchestrate.cmd`** only; you use this document to teach, demo, and troubleshoot.
 
-**Related docs:** [CLASS-GUIDE.md](CLASS-GUIDE.md) | [WORKFLOW-AND-CODE.md](WORKFLOW-AND-CODE.md) | [GOVERNANCE-DEPLOY.md](GOVERNANCE-DEPLOY.md) | [README](../README.md)
+**Related docs:** [CLASS-GUIDE.md](CLASS-GUIDE.md) | [WORKFLOW-AND-CODE.md](WORKFLOW-AND-CODE.md) | [GOVERNANCE-DEPLOY.md](GOVERNANCE-DEPLOY.md) | [README](../README.md) | **[COVERAGE-MAP.md](../COVERAGE-MAP.md)**
 
 **Platform:** Windows only. **Start here:** [README §1 — run guide, failures & AI chat](../README.md#1-how-to-run-on-windows-step-by-step).
 
