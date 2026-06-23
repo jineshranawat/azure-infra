@@ -4,7 +4,7 @@ Master guide for trainers delivering Class 1 + platform services. Learners use *
 
 **Related docs:** [CLASS-GUIDE.md](CLASS-GUIDE.md) | [WORKFLOW-AND-CODE.md](WORKFLOW-AND-CODE.md) | [GOVERNANCE-DEPLOY.md](GOVERNANCE-DEPLOY.md) | [README](../README.md)
 
-**Platform:** Windows only — no bash, no macOS paths. Entry point: `orchestrate.cmd`.
+**Platform:** Windows only. **Start here:** [README §1 — run guide, failures & AI chat](../README.md#1-how-to-run-on-windows-step-by-step).
 
 ---
 
@@ -193,14 +193,16 @@ Orchestrator retries without Fabric, skips Synapse, still completes verify + sum
 
 ## 9. Troubleshooting
 
+Full learner table (failures, MPN warnings, AI chat): [README §1](../README.md#failures--workarounds-short-guide).
+
 | Symptom | Fix |
 |---------|-----|
 | `az` not found | `orchestrate.cmd --install-cli` |
-| PowerShell blocks scripts | Use `orchestrate.cmd` only — never needs policy change |
+| PowerShell blocks scripts | `orchestrate.cmd` in Command Prompt |
 | `az login` MFA | `orchestrate.cmd --use-device-code` |
-| RBAC `RoleDefinitionDoesNotExist` | `_ensure_rbac` CLI fallback runs automatically |
-| Fabric workspace exists | `fabric_workspace.py` logs `already present` |
-| Portal cost column `-` | Normal first 24–48h; use Budget + verify script |
+| RBAC `RoleDefinitionDoesNotExist` | Re-run — `_ensure_rbac` fallback |
+| Fabric workspace exists | `already present` log — OK |
+| Portal cost `-` | Billing lag — use verify script |
 
 ---
 
