@@ -87,7 +87,7 @@ https://learn.microsoft.com/fabric/enterprise/fabric-quotas
 ## Re-run automation
 
 ```powershell
-.\orchestrate.ps1 --platforms-only --skip-setup
+.\orchestrate.cmd --platforms-only --skip-setup
 ```
 
 Code paths:

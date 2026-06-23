@@ -89,13 +89,13 @@ def _key_vault_name(learner: str, name_hash: str) -> str:
 
 
 def _budget_start_date() -> str:
-    """First day of the current UTC month — matches deploy.sh behaviour."""
+    """First day of the current UTC month — matches orchestrate.py budget anchor."""
     today = datetime.now(timezone.utc).date()
     return date(today.year, today.month, 1).isoformat()
 
 
 def _get_principal_object_id() -> str:
-    """Resolve signed-in user object ID — mirrors deploy.sh az CLI lookup."""
+    """Resolve signed-in user object ID — mirrors orchestrate.py az CLI lookup."""
     import subprocess
 
     result = subprocess.run(

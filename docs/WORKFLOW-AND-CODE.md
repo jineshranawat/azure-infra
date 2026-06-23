@@ -16,7 +16,7 @@ Class 1 builds a **single resource group** containing a governed, low-cost data 
 ```text
 Learner laptop / VM
     |
-    |  orchestrate.ps1 / orchestrate.sh / orchestrate.py
+    |  orchestrate.cmd / orchestrate.py
     v
 Azure CLI (control plane)  --------->  Azure Resource Manager
     |                                        |
@@ -54,9 +54,8 @@ flowchart TD
 | Open this file | When (class block) | What it teaches |
 |----------------|-------------------|-----------------|
 | `.env.example` → `.env` | Block 0 | Learner-specific config; no secrets in git |
-| `orchestrate.ps1` / `orchestrate.sh` | Block 0 | One command runs the whole lab |
+| `orchestrate.cmd` | Block 0 | One command runs the whole lab |
 | `scripts/orchestrate.py` | Block 0–6 | How setup, deploy, RBAC fallback, verify chain together |
-| `deploy.sh` | Block 1–2 | Bash equivalent: RG + Bicep deploy |
 | `infra/main.bicep` L1–42 | Block 1 | UK region, parameters, tags, naming |
 | `infra/main.bicep` L44–86 | Block 2 | Consumption budget |
 | `infra/main.bicep` L88–109 | Block 3 | Key Vault |
@@ -77,7 +76,7 @@ Use this table during class. **Open the IDE file first**, run the command, **the
 | | |
 |---|---|
 | **Open in IDE** | `.env.example`, then create `.env` |
-| **Run** | `.\orchestrate.ps1 --install-cli` or `./orchestrate.sh --install-cli` |
+| **Run** | `orchestrate.cmd --install-cli` |
 | **Open in portal** | [Subscriptions](https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade) |
 
 **What happens in code (`orchestrate.py`):**
@@ -111,18 +110,18 @@ LOCATION=uksouth
 
 | | |
 |---|---|
-| **Open in IDE** | `deploy.sh` L19–35, `infra/main.bicep` L7–37 |
+| **Open in IDE** | `scripts/orchestrate.py` (`_deploy_bicep`), `infra/main.bicep` L7–37 |
 | **Run** | Orchestrator continues → `az group create ...` (inside `_deploy_bicep`) |
 | **Open in portal** | Resource groups → `rg-<learner>-class1` → **Tags** |
 
 **What happens in code:**
 
-`deploy.sh` (manual path):
+`orchestrate.cmd` / `scripts/orchestrate.py` → `_deploy_bicep()`:
 
-```bash
-# L19-22: reject non-UK regions
-# L27-35: seven mandatory tags
-# L52-57: az group create with --tags
+```text
+# _merge_config: reject non-UK regions (uksouth / ukwest only)
+# _tag_args: seven mandatory tags on az group create
+# main.bicep var tags: same keys on every resource in deployment
 ```
 
 `orchestrate.py` → `_tag_args()` (L339–345): builds the same tag list for `az group create`.
@@ -344,7 +343,7 @@ All resources pass the £0 SKU allow-list.
 
 ## 4. `orchestrate.py` — full execution timeline
 
-When you run `.\orchestrate.ps1`, this is the exact sequence:
+When you run `.\orchestrate.cmd`, this is the exact sequence:
 
 | # | Step | Function | Azure / local action |
 |---|------|----------|---------------------|
@@ -368,7 +367,7 @@ sequenceDiagram
     participant ARM as Azure ARM
     participant V as verify_cost.py
 
-    L->>O: orchestrate.ps1
+    L->>O: orchestrate.cmd
     O->>O: load .env, create venv
     O->>AZ: az login / account set
     O->>AZ: az group create (tags)
@@ -430,7 +429,7 @@ Returned to `az deployment group show` and printed by orchestrator summary.
 
 ## 6. Portal cheat sheet — open these blades in order
 
-After a successful `orchestrate.ps1` run, walk the portal in this sequence:
+After a successful `orchestrate.cmd` run, walk the portal in this sequence:
 
 | Order | Portal navigation | Confirms |
 |-------|-------------------|----------|
@@ -451,7 +450,7 @@ After a successful `orchestrate.ps1` run, walk the portal in this sequence:
 
 | | Bicep track | Python track |
 |---|-------------|--------------|
-| **Entry** | `orchestrate.py` (default) or `deploy.sh` | `orchestrate.py --method python` |
+| **Entry** | `orchestrate.cmd` (default) | `orchestrate.cmd --class1-only` |
 | **Deploy mechanism** | `az deployment group create` | `scripts/provision.py` SDK calls |
 | **Infra definition** | `infra/main.bicep` | Functions `_ensure_*` in `provision.py` |
 | **Verify** | `verify_cost.py` (both) | `verify_cost.py` (both) |
@@ -480,27 +479,24 @@ For each block (~45–75 min):
 5. **10 min** — learner exercise / discussion
 6. **5 min** — checkpoint before next block
 
-**Incremental teaching tip:** run full `orchestrate.ps1` once at lunch, then use the afternoon to **only** open portal blades and IDE sections — learners map code lines to live resources.
+**Incremental teaching tip:** run full `orchestrate.cmd` once at lunch, then use the afternoon to **only** open portal blades and IDE sections — learners map code lines to live resources.
 
 ---
 
 ## 9. Quick commands reference
 
-```powershell
-# Full lab (Windows)
-.\orchestrate.ps1 --install-cli
+```text
+orchestrate.cmd --install-cli
+orchestrate.cmd
 
-# Re-deploy + verify only
-.\orchestrate.ps1 --skip-setup
-
-# Python SDK deploy path
+# Python SDK deploy path (optional)
 python scripts/orchestrate.py --method python
 
 # Verify only
-.\.venv\Scripts\python.exe scripts\verify_cost.py --resource-group rg-jinesh-class1
+.venv\Scripts\python.exe scripts\verify_cost.py --resource-group rg-<learner>-class1
 
 # Teardown
-.\.venv\Scripts\python.exe scripts\teardown.py --resource-group rg-jinesh-class1 --yes
+orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 ```
 
 ---

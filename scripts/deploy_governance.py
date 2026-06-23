@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Deploy Purview, Synapse, and Fabric with subscription-aware fallbacks.
+"""Deploy Purview, Synapse, and Fabric — delegates to orchestrate.cmd platforms path.
+
+Thin wrapper for trainers who need platform-only re-deploy. Prefer: orchestrate.cmd --platforms-only
 
 Synapse and Fabric often fail on MPN/training subscriptions:
   - Synapse: SqlServerRegionDoesNotAllowProvisioning
-  - Fabric: regional quota = 0 (request quota in Azure portal)
+  - Fabric: regional quota = 0
 
 Usage:
-  python scripts/deploy_governance.py --subscription-id <guid> --resource-group rg-jinesh-class1
+  orchestrate.cmd --platforms-only
 """
 
 from __future__ import annotations

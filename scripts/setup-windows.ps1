@@ -190,7 +190,8 @@ try {
      az account set --subscription <your-subscription-guid>
 
 4. Deploy - choose one path:
-     Bicep:  bash deploy.sh          (Git Bash or WSL)
+     Full lab:  orchestrate.cmd
+     Class-1:   orchestrate.cmd --class1-only
      Python: .\.venv\Scripts\python.exe scripts\provision.py --subscription-id <guid>
 
 5. Verify:

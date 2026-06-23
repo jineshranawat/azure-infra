@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """End-to-end lab orchestration: Class-1 landing zone + platform services + verify.
 
-Single entry point for trainers and learners. Default mode runs the FULL lab.
+Windows learners run orchestrate.cmd (this module is the real logic).
 
-Typical first run (edit .env first):
+First time on a clean machine:
+    orchestrate.cmd --install-cli
 
-    python scripts/orchestrate.py --install-cli
-
-Full lab (default) — Class-1 + ADF + Purview + Databricks + verify + cost compare:
-
-    python scripts/orchestrate.py
+Full lab (default, safe to re-run — idempotent incremental deploys):
+    orchestrate.cmd
 
 Class-1 landing zone only:
+    orchestrate.cmd --class1-only
 
-    python scripts/orchestrate.py --class1-only
+Teardown:
+    orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 
 Environment variables / .env keys:
     AZURE_SUBSCRIPTION_ID, LEARNER, OWNER_EMAIL, LOCATION (uksouth|ukwest)
@@ -58,6 +58,8 @@ MANDATORY_TAGS: dict[str, str] = {
 }
 
 logger = logging.getLogger("orchestrate")
+
+# --- Config & paths (guardrail: UK-only locations, deterministic learner id) ---
 
 
 @dataclass(frozen=True)
@@ -167,6 +169,7 @@ def _merge_config(args: argparse.Namespace) -> Config:
     )
 
 
+# --- Bootstrap: .env, venv, Azure CLI (Windows-only auto-install) ---
 def _ensure_dotenv() -> None:
     if ENV_FILE.is_file():
         _ok(f".env exists ({ENV_FILE})")
@@ -205,12 +208,14 @@ def _ensure_venv(*, skip: bool) -> Path:
     _ok(f"Python {version.stdout.strip()}")
 
     vpy = _venv_python()
-    if not vpy.is_file():
+    if vpy.is_file():
+        _ok("Virtual environment already present (.venv)")
+    else:
         _step("Creating virtual environment (.venv)")
         _run([py, "-m", "venv", str(VENV_DIR)])
         _ok("Virtual environment created")
 
-    _step("Installing Python dependencies")
+    _step("Installing Python dependencies (idempotent pip install)")
     _run([str(vpy), "-m", "pip", "install", "--upgrade", "pip", "-q"])
     _run([str(vpy), "-m", "pip", "install", "-r", str(REQUIREMENTS), "-q"])
     _ok("requirements.txt installed")
@@ -244,39 +249,6 @@ def _install_azure_cli_windows() -> None:
     )
 
 
-def _install_azure_cli_linux() -> None:
-    if shutil.which("apt-get"):
-        _step("Installing Azure CLI (apt)")
-        _run(["bash", "-c", "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash"])
-        return
-    if shutil.which("dnf"):
-        _step("Installing Azure CLI (dnf)")
-        _run(["bash", "-c", "sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc"])
-        _run(
-            [
-                "bash", "-c",
-                "sudo dnf install -y https://packages.microsoft.com/config/rhel/9.0/packages-microsoft-prod.rpm "
-                "&& sudo dnf install -y azure-cli",
-            ]
-        )
-        return
-    raise SystemExit(
-        "Unsupported Linux package manager. Install Azure CLI manually:\n"
-        "  https://learn.microsoft.com/cli/azure/install-azure-cli-linux"
-    )
-
-
-def _install_azure_cli_macos() -> None:
-    if shutil.which("brew"):
-        _step("Installing Azure CLI (Homebrew)")
-        _run(["brew", "install", "azure-cli"])
-        return
-    raise SystemExit(
-        "Homebrew not found. Install Azure CLI manually:\n"
-        "  https://learn.microsoft.com/cli/azure/install-azure-cli-macos"
-    )
-
-
 def _ensure_azure_cli(*, install: bool) -> str:
     az = _find_az()
     if az:
@@ -287,18 +259,14 @@ def _ensure_azure_cli(*, install: bool) -> str:
 
     if not install:
         raise SystemExit(
-            "Azure CLI not found. Re-run with --install-cli or install manually."
+            "Azure CLI not found. Re-run: orchestrate.cmd --install-cli"
         )
 
-    system = platform.system()
-    if system == "Windows":
-        _install_azure_cli_windows()
-    elif system == "Linux":
-        _install_azure_cli_linux()
-    elif system == "Darwin":
-        _install_azure_cli_macos()
-    else:
-        raise SystemExit(f"Unsupported OS for auto-install: {system}")
+    if platform.system() != "Windows":
+        raise SystemExit(
+            "This lab is Windows-only. Use a Windows machine and orchestrate.cmd."
+        )
+    _install_azure_cli_windows()
 
     az = _find_az()
     if not az:
@@ -306,6 +274,7 @@ def _ensure_azure_cli(*, install: bool) -> str:
     return az
 
 
+# --- Azure login & subscription context ---
 def _ensure_az_login(az: str, *, use_device_code: bool) -> None:
     _step("Checking Azure login")
     probe = _run([az, "account", "show", "-o", "json"], check=False, capture=True)
@@ -352,20 +321,35 @@ def _tag_args(cfg: Config) -> list[str]:
     return args
 
 
+# --- Class-1 deploy: incremental Bicep + discover partial estate ---
+def _resource_group_exists(az: str, name: str) -> bool:
+    """Return True when the RG already exists (idempotent re-run)."""
+    result = _run(
+        [az, "group", "exists", "--name", name, "-o", "tsv"],
+        capture=True,
+        check=False,
+    )
+    return result.stdout.strip().lower() == "true"
+
+
 def _deploy_bicep(az: str, cfg: Config, principal_id: str) -> dict[str, Any]:
-    _step(f"Creating resource group {cfg.resource_group}")
+    if _resource_group_exists(az, cfg.resource_group):
+        _ok(f"Resource group {cfg.resource_group} already present — incremental update")
+    else:
+        _step(f"Creating resource group {cfg.resource_group}")
     _run(
         [az, "group", "create", "--name", cfg.resource_group, "--location", cfg.location, "--output", "none"]
         + _tag_args(cfg)
     )
-    _ok(f"Resource group {cfg.resource_group}")
+    _ok(f"Resource group {cfg.resource_group} ready")
 
-    _step("Deploying Bicep template (budget, KV, storage, RBAC)")
+    _step("Deploying Bicep template (incremental — budget, KV, storage, RBAC)")
     deploy = _run(
         [
             az, "deployment", "group", "create",
             "--resource-group", cfg.resource_group,
             "--name", "main",
+            "--mode", "Incremental",
             "--template-file", str(BICEP_TEMPLATE),
             "--parameters",
             f"location={cfg.location}",
@@ -467,7 +451,7 @@ def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) 
             "Class-1 storage account not found. Run main deploy first (orchestrate without --platforms-only)."
         )
 
-    _step("Deploying platform services (ADF, Synapse, Purview, Fabric, Databricks)")
+    _step("Deploying platform services (incremental — ADF, Synapse, Purview, Fabric, Databricks)")
     _register_platform_providers(az)
     sql_password = _synapse_sql_password()
     admin_json = json.dumps([cfg.owner_email])
@@ -476,6 +460,7 @@ def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) 
             az, "deployment", "group", "create",
             "--resource-group", cfg.resource_group,
             "--name", "platforms",
+            "--mode", "Incremental",
             "--template-file", str(PLATFORM_BICEP),
             "--parameters",
             f"location={cfg.location}",
@@ -504,6 +489,7 @@ def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) 
                 az, "deployment", "group", "create",
                 "--resource-group", cfg.resource_group,
                 "--name", "platforms",
+                "--mode", "Incremental",
                 "--template-file", str(PLATFORM_BICEP),
                 "--parameters",
                 f"location={cfg.location}",
@@ -558,7 +544,7 @@ def _create_fabric_workspace(vpy: Path, cfg: Config, outputs: dict[str, Any]) ->
         for line in (result.stdout or "").splitlines():
             if "Workspace" in line or "Fabric" in line:
                 logger.info("    %s", line.split("—", 1)[-1].strip())
-        _ok(f"Fabric workspace '{ws_name}' created")
+        _ok(f"Fabric workspace '{ws_name}' ready")
     else:
         _warn("Fabric workspace API call failed (capacity exists — create workspace in https://app.fabric.microsoft.com)")
         logger.debug(result.stderr or result.stdout)
@@ -744,7 +730,7 @@ def _print_summary(cfg: Config, outputs: dict[str, Any], *, lab_mode: str) -> No
         f"  Budgets           : {urls.get('budgets', 'https://portal.azure.com/#view/Microsoft_Azure_CostManagement/BudgetsBlade')}",
         "",
         "--- Teardown ---",
-        f"  {_venv_python()} scripts/teardown.py --resource-group {rg} --yes",
+        f"  orchestrate.cmd teardown --resource-group {rg} --yes",
         "",
         "Trainer notes: docs/TRAINER-NOTES.md",
     ])
@@ -782,7 +768,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--install-cli",
         action="store_true",
-        help="Install Azure CLI if missing (winget/apt/brew)",
+        help="Install Azure CLI if missing (winget on Windows)",
     )
     parser.add_argument("--skip-setup", action="store_true", help="Skip venv and pip install")
     parser.add_argument("--skip-verify", action="store_true", help="Skip verify_cost.py")

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Create a Microsoft Fabric workspace and assign it to a Fabric capacity.
 
+Idempotent: lists existing workspaces first; if displayName matches, skips create.
+
 Requires:
   - Fabric capacity already deployed (infra/platform-services.bicep)
   - Signed-in user with Fabric admin / workspace create rights
@@ -11,10 +13,10 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 
@@ -22,6 +24,7 @@ from azure.identity import AzureCliCredential
 
 logger = logging.getLogger(__name__)
 
+# Fabric REST API base — workspace create is control-plane, not Azure ARM.
 FABRIC_API = "https://api.fabric.microsoft.com/v1"
 FABRIC_SCOPE = "https://api.fabric.microsoft.com/.default"
 
@@ -32,6 +35,7 @@ def _configure_logging(verbose: bool) -> None:
 
 
 def _fabric_token() -> str:
+    """Acquire OAuth token via az login session (DefaultAzureCredential chain)."""
     credential = AzureCliCredential()
     return credential.get_token(FABRIC_SCOPE).token
 
@@ -42,6 +46,7 @@ def _request(
     token: str,
     body: dict[str, Any] | None = None,
 ) -> tuple[int, dict[str, Any] | None, dict[str, str]]:
+    """Low-level Fabric API call; returns (status, json_body, response_headers)."""
     url = f"{FABRIC_API}{path}"
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(
@@ -68,7 +73,26 @@ def _request(
             return exc.code, None, dict(exc.headers)
 
 
+def _find_workspace_by_display_name(display_name: str, token: str) -> dict[str, Any] | None:
+    """List workspaces (paginated) and return the first match on displayName — idempotent skip."""
+    continuation: str | None = None
+    while True:
+        path = "/workspaces"
+        if continuation:
+            path = f"/workspaces?continuationToken={urllib.parse.quote(continuation)}"
+        status, body, _ = _request("GET", path, token)
+        if status != 200 or not body:
+            return None
+        for ws in body.get("value", []):
+            if ws.get("displayName") == display_name:
+                return ws
+        continuation = body.get("continuationToken")
+        if not continuation:
+            return None
+
+
 def _wait_workspace(token: str, workspace_id: str, timeout_s: int = 120) -> dict[str, Any] | None:
+    """Poll async workspace provisioning until GET returns 200."""
     deadline = time.time() + timeout_s
     while time.time() < deadline:
         status, body, _ = _request("GET", f"/workspaces/{workspace_id}", token)
@@ -84,7 +108,14 @@ def create_fabric_workspace(
     *,
     description: str = "Class-1 training workspace",
 ) -> dict[str, Any]:
+    """Create workspace on capacity, or return existing workspace if displayName already present."""
     token = _fabric_token()
+
+    existing = _find_workspace_by_display_name(display_name, token)
+    if existing:
+        logger.info("Fabric workspace already present: %s (%s)", display_name, existing.get("id", ""))
+        return existing
+
     payload = {
         "displayName": display_name,
         "description": description,

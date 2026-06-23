@@ -15,7 +15,7 @@ Timed flow for trainers and learners. Each block maps to a section of this repo 
 | Block | Time | Concept | Code / artefact | Learner sees in portal |
 |-------|------|---------|-----------------|------------------------|
 | 0 | 30 min | Machine setup & Azure login | `scripts/setup-windows.ps1`, `.env` | Subscriptions blade |
-| 1 | 45 min | UK residency & governance tags | `deploy.sh` (RG), `main.bicep` `tags` | Resource group tags |
+| 1 | 45 min | UK residency & governance tags | `orchestrate.cmd`, `main.bicep` `tags` | Resource group tags |
 | 2 | 45 min | Cost guardrails before spend | `main.bicep` `budget` | Cost Management → Budgets |
 | 3 | 60 min | Identity & secrets (Key Vault) | `main.bicep` `keyVault` | Key Vault blade |
 | 4 | 75 min | Medallion lake & lifecycle | `main.bicep` storage + containers | Storage → containers, lifecycle |
@@ -41,12 +41,12 @@ Timed flow for trainers and learners. Each block maps to a section of this repo 
 - [ ] Copy `.env.example` → `.env` and fill in subscription ID, learner, email
 - [ ] Run **full lab** orchestrator:
 
-  ```powershell
-  .\orchestrate.ps1 --skip-setup
+  ```text
+  orchestrate.cmd --install-cli
   ```
 
-  ```bash
-  ./orchestrate.sh --install-cli
+  ```text
+  orchestrate.cmd
   ```
 
 - [ ] Complete `az login` when prompted (browser or `--use-device-code` on headless VMs)
@@ -81,8 +81,8 @@ Timed flow for trainers and learners. Each block maps to a section of this repo 
 
 | File | What to show |
 |------|----------------|
-| `deploy.sh` L19–22 | Location guard (`uksouth` / `ukwest` only) |
-| `deploy.sh` L26–35 | Tag list applied at RG creation |
+| scripts/orchestrate.py L19–22 | Location guard (`uksouth` / `ukwest` only) |
+| scripts/orchestrate.py L26–35 | Tag list applied at RG creation |
 | `infra/main.bicep` L7–12 | `@allowed` on `location` param |
 | `infra/main.bicep` L28–37 | Same tags on every resource inside Bicep |
 
@@ -118,7 +118,7 @@ az group create --name rg-<learner>-class1 --location uksouth `
 
 ### Checkpoint
 
-Portal: **Resource groups** → `rg-<learner>-class1` → Tags blade matches `deploy.sh`.
+Portal: **Resource groups** → `rg-<learner>-class1` → Tags blade matches scripts/orchestrate.py.
 
 ---
 
@@ -138,23 +138,17 @@ Portal: **Resource groups** → `rg-<learner>-class1` → Tags blade matches `de
 | File | What to show |
 |------|----------------|
 | `infra/main.bicep` L44–86 | `Microsoft.Consumption/budgets` resource |
-| `deploy.sh` L49–50 | `budgetStartDate` = 1st of current UTC month |
+| scripts/orchestrate.py L49–50 | `budgetStartDate` = 1st of current UTC month |
 | `scripts/provision.py` `_ensure_budget` | Same logic in Python SDK path |
 
 Discuss: why `filter.dimensions.ResourceGroupName` matters.
 
 ### Hands-on (15 min)
 
-Deploy budget (full deploy or Bicep-only if RG exists):
+Deploy budget (full deploy or class1-only if stepping through):
 
-```powershell
-# Full path
-bash deploy.sh
-# Windows without bash:
-az deployment group create --resource-group rg-<learner>-class1 `
-  --template-file infra/main.bicep `
-  --parameters location=uksouth learner=<learner> ownerEmail=<email> `
-               principalObjectId=<object-id> budgetStartDate=<yyyy-mm-01>
+```text
+orchestrate.cmd --class1-only
 ```
 
 ### Student TODO
@@ -283,7 +277,7 @@ Containers: audit, bronze, gold, silver
 | File | What to show |
 |------|----------------|
 | `infra/main.bicep` L214–236 | Scoped role assignments |
-| `deploy.sh` L46–47 | Where principal ID is sourced |
+| scripts/orchestrate.py L46–47 | Where principal ID is sourced |
 | `scripts/provision.py` `_ensure_rbac` | SDK path |
 
 **Trainer note:** Bicep role GUIDs must use `concat()` — string interpolation can corrupt GUIDs containing `586e75` (scientific-notation parsing). If Bicep RBAC fails, assign via CLI:
@@ -402,7 +396,7 @@ Script exits 0; learner can articulate difference between budget cap and actual 
 
 | Track | When to use | Command |
 |-------|-------------|---------|
-| **Bicep / IaC** (default) | Infra engineers, GitOps mindset | `bash deploy.sh` |
+| **Bicep / IaC** (default) | Infra engineers, GitOps mindset | `orchestrate.cmd` |
 | **Python SDK** | Data engineers, automation focus | `python scripts/provision.py --subscription-id <guid>` |
 
 Both paths produce the **same estate** in the same build order. Teach Block 2–5 concepts once; demo both entry points if time allows.
@@ -423,14 +417,14 @@ Both paths produce the **same estate** in the same build order. Teach Block 2–
 15:30 – 15:45   Block 7   Teardown demo (optional live delete)
 ```
 
-**Incremental deploy variant:** Run `bash deploy.sh` once at **end of Block 2** (budget only — comment out later resources in Bicep for live stepped deploy), or deploy fully at lunch and use afternoon for portal + RBAC labs. Full template deploy takes ~3–5 minutes.
+**Incremental deploy variant:** Run `orchestrate.cmd --class1-only` once at **end of Block 2**, or deploy fully at lunch and use afternoon for portal + RBAC labs.
 
 ---
 
 ## Trainer quick-reference — build order in code
 
 ```text
-deploy.sh          →  RG + tags + parameters
+orchestrate.cmd     →  RG + tags + Bicep deploy
 main.bicep         →  budget → keyVault → storageAccount → containers → lifecycle → RBAC
 provision.py       →  same order in _ensure_* functions (Steps 1–5)
 verify_cost.py     →  post-deploy SKU + MTD cost gate
@@ -446,7 +440,7 @@ teardown.py        →  delete rg-<learner>-class1
 | `.env.example` | Learner-specific config template |
 | `scripts/setup-windows.ps1` | Block 0 automation |
 | `infra/main.bicep` | Blocks 1–5 IaC |
-| `deploy.sh` | Block 1 entry + full deploy orchestration |
+| scripts/orchestrate.py | Block 1 entry + full deploy orchestration |
 | `scripts/provision.py` | Blocks 1–5 SDK alternative |
 | `scripts/verify_cost.py` | Block 6 verification |
 | `scripts/teardown.py` | Block 7 cleanup |
