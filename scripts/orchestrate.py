@@ -182,9 +182,29 @@ def _ensure_dotenv() -> None:
 
 
 def _python_for_venv() -> str:
-    for candidate in ("python3", "python", "py"):
-        if shutil.which(candidate):
-            return candidate
+    """Resolve a Python 3.11+ executable (Windows Store python3 stubs are skipped)."""
+    if sys.version_info >= (3, 11) and Path(sys.executable).is_file():
+        return sys.executable
+
+    if platform.system() == "Windows":
+        candidates = ("py", "python", "python3")
+    else:
+        candidates = ("python3", "python")
+
+    for candidate in candidates:
+        path = shutil.which(candidate)
+        if not path:
+            continue
+        try:
+            ok = subprocess.run(
+                [path, "-c", "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"],
+                capture_output=True,
+                check=False,
+            )
+            if ok.returncode == 0:
+                return path
+        except OSError:
+            continue
     raise SystemExit("Python 3.11+ not found on PATH.")
 
 
