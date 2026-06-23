@@ -87,7 +87,8 @@ Use this table during class. **Open the IDE file first**, run the command, **the
 | `_merge_config()` | 125–160 | Reads `.env`; validates subscription, learner regex, UK location |
 | `_ensure_venv()` | 187–210 | Creates `.venv`, `pip install -r requirements.txt` |
 | `_ensure_azure_cli()` | 273–299 | Finds `az` or installs via winget/apt/brew |
-| `_ensure_az_login()` | 302–315 | Runs `az account show`; if fail → `az login` |
+| `_ensure_az_no_wam_broker()` | 319–336 | Windows: `az config set core.enable_broker_on_windows=false` (skip if already false) |
+| `_ensure_az_login()` | 339–355 | Runs `az account show`; if fail → `az login` (optional `--use-device-code`) |
 
 **Portal — what to show:**
 
@@ -350,7 +351,7 @@ When you run `.\orchestrate.cmd`, this is the exact sequence:
 | 1 | Load config | `_ensure_dotenv`, `_merge_config` | Read `.env` |
 | 2 | Python setup | `_ensure_venv` | `.venv` + pip packages |
 | 3 | CLI check | `_ensure_azure_cli` | Find or install `az` |
-| 4 | Login | `_ensure_az_login` | `az account show` or `az login` |
+| 4 | WAM broker + login | `_ensure_az_no_wam_broker`, `_ensure_az_login` | Disable WAM on Windows (idempotent); `az account show` or `az login` |
 | 5 | Subscription | `_set_subscription` | `az account set` |
 | 6 | Principal ID | `_principal_object_id` | `az ad signed-in-user show` |
 | 7 | Resource group | `_deploy_bicep` | `az group create` + tags |
@@ -506,7 +507,8 @@ orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 | Symptom | Open in code | Open in portal |
 |---------|----------------|----------------|
 | `LOCATION must be uksouth or ukwest` | `.env` `LOCATION` | N/A |
-| `az login` fails | — | Entra ID sign-in logs |
+| `az login` fails | `_ensure_az_no_wam_broker`, `--use-device-code` | Entra ID sign-in logs |
+| MDM / `0x80192ee7` on VDI | `_ensure_az_no_wam_broker` (auto); `orchestrate.cmd --use-device-code` | — |
 | Bicep RBAC `RoleDefinitionDoesNotExist` | `main.bicep` L222 `concat()` | IAM → manual assign |
 | `Versioning is not supported` | `main.bicep` blobService (no versioning with HNS) | — |
 | Blob upload forbidden | `main.bicep` L228 storage role | Storage → IAM |

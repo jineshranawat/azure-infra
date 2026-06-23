@@ -35,7 +35,7 @@ orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 | Phase | Script function | Deploys / runs |
 |-------|-----------------|----------------|
 | 0 | `_ensure_dotenv`, `_ensure_venv`, `_ensure_azure_cli` | `.env`, Python venv, Azure CLI |
-| 1 | `_ensure_az_login`, `_set_subscription` | `az login`, subscription context |
+| 1 | `_ensure_az_no_wam_broker`, `_ensure_az_login`, `_set_subscription` | Disable WAM broker (VDI), `az login`, subscription context |
 | 2 | `_deploy_bicep`, `_ensure_rbac` | Class-1: RG, tags, budget, KV, storage, medallion, lifecycle, RBAC |
 | 3 | `_deploy_platforms`, `_create_fabric_workspace` | ADF, Purview, Databricks; Synapse/Fabric (best-effort) |
 | 4 | `_verify` | `verify_cost.py` — SKU allow-list + MTD cost |
@@ -52,7 +52,7 @@ orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 | `--skip-setup` | Optional speed — skip venv/pip when already installed |
 | `--skip-verify` | Skip SKU/cost gate (not recommended) |
 | `--skip-compare` | Skip list-price comparison table |
-| `--use-device-code` | Headless VM / no browser for `az login` |
+| `--use-device-code` | Headless VDI / no browser — avoids WAM and MDM enrollment entirely |
 | `--install-cli` | First run — install Azure CLI via winget |
 
 ---
@@ -200,6 +200,7 @@ Full learner table (failures, MPN warnings, AI chat): [README §1](../README.md#
 | `az` not found | `orchestrate.cmd --install-cli` |
 | PowerShell blocks scripts | `orchestrate.cmd` in Command Prompt |
 | `az login` MFA | `orchestrate.cmd --use-device-code` |
+| MDM / `0x80192ee7` on VDI | WAM disabled automatically; `--use-device-code` if still blocked |
 | RBAC `RoleDefinitionDoesNotExist` | Re-run — `_ensure_rbac` fallback |
 | Fabric workspace exists | `already present` log — OK |
 | Portal cost `-` | Billing lag — use verify script |

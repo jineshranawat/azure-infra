@@ -186,6 +186,7 @@ What file should I open and what command should I try next?
 | Symptom | Likely cause | Workaround |
 |---------|--------------|------------|
 | Browser login loop / popup blocked | Browser or SSO policy | `orchestrate.cmd --use-device-code` — sign in on phone/another device |
+| Work-account / MDM prompt or error `0x80192ee7` (-2145833241) on VDI | Azure CLI WAM broker triggers Intune enrollment | Orchestrator disables WAM automatically; re-run `orchestrate.cmd`. Still stuck? `orchestrate.cmd --use-device-code` — or untick *Allow my organization to manage my device* if the GUI appears |
 | `az login` timeout | VPN / proxy | Try guest network; ask IT; use device code |
 | Wrong subscription in portal | Multiple subs | Check `.env` GUID; trainer runs `az account set --subscription <id>` |
 | `Authorization failed` / 403 on deploy | Insufficient role | Need **Contributor** or **Owner** on training subscription — ask trainer |

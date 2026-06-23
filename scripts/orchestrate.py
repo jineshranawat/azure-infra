@@ -295,6 +295,47 @@ def _ensure_azure_cli(*, install: bool) -> str:
 
 
 # --- Azure login & subscription context ---
+def _az_config_value(az: str, key: str) -> str | None:
+    """Read one az config key; None when unset or unreadable."""
+    result = _run(
+        [az, "config", "get", key, "-o", "json"],
+        check=False,
+        capture=True,
+    )
+    if result.returncode != 0:
+        return None
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(payload, list):
+        payload = payload[0] if payload else {}
+    if not isinstance(payload, dict):
+        return None
+    value = payload.get("value")
+    return str(value) if value is not None else None
+
+
+def _ensure_az_no_wam_broker(az: str) -> None:
+    """Disable WAM broker on Windows so az login skips MDM device enrollment (VDI-safe).
+
+    Azure CLI 2.61+ defaults to Web Account Manager on Windows, which can trigger
+    Intune enrollment and fail on VDIs (e.g. 0x80192ee7). Browser or device-code
+    auth works once the broker is off. Idempotent: skips when already false.
+    """
+    if platform.system() != "Windows":
+        return
+
+    _step("Checking Azure CLI login broker (WAM)")
+    current = _az_config_value(az, "core.enable_broker_on_windows")
+    if current is not None and current.lower() == "false":
+        _ok("WAM broker already disabled (core.enable_broker_on_windows=false)")
+        return
+
+    _run([az, "config", "set", "core.enable_broker_on_windows=false"], check=True)
+    _ok("Disabled WAM broker — az login will use browser or device-code auth, not MDM enrollment")
+
+
 def _ensure_az_login(az: str, *, use_device_code: bool) -> None:
     _step("Checking Azure login")
     probe = _run([az, "account", "show", "-o", "json"], check=False, capture=True)
@@ -303,7 +344,10 @@ def _ensure_az_login(az: str, *, use_device_code: bool) -> None:
         _ok(f"Signed in as {acct.get('user', {}).get('name', 'unknown')}")
         return
 
-    _warn("Not signed in — starting az login")
+    if use_device_code:
+        _warn("Not signed in — starting az login (device code; sign in at https://aka.ms/devicelogin)")
+    else:
+        _warn("Not signed in — starting az login (browser; use --use-device-code on headless VDI)")
     login_cmd = [az, "login"]
     if use_device_code:
         login_cmd.append("--use-device-code")
@@ -836,6 +880,7 @@ def main(argv: list[str] | None = None) -> int:
 
     vpy = _ensure_venv(skip=args.skip_setup)
     az = _ensure_azure_cli(install=args.install_cli)
+    _ensure_az_no_wam_broker(az)
     _ensure_az_login(az, use_device_code=args.use_device_code)
     _set_subscription(az, cfg.subscription_id)
 
