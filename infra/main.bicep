@@ -19,8 +19,15 @@ param learner string
 @description('Owner email for mandatory tags and budget alert notifications.')
 param ownerEmail string
 
-@description('Object ID of the signed-in user — data-plane RBAC requires explicit assignment.')
+@description('Object ID of the signed-in user or service principal — data-plane RBAC requires explicit assignment.')
 param principalObjectId string
+
+@description('Principal type for data-plane RBAC role assignments.')
+@allowed([
+  'User'
+  'ServicePrincipal'
+])
+param principalType string = 'User'
 
 @description('First day of the current month (YYYY-MM-01) — budget timePeriod anchor.')
 param budgetStartDate string
@@ -221,7 +228,7 @@ resource kvRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   properties: {
     roleDefinitionId: concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', kvSecretsOfficerRoleId)
     principalId: principalObjectId
-    principalType: 'User'
+    principalType: principalType
   }
 }
 
@@ -231,7 +238,7 @@ resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-
   properties: {
     roleDefinitionId: concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', storageBlobDataContributorRoleId)
     principalId: principalObjectId
-    principalType: 'User'
+    principalType: principalType
   }
 }
 

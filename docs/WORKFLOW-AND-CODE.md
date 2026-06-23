@@ -84,11 +84,11 @@ Use this table during class. **Open the IDE file first**, run the command, **the
 | Function | Lines | Action |
 |----------|-------|--------|
 | `_ensure_dotenv()` | 163–171 | Copies `.env.example` → `.env` if missing; stops so learner can edit |
-| `_merge_config()` | 125–160 | Reads `.env`; validates subscription, learner regex, UK location |
+| `_merge_config()` | 125–160 | Reads `.env`; SP creds → service principal login; `CLASS_OWNER_EMAIL` fallback |
 | `_ensure_venv()` | 187–210 | Creates `.venv`, `pip install -r requirements.txt` |
 | `_ensure_azure_cli()` | 273–299 | Finds `az` or installs via winget/apt/brew |
-| `_ensure_az_no_wam_broker()` | 319–336 | Windows: `az config set core.enable_broker_on_windows=false` (skip if already false) |
-| `_ensure_az_login()` | 339–355 | Runs `az account show`; if fail → `az login` (optional `--use-device-code`) |
+| `_ensure_az_no_wam_broker()` | 319–336 | Windows interactive only: disable WAM broker (skip if already false) |
+| `_ensure_az_login()` | 339–390 | `az account show`; else SP login or `az login` (`--use-device-code` optional) |
 
 **Portal — what to show:**
 
@@ -96,13 +96,25 @@ Use this table during class. **Open the IDE file first**, run the command, **the
 2. Note **Directory** (tenant) for login issues
 3. **My role** should be Owner or Contributor
 
-**Learner `.env` example:**
+**Learner `.env` (per-learner browser login):**
 
 ```env
 AZURE_SUBSCRIPTION_ID=a802ddef-155b-481f-9796-fac7318a749f
 LEARNER=jinesh
 OWNER_EMAIL=v-jinesh@mastekus.onmicrosoft.com
 LOCATION=uksouth
+```
+
+**Class image `.env` (service principal — learner only sets subscription + LEARNER):**
+
+```env
+AZURE_SUBSCRIPTION_ID=<learner-subscription-guid>
+LEARNER=jinesh
+LOCATION=uksouth
+CLASS_OWNER_EMAIL=training@example.com
+AZURE_TENANT_ID=<tenant-guid>
+AZURE_CLIENT_ID=<app-id>
+AZURE_CLIENT_SECRET=<secret>
 ```
 
 ---

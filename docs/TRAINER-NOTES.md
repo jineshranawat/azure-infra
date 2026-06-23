@@ -35,7 +35,7 @@ orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 | Phase | Script function | Deploys / runs |
 |-------|-----------------|----------------|
 | 0 | `_ensure_dotenv`, `_ensure_venv`, `_ensure_azure_cli` | `.env`, Python venv, Azure CLI |
-| 1 | `_ensure_az_no_wam_broker`, `_ensure_az_login`, `_set_subscription` | Disable WAM broker (VDI), `az login`, subscription context |
+| 1 | `_ensure_az_no_wam_broker` or SP login, `_ensure_az_login`, `_set_subscription` | WAM off (interactive) or `az login --service-principal` (class image) |
 | 2 | `_deploy_bicep`, `_ensure_rbac` | Class-1: RG, tags, budget, KV, storage, medallion, lifecycle, RBAC |
 | 3 | `_deploy_platforms`, `_create_fabric_workspace` | ADF, Purview, Databricks; Synapse/Fabric (best-effort) |
 | 4 | `_verify` | `verify_cost.py` — SKU allow-list + MTD cost |
@@ -71,7 +71,8 @@ orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 ## 3. Pre-class checklist (trainer)
 
 - [ ] Learners have **Contributor** or **Owner** on a training subscription
-- [ ] `.env` filled: `AZURE_SUBSCRIPTION_ID`, `LEARNER`, `OWNER_EMAIL`, `LOCATION=uksouth`
+- [ ] `.env` filled: `AZURE_SUBSCRIPTION_ID`, `LEARNER`, `LOCATION=uksouth`
+- [ ] Per-learner login: `OWNER_EMAIL` in `.env` — or class mode: trainer sets `CLASS_OWNER_EMAIL` + `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` on golden image (learners skip browser login)
 - [ ] Python 3.11+ on PATH
 - [ ] Explain: passwords never go in chat — `az login` only
 - [ ] **MPN/MSDN subscriptions:** warn that **Synapse** and **Fabric capacity** may be blocked (see Section 8)

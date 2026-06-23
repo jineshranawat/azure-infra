@@ -16,7 +16,9 @@ Teardown:
     orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 
 Environment variables / .env keys:
-    AZURE_SUBSCRIPTION_ID, LEARNER, OWNER_EMAIL, LOCATION (uksouth|ukwest)
+    AZURE_SUBSCRIPTION_ID, LEARNER, LOCATION (uksouth|ukwest)
+    OWNER_EMAIL (per-learner) or CLASS_OWNER_EMAIL (trainer golden image)
+    AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET (optional — class SP login)
 """
 
 from __future__ import annotations
@@ -63,11 +65,20 @@ logger = logging.getLogger("orchestrate")
 
 
 @dataclass(frozen=True)
+class ServicePrincipalAuth:
+    tenant_id: str
+    client_id: str
+    client_secret: str
+
+
+@dataclass(frozen=True)
 class Config:
     subscription_id: str
     learner: str
     owner_email: str
     location: str
+    principal_type: str
+    service_principal: ServicePrincipalAuth | None
 
     @property
     def resource_group(self) -> str:
@@ -96,6 +107,17 @@ def _warn(msg: str) -> None:
     logger.warning("    WARN: %s", msg)
 
 
+def _redact_cmd(cmd: list[str]) -> str:
+    """Mask secrets when logging az login --password values."""
+    masked = list(cmd)
+    for i, arg in enumerate(masked):
+        if arg in ("--password", "-p") and i + 1 < len(masked):
+            masked[i + 1] = "***"
+        elif arg.startswith("--password="):
+            masked[i] = "--password=***"
+    return " ".join(masked)
+
+
 def _run(
     cmd: list[str],
     *,
@@ -104,7 +126,7 @@ def _run(
     env: dict[str, str] | None = None,
     cwd: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    logger.debug("exec: %s", " ".join(cmd))
+    logger.debug("exec: %s", _redact_cmd(cmd))
     merged_env = os.environ.copy()
     if env:
         merged_env.update(env)
@@ -131,8 +153,43 @@ def _load_dotenv(path: Path) -> dict[str, str]:
     return values
 
 
+def _service_principal_auth(file_env: dict[str, str]) -> ServicePrincipalAuth | None:
+    """Return SP credentials when all three env keys are set; else None for interactive login."""
+    tenant_id = (
+        os.environ.get("AZURE_TENANT_ID") or file_env.get("AZURE_TENANT_ID", "")
+    ).strip()
+    client_id = (
+        os.environ.get("AZURE_CLIENT_ID") or file_env.get("AZURE_CLIENT_ID", "")
+    ).strip()
+    client_secret = (
+        os.environ.get("AZURE_CLIENT_SECRET") or file_env.get("AZURE_CLIENT_SECRET", "")
+    ).strip()
+    if not tenant_id and not client_id and not client_secret:
+        return None
+    missing = [
+        name
+        for name, value in (
+            ("AZURE_TENANT_ID", tenant_id),
+            ("AZURE_CLIENT_ID", client_id),
+            ("AZURE_CLIENT_SECRET", client_secret),
+        )
+        if not value
+    ]
+    if missing:
+        raise SystemExit(
+            "Service principal auth requires all of AZURE_TENANT_ID, AZURE_CLIENT_ID, "
+            f"AZURE_CLIENT_SECRET (missing: {', '.join(missing)})."
+        )
+    return ServicePrincipalAuth(
+        tenant_id=tenant_id,
+        client_id=client_id,
+        client_secret=client_secret,
+    )
+
+
 def _merge_config(args: argparse.Namespace) -> Config:
     file_env = _load_dotenv(ENV_FILE)
+    service_principal = _service_principal_auth(file_env)
     subscription_id = (
         args.subscription_id
         or os.environ.get("AZURE_SUBSCRIPTION_ID")
@@ -145,6 +202,8 @@ def _merge_config(args: argparse.Namespace) -> Config:
         args.owner_email
         or os.environ.get("OWNER_EMAIL")
         or file_env.get("OWNER_EMAIL", "")
+        or os.environ.get("CLASS_OWNER_EMAIL")
+        or file_env.get("CLASS_OWNER_EMAIL", "")
     ).strip()
     location = (
         args.location or os.environ.get("LOCATION") or file_env.get("LOCATION", "uksouth")
@@ -155,17 +214,24 @@ def _merge_config(args: argparse.Namespace) -> Config:
             "AZURE_SUBSCRIPTION_ID required. Set in .env or pass --subscription-id."
         )
     if not owner_email:
-        raise SystemExit("OWNER_EMAIL required. Set in .env or pass --owner-email.")
+        raise SystemExit(
+            "OWNER_EMAIL or CLASS_OWNER_EMAIL required. "
+            "Learners set OWNER_EMAIL; class images set CLASS_OWNER_EMAIL once with service principal creds."
+        )
     if location not in ALLOWED_LOCATIONS:
         raise SystemExit(f"LOCATION must be one of {sorted(ALLOWED_LOCATIONS)}.")
     if not LEARNER_RE.match(learner):
         raise SystemExit("LEARNER must be 2–10 lowercase alphanumeric characters.")
+
+    principal_type = "ServicePrincipal" if service_principal else "User"
 
     return Config(
         subscription_id=subscription_id,
         learner=learner,
         owner_email=owner_email,
         location=location,
+        principal_type=principal_type,
+        service_principal=service_principal,
     )
 
 
@@ -336,12 +402,41 @@ def _ensure_az_no_wam_broker(az: str) -> None:
     _ok("Disabled WAM broker — az login will use browser or device-code auth, not MDM enrollment")
 
 
-def _ensure_az_login(az: str, *, use_device_code: bool) -> None:
+def _ensure_az_login(
+    az: str,
+    *,
+    use_device_code: bool,
+    service_principal: ServicePrincipalAuth | None,
+) -> None:
     _step("Checking Azure login")
     probe = _run([az, "account", "show", "-o", "json"], check=False, capture=True)
     if probe.returncode == 0:
         acct = json.loads(probe.stdout)
-        _ok(f"Signed in as {acct.get('user', {}).get('name', 'unknown')}")
+        user = acct.get("user", {})
+        label = user.get("name", "unknown")
+        user_type = user.get("type")
+        if user_type:
+            label = f"{label} ({user_type})"
+        _ok(f"Signed in as {label}")
+        return
+
+    if service_principal:
+        _warn("Not signed in — az login --service-principal (no browser)")
+        _run(
+            [
+                az,
+                "login",
+                "--service-principal",
+                "--username",
+                service_principal.client_id,
+                "--password",
+                service_principal.client_secret,
+                "--tenant",
+                service_principal.tenant_id,
+            ],
+            check=True,
+        )
+        _ok("Service principal login complete")
         return
 
     if use_device_code:
@@ -363,8 +458,46 @@ def _set_subscription(az: str, subscription_id: str) -> None:
     _ok(f"Subscription: {acct.get('name')} ({acct.get('id')})")
 
 
-def _principal_object_id(az: str) -> str:
-    result = _run([az, "ad", "signed-in-user", "show", "--query", "id", "-o", "tsv"], capture=True)
+def _detect_account_principal(az: str) -> tuple[str, str | None]:
+    """Infer principal type and app id from the active az login session."""
+    result = _run([az, "account", "show", "-o", "json"], check=False, capture=True)
+    if result.returncode != 0:
+        return "User", None
+    user = json.loads(result.stdout).get("user", {})
+    if user.get("type") == "servicePrincipal":
+        return "ServicePrincipal", user.get("name")
+    return "User", None
+
+
+def _principal_object_id(
+    az: str,
+    *,
+    principal_type: str,
+    client_id: str | None = None,
+) -> str:
+    if principal_type == "ServicePrincipal":
+        app_id = client_id
+        if not app_id:
+            acct = json.loads(
+                _run([az, "account", "show", "-o", "json"], capture=True).stdout
+            )
+            app_id = acct.get("user", {}).get("name", "")
+        result = _run(
+            [az, "ad", "sp", "show", "--id", app_id, "--query", "id", "-o", "tsv"],
+            capture=True,
+            check=False,
+        )
+        principal = result.stdout.strip()
+        if not principal:
+            raise RuntimeError(
+                f"Could not resolve service principal object ID for app {app_id}."
+            )
+        return principal
+
+    result = _run(
+        [az, "ad", "signed-in-user", "show", "--query", "id", "-o", "tsv"],
+        capture=True,
+    )
     principal = result.stdout.strip()
     if not principal:
         raise RuntimeError("Could not resolve signed-in user object ID.")
@@ -396,7 +529,13 @@ def _resource_group_exists(az: str, name: str) -> bool:
     return result.stdout.strip().lower() == "true"
 
 
-def _deploy_bicep(az: str, cfg: Config, principal_id: str) -> dict[str, Any]:
+def _deploy_bicep(
+    az: str,
+    cfg: Config,
+    principal_id: str,
+    *,
+    principal_type: str | None = None,
+) -> dict[str, Any]:
     if _resource_group_exists(az, cfg.resource_group):
         _ok(f"Resource group {cfg.resource_group} already present — incremental update")
     else:
@@ -406,6 +545,8 @@ def _deploy_bicep(az: str, cfg: Config, principal_id: str) -> dict[str, Any]:
         + _tag_args(cfg)
     )
     _ok(f"Resource group {cfg.resource_group} ready")
+
+    rbac_principal_type = principal_type or cfg.principal_type
 
     _step("Deploying Bicep template (incremental — budget, KV, storage, RBAC)")
     deploy = _run(
@@ -420,6 +561,7 @@ def _deploy_bicep(az: str, cfg: Config, principal_id: str) -> dict[str, Any]:
             f"learner={cfg.learner}",
             f"ownerEmail={cfg.owner_email}",
             f"principalObjectId={principal_id}",
+            f"principalType={rbac_principal_type}",
             f"budgetStartDate={_budget_start_date()}",
             "-o", "json",
         ],
@@ -630,7 +772,15 @@ def _deploy_python(vpy: Path, cfg: Config, principal_id: str | None) -> dict[str
     return _discover_outputs(_find_az() or "az", cfg)
 
 
-def _ensure_rbac(az: str, cfg: Config, principal_id: str, outputs: dict[str, Any]) -> None:
+def _ensure_rbac(
+    az: str,
+    cfg: Config,
+    principal_id: str,
+    outputs: dict[str, Any],
+    *,
+    principal_type: str | None = None,
+) -> None:
+    rbac_principal_type = principal_type or cfg.principal_type
     kv_name = outputs.get("keyVaultName")
     st_name = outputs.get("storageAccountName")
     if not kv_name or not st_name:
@@ -665,7 +815,7 @@ def _ensure_rbac(az: str, cfg: Config, principal_id: str, outputs: dict[str, Any
                 az, "role", "assignment", "create",
                 "--role", role,
                 "--assignee-object-id", principal_id,
-                "--assignee-principal-type", "User",
+                "--assignee-principal-type", rbac_principal_type,
                 "--scope", scope,
                 "-o", "none",
             ],
@@ -880,11 +1030,31 @@ def main(argv: list[str] | None = None) -> int:
 
     vpy = _ensure_venv(skip=args.skip_setup)
     az = _ensure_azure_cli(install=args.install_cli)
-    _ensure_az_no_wam_broker(az)
-    _ensure_az_login(az, use_device_code=args.use_device_code)
+    if cfg.service_principal:
+        _ok("Service principal auth configured — skipping browser login and WAM broker")
+    else:
+        _ensure_az_no_wam_broker(az)
+    _ensure_az_login(
+        az,
+        use_device_code=args.use_device_code,
+        service_principal=cfg.service_principal,
+    )
     _set_subscription(az, cfg.subscription_id)
 
-    principal_id = _principal_object_id(az)
+    principal_type = cfg.principal_type
+    sp_client_id = cfg.service_principal.client_id if cfg.service_principal else None
+    if principal_type == "User":
+        detected_type, detected_client = _detect_account_principal(az)
+        if detected_type == "ServicePrincipal":
+            principal_type = detected_type
+            sp_client_id = detected_client
+            _ok("Active session is a service principal — using SP object ID for RBAC")
+
+    principal_id = _principal_object_id(
+        az,
+        principal_type=principal_type,
+        client_id=sp_client_id,
+    )
     _ok(f"Principal object ID: {principal_id}")
 
     method = "bicep" if args.method == "auto" else args.method
@@ -893,10 +1063,12 @@ def main(argv: list[str] | None = None) -> int:
     # Phase 1: Class-1 landing zone (budget, KV, storage, RBAC)
     if not args.platforms_only:
         if method == "bicep":
-            outputs = _deploy_bicep(az, cfg, principal_id)
+            outputs = _deploy_bicep(
+                az, cfg, principal_id, principal_type=principal_type
+            )
         else:
             outputs = _deploy_python(vpy, cfg, principal_id)
-        _ensure_rbac(az, cfg, principal_id, outputs)
+        _ensure_rbac(az, cfg, principal_id, outputs, principal_type=principal_type)
 
     # Phase 2: Platform services (ADF, Purview, Databricks; Synapse/Fabric best-effort)
     if run_platforms:

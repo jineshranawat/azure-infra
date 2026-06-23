@@ -50,10 +50,10 @@ orchestrate.cmd --install-cli
 | What happens | You do |
 |--------------|--------|
 | Script copies `.env.example` → `.env` | Open `.env` in Notepad |
-| Script stops and asks you to edit | Set `AZURE_SUBSCRIPTION_ID`, `LEARNER`, `OWNER_EMAIL`, `LOCATION=uksouth` |
+| Script stops and asks you to edit | Set `AZURE_SUBSCRIPTION_ID`, `LEARNER`, `LOCATION=uksouth` (and `OWNER_EMAIL` unless using class service principal — see below) |
 | | Save the file |
 
-Example `.env`:
+Example `.env` (per-learner browser login):
 
 ```env
 AZURE_SUBSCRIPTION_ID=your-subscription-guid-here
@@ -61,6 +61,20 @@ LEARNER=yourname
 OWNER_EMAIL=you@yourcompany.com
 LOCATION=uksouth
 ```
+
+**Class / VDI mode (no browser login):** trainer bakes service principal creds + `CLASS_OWNER_EMAIL` into the golden image `.env`. Each learner only edits `AZURE_SUBSCRIPTION_ID` and `LEARNER`:
+
+```env
+AZURE_SUBSCRIPTION_ID=your-subscription-guid-here
+LEARNER=yourname
+LOCATION=uksouth
+CLASS_OWNER_EMAIL=training@yourcompany.com
+AZURE_TENANT_ID=<tenant-guid>
+AZURE_CLIENT_ID=<app-id>
+AZURE_CLIENT_SECRET=<secret-from-key-vault-or-trainer>
+```
+
+Never commit real `AZURE_CLIENT_SECRET` values to git — `.env` is gitignored.
 
 ---
 
@@ -75,7 +89,7 @@ orchestrate.cmd --install-cli
 | Phase | What happens |
 |-------|----------------|
 | Bootstrap | Creates `.venv`, installs Python packages, installs Azure CLI (winget) if missing |
-| Login | Browser opens for `az login` — sign in with your training account |
+| Login | Service principal (class image) or browser `az login` — no MFA popups on VDI when SP creds are set |
 | Deploy | Class-1 landing zone + ADF + Purview + Databricks + verify + cost summary |
 | Time | Allow **10–20 minutes** — do not close the window |
 
