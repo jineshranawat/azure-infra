@@ -204,7 +204,9 @@ What file should I open and what command should I try next?
 | `az login` timeout | VPN / proxy | Try guest network; ask IT; use device code |
 | Wrong subscription in portal | Multiple subs | Check `.env` GUID; trainer runs `az account set --subscription <id>` |
 | `Authorization failed` / 403 on deploy | Insufficient role | Need **Contributor** or **Owner** on training subscription — ask trainer |
-| `Could not resolve signed-in user object ID` | Stale login | `az logout` then `az login`; re-run `orchestrate.cmd` |
+| `Could not resolve service principal object ID` | Stale user `az login` while `.env` has SP creds | Re-run `orchestrate.cmd` — auto `az logout` + SP login; or `az logout` manually |
+| Purview error `35001` / tenant catalog exists | One Purview account per Entra tenant | **Automatic** — ADF + Databricks deploy; use existing Purview in [web.purview.azure.com](https://web.purview.azure.com) |
+| `Platform services deployment failed` | Purview/Fabric/Synapse (old builds) | Pull latest — Synapse/Fabric removed; Purview retries without blocking ADF/DBW |
 
 #### C — Deploy (Bicep / ARM)
 
@@ -225,7 +227,7 @@ These are **not** failures — orchestrator warns and continues. Full detail: [d
 |---------|---------|------------|
 | `SqlServerRegionDoesNotAllowProvisioning` | Synapse blocked on MPN | **Skip** — use Fabric trial SQL later; lab completes without Synapse |
 | `RegionalQuota: 0` (Fabric) | No Fabric capacity quota | Open [app.fabric.microsoft.com](https://app.fabric.microsoft.com) → **Start trial** → new workspace |
-| `Platform deploy failed — retrying without Fabric` | Fabric F-SKU blocked | **Automatic** — ADF, Purview, Databricks still deploy |
+| `Platform deploy failed — retrying without Fabric` | Old orchestrator on MPN subs | **Removed** — Fabric no longer deployed; pull latest `main` |
 | `Fabric capacity not deployed — skipping workspace` | No capacity ID | Fabric trial path above |
 | Purview in **eastus** | Tenant free-tier rule | **By design** — UK resources stay in uksouth; Purview exception documented |
 

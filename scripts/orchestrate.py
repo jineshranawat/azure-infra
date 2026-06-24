@@ -409,18 +409,22 @@ def _ensure_az_login(
     service_principal: ServicePrincipalAuth | None,
 ) -> None:
     _step("Checking Azure login")
-    probe = _run([az, "account", "show", "-o", "json"], check=False, capture=True)
-    if probe.returncode == 0:
-        acct = json.loads(probe.stdout)
-        user = acct.get("user", {})
-        label = user.get("name", "unknown")
-        user_type = user.get("type")
-        if user_type:
-            label = f"{label} ({user_type})"
-        _ok(f"Signed in as {label}")
-        return
 
     if service_principal:
+        probe = _run([az, "account", "show", "-o", "json"], check=False, capture=True)
+        if probe.returncode == 0:
+            user = json.loads(probe.stdout).get("user", {})
+            if (
+                user.get("type") == "servicePrincipal"
+                and user.get("name") == service_principal.client_id
+            ):
+                _ok(f"Signed in as service principal {service_principal.client_id}")
+                return
+            if user.get("type") != "servicePrincipal":
+                _warn(
+                    "Stale user browser session detected — signing out so service principal login can proceed"
+                )
+                _run([az, "logout"], check=False)
         _warn("Not signed in — az login --service-principal (no browser)")
         _run(
             [
@@ -437,6 +441,17 @@ def _ensure_az_login(
             check=True,
         )
         _ok("Service principal login complete")
+        return
+
+    probe = _run([az, "account", "show", "-o", "json"], check=False, capture=True)
+    if probe.returncode == 0:
+        acct = json.loads(probe.stdout)
+        user = acct.get("user", {})
+        label = user.get("name", "unknown")
+        user_type = user.get("type")
+        if user_type:
+            label = f"{label} ({user_type})"
+        _ok(f"Signed in as {label}")
         return
 
     if use_device_code:
@@ -613,6 +628,100 @@ def _discover_outputs(az: str, cfg: Config) -> dict[str, Any]:
     return outputs
 
 
+def _deployment_text(result: subprocess.CompletedProcess[str]) -> str:
+    return f"{result.stderr or ''}{result.stdout or ''}"
+
+
+def _purview_tenant_exists_error(text: str) -> bool:
+    return "35001" in text or "Tenant-level Purview Account already exists" in text
+
+
+def _parse_deployment_outputs(deploy: subprocess.CompletedProcess[str]) -> dict[str, Any]:
+    if deploy.returncode != 0:
+        return {}
+    body = json.loads(deploy.stdout)
+    outputs: dict[str, Any] = {}
+    for key, val in body.get("properties", {}).get("outputs", {}).items():
+        outputs[key] = val.get("value") if isinstance(val, dict) else val
+    return outputs
+
+
+def _platform_bicep_params(
+    cfg: Config,
+    storage_name: str,
+    *,
+    deploy_purview: bool,
+    deploy_synapse: bool = False,
+    deploy_fabric: bool = False,
+    synapse_sql_password: str = "Unused0!Password",
+) -> list[str]:
+    admin_json = json.dumps([cfg.owner_email])
+    return [
+        f"location={cfg.location}",
+        f"learner={cfg.learner}",
+        f"ownerEmail={cfg.owner_email}",
+        f"storageAccountName={storage_name}",
+        f"synapseSqlPassword={synapse_sql_password}",
+        f"deployPurview={'true' if deploy_purview else 'false'}",
+        f"deploySynapse={'true' if deploy_synapse else 'false'}",
+        f"deployFabric={'true' if deploy_fabric else 'false'}",
+        "purviewLocation=eastus",
+        f"fabricAdminMembers={admin_json}",
+    ]
+
+
+def _run_platform_bicep(
+    az: str,
+    cfg: Config,
+    storage_name: str,
+    *,
+    deploy_purview: bool,
+    deploy_synapse: bool = False,
+    deploy_fabric: bool = False,
+    synapse_sql_password: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    return _run(
+        [
+            az,
+            "deployment",
+            "group",
+            "create",
+            "--resource-group",
+            cfg.resource_group,
+            "--name",
+            "platforms",
+            "--mode",
+            "Incremental",
+            "--template-file",
+            str(PLATFORM_BICEP),
+            "--parameters",
+            *_platform_bicep_params(
+                cfg,
+                storage_name,
+                deploy_purview=deploy_purview,
+                deploy_synapse=deploy_synapse,
+                deploy_fabric=deploy_fabric,
+                synapse_sql_password=synapse_sql_password or "Unused0!Password",
+            ),
+            "-o",
+            "json",
+        ],
+        check=False,
+        capture=True,
+    )
+
+
+def _core_platforms_ready(outputs: dict[str, Any]) -> tuple[bool, list[str]]:
+    missing: list[str] = []
+    for key, label in (
+        ("dataFactoryName", "Azure Data Factory"),
+        ("databricksWorkspaceName", "Databricks"),
+    ):
+        if not outputs.get(key):
+            missing.append(label)
+    return not missing, missing
+
+
 def _synapse_sql_password() -> str:
     """Azure SQL admin password complexity."""
     special = "!@#$%"
@@ -636,10 +745,7 @@ def _register_platform_providers(az: str) -> None:
     for ns in (
         "Microsoft.Network",
         "Microsoft.Databricks",
-        "Microsoft.Synapse",
         "Microsoft.DataFactory",
-        "Microsoft.Sql",
-        "Microsoft.Fabric",
         "Microsoft.Purview",
         "Microsoft.EventHub",
     ):
@@ -657,74 +763,59 @@ def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) 
             "Class-1 storage account not found. Run main deploy first (orchestrate without --platforms-only)."
         )
 
-    _step("Deploying platform services (incremental — ADF, Synapse, Purview, Fabric, Databricks)")
+    _step("Deploying platform services (incremental — ADF, Purview, Databricks)")
     _register_platform_providers(az)
-    sql_password = _synapse_sql_password()
-    admin_json = json.dumps([cfg.owner_email])
-    deploy = _run(
-        [
-            az, "deployment", "group", "create",
-            "--resource-group", cfg.resource_group,
-            "--name", "platforms",
-            "--mode", "Incremental",
-            "--template-file", str(PLATFORM_BICEP),
-            "--parameters",
-            f"location={cfg.location}",
-            f"learner={cfg.learner}",
-            f"ownerEmail={cfg.owner_email}",
-            f"storageAccountName={storage_name}",
-            f"synapseSqlPassword={sql_password}",
-            "deployPurview=true",
-            "deploySynapse=false",
-            "deployFabric=true",
-            "purviewLocation=eastus",
-            "fabricLocation=westeurope",
-            f"fabricSkuName=F0",
-            f"fabricAdminMembers={admin_json}",
-            "-o", "json",
-        ],
-        check=False,
-        capture=True,
-    )
+
+    # Ordered fallbacks: full stack → skip Purview (tenant catalog exists) → discover partial.
+    attempts: list[tuple[str, bool]] = [
+        ("ADF + Databricks + Purview", True),
+        ("ADF + Databricks (Purview skipped)", False),
+    ]
 
     platform_outputs: dict[str, Any] = {}
-    if deploy.returncode != 0:
-        _warn("Platform deploy failed — retrying without Fabric (subscription Fabric quota may be 0)")
-        deploy = _run(
-            [
-                az, "deployment", "group", "create",
-                "--resource-group", cfg.resource_group,
-                "--name", "platforms",
-                "--mode", "Incremental",
-                "--template-file", str(PLATFORM_BICEP),
-                "--parameters",
-                f"location={cfg.location}",
-                f"learner={cfg.learner}",
-                f"ownerEmail={cfg.owner_email}",
-                f"storageAccountName={storage_name}",
-                f"synapseSqlPassword={sql_password}",
-                "deployPurview=true",
-                "deploySynapse=false",
-                "deployFabric=false",
-                "purviewLocation=eastus",
-                f"fabricAdminMembers={admin_json}",
-                "-o", "json",
-            ],
-            check=False,
-            capture=True,
+    last_error = ""
+    for label, deploy_purview in attempts:
+        deploy = _run_platform_bicep(
+            az,
+            cfg,
+            storage_name,
+            deploy_purview=deploy_purview,
         )
+        if deploy.returncode == 0:
+            platform_outputs = _parse_deployment_outputs(deploy)
+            _ok(f"Platform services deployment succeeded ({label})")
+            merged = {**outputs, **platform_outputs}
+            if not deploy_purview:
+                merged["purviewAccountName"] = "skipped-tenant-catalog-exists"
+            return merged
 
-    if deploy.returncode == 0:
-        body = json.loads(deploy.stdout)
-        for key, val in body.get("properties", {}).get("outputs", {}).items():
-            platform_outputs[key] = val.get("value") if isinstance(val, dict) else val
-        _ok("Platform services deployment succeeded")
-        merged = {**outputs, **platform_outputs}
-        _create_fabric_workspace(vpy, cfg, merged)
+        last_error = _deployment_text(deploy)
+        logger.debug(last_error)
+        if deploy_purview and _purview_tenant_exists_error(last_error):
+            _warn(
+                "Purview skipped — tenant already has an enterprise catalog (error 35001). "
+                "Deploying ADF and Databricks only."
+            )
+            continue
+        _warn(f"Platform deploy failed ({label}) — trying reduced set")
+
+    merged = {**outputs, **_discover_outputs(az, cfg), **platform_outputs}
+    ready, missing = _core_platforms_ready(merged)
+    if ready:
+        if _purview_tenant_exists_error(last_error):
+            merged.setdefault("purviewAccountName", "skipped-tenant-catalog-exists")
+        _warn(
+            "Platform deploy had errors but ADF and Databricks are present — continuing "
+            "(check portal for Purview if needed)"
+        )
         return merged
 
-    logger.error(deploy.stderr or deploy.stdout)
-    raise SystemExit("Platform services deployment failed — see log above")
+    logger.error(last_error)
+    raise SystemExit(
+        "Platform services deployment failed — missing: "
+        + ", ".join(missing)
+        + ". See log above."
+    )
 
 
 def _create_fabric_workspace(vpy: Path, cfg: Config, outputs: dict[str, Any]) -> None:
@@ -905,8 +996,6 @@ def _print_summary(cfg: Config, outputs: dict[str, Any], *, lab_mode: str) -> No
     adf = outputs.get("dataFactoryName", "")
     dbw = outputs.get("databricksWorkspaceName", "")
     purview = outputs.get("purviewAccountName", "")
-    synapse = outputs.get("synapseWorkspaceName", "")
-    fabric = outputs.get("fabricCapacityName", "")
 
     lines = [
         f"Lab mode       : {lab_mode}",
@@ -921,8 +1010,6 @@ def _print_summary(cfg: Config, outputs: dict[str, Any], *, lab_mode: str) -> No
         f"  Data Factory   : {adf or '(see portal)'}",
         f"  Databricks     : {dbw or '(see portal)'}",
         f"  Purview        : {purview or '(see portal)'}",
-        f"  Synapse SQL    : {synapse}",
-        f"  Fabric capacity: {fabric or 'manual trial — see docs/TRAINER-NOTES.md'}",
         "",
         "--- Portal quick links ---",
         f"  Resource group : {rg_url}",
@@ -937,8 +1024,6 @@ def _print_summary(cfg: Config, outputs: dict[str, Any], *, lab_mode: str) -> No
     if dbw:
         lines.append(f"  Databricks     : {_portal_link('Microsoft.Databricks/workspaces', dbw)}")
     lines.extend([
-        f"  Fabric portal  : https://app.fabric.microsoft.com/",
-        "",
         "--- Cost Management ---",
         f"  Cost analysis (RG): {urls.get('cost_analysis_resource_group', '')}",
         f"  Budgets           : {urls.get('budgets', 'https://portal.azure.com/#view/Microsoft_Azure_CostManagement/BudgetsBlade')}",
@@ -1043,12 +1128,17 @@ def main(argv: list[str] | None = None) -> int:
 
     principal_type = cfg.principal_type
     sp_client_id = cfg.service_principal.client_id if cfg.service_principal else None
-    if principal_type == "User":
-        detected_type, detected_client = _detect_account_principal(az)
-        if detected_type == "ServicePrincipal":
-            principal_type = detected_type
-            sp_client_id = detected_client
+    detected_type, detected_client = _detect_account_principal(az)
+    if detected_type == "ServicePrincipal":
+        principal_type = detected_type
+        sp_client_id = sp_client_id or detected_client
+        if cfg.service_principal:
             _ok("Active session is a service principal — using SP object ID for RBAC")
+    elif principal_type == "ServicePrincipal" and not sp_client_id:
+        raise SystemExit(
+            "Service principal credentials are in .env but the active az session is a user. "
+            "Re-run orchestrate.cmd (logout is automatic) or run: az logout"
+        )
 
     principal_id = _principal_object_id(
         az,

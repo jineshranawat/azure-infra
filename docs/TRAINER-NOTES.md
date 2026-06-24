@@ -37,7 +37,7 @@ orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 | 0 | `_ensure_dotenv`, `_ensure_venv`, `_ensure_azure_cli` | `.env`, Python venv, Azure CLI |
 | 1 | `_ensure_az_no_wam_broker` or SP login, `_ensure_az_login`, `_set_subscription` | WAM off (interactive) or `az login --service-principal` (class image) |
 | 2 | `_deploy_bicep`, `_ensure_rbac` | Class-1: RG, tags, budget, KV, storage, medallion, lifecycle, RBAC |
-| 3 | `_deploy_platforms`, `_create_fabric_workspace` | ADF, Purview, Databricks; Synapse/Fabric (best-effort) |
+| 3 | `_deploy_platforms` | ADF, Purview (or skip if tenant catalog exists), Databricks |
 | 4 | `_verify` | `verify_cost.py` — SKU allow-list + MTD cost |
 | 5 | `_compare_platforms` | `compare_platform_costs.py` — list prices + Cost Explorer URLs |
 | 6 | `_print_summary` | All portal links |
@@ -187,8 +187,9 @@ RG + tags → budget → Key Vault → storage + containers + lifecycle → RBAC
 | **Synapse** | `SqlServerRegionDoesNotAllowProvisioning` | Skipped in orchestrator (`deploySynapse=false`) |
 | **Fabric capacity** | `RegionalQuota: 0` | Fabric trial at app.fabric.microsoft.com |
 | **Purview** | Tenant free tier in `eastus` | Orchestrator deploys Purview in **eastus** automatically |
+| **Purview** | Error `35001` — tenant catalog already exists | **Automatic** — deploys ADF + Databricks only; use existing tenant Purview in portal |
 
-Orchestrator retries without Fabric, skips Synapse, still completes verify + summary.
+Orchestrator skips Synapse and Fabric by default; retries without Purview when the tenant already has a catalog.
 
 ---
 
