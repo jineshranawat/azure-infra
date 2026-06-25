@@ -75,11 +75,11 @@ orchestrate.cmd --run-pipeline     # trigger ADF copy (small activity-run cost)
 
 | Time | Block | Activity | Portal |
 |------|-------|----------|--------|
-| 0:00–0:20 | **1 — ADF anatomy** | Theory + [MANUAL-LAB §D](MANUAL-LAB.md#a-find-your-resources-5-min) linked service | ADF → Manage |
-| 0:20–0:50 | **2 — Bronze ingest** | `orchestrate.cmd` + [MANUAL-LAB §C](MANUAL-LAB.md#c-verify-storage-after-orchestratecmd-10-min) verify storage | Storage → bronze |
-| 0:50–1:20 | **3 — Pipeline as code** | `adf_pipeline.py` + [MANUAL-LAB §E](MANUAL-LAB.md#e-adf--datasets--pipeline-15-min) verify in Author | ADF → datasets + pipeline |
-| 1:20–1:45 | **4 — Operate** | [MANUAL-LAB §F](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min) Trigger now + Monitor | ADF → Monitor |
-| 1:45–2:00 | **5 — Checkpoint** | [MANUAL-LAB §I](MANUAL-LAB.md#i-end-to-end-verification-checklist) full checklist | Cost Management |
+| 0:00–0:20 | **1 — ADF anatomy** | §A then §D — find RG → Studio + linked service | ADF → Manage |
+| 0:20–0:50 | **2 — Bronze ingest** | §B upload **or** `orchestrate.cmd` + §C verify | Storage → bronze |
+| 0:50–1:20 | **3 — Pipeline as code** | §G build **or** §E verify (not both) | ADF → datasets + pipeline |
+| 1:20–1:45 | **4 — Operate** | [MANUAL-LAB §F](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min--block-4) Trigger now + Monitor | ADF → Monitor |
+| 1:45–2:00 | **5 — Checkpoint** | [MANUAL-LAB §I](MANUAL-LAB.md#i-end-to-end-verification-checklist--block-5) full checklist | Cost Management |
 
 Trainer detail: [GUIDE.md](GUIDE.md) | **Portal handout:** [MANUAL-LAB.md](MANUAL-LAB.md)
 
@@ -87,7 +87,9 @@ Trainer detail: [GUIDE.md](GUIDE.md) | **Portal handout:** [MANUAL-LAB.md](MANUA
 
 ## D. Deliverables checklist
 
-Use [MANUAL-LAB.md §I](MANUAL-LAB.md#i-end-to-end-verification-checklist) for portal verification tables.
+Use [MANUAL-LAB.md §I](MANUAL-LAB.md#i-end-to-end-verification-checklist--block-5) for portal verification tables.
+
+**MANUAL-LAB section order:** Block 1 = **§A then §D** (sequential steps). Block 2 = **§B** (portal) or **§C** (after script). Block 3 = **§G** or **§E** (pick one). See [MANUAL-LAB section map](MANUAL-LAB.md#section-map-read-in-order--letters-are-not-interchangeable).
 
 - [ ] `orchestrate.cmd` exits 0
 - [ ] `bronze/incoming/transactions/<run_id>/sample_transactions.csv` exists
@@ -130,5 +132,6 @@ ADF factory idle ≈ £0. `--run-pipeline` triggers copy activity runs (free-tie
 | No runs in morning check | Expected until `--run-pipeline`; use `orchestrate.cmd --morning-check` |
 | Import errors | Re-run `orchestrate.cmd` (auto-creates `.venv` + pip install) |
 | Script appears hung | First run loads Azure SDK (~30s); ensure `az login` via repo root `orchestrate.cmd` |
+| `az datafactory` timeout | Fixed in latest `adf_rbac.py` — uses SDK; `git pull` and re-run |
 
 Use Cursor / VS Code AI chat to explain errors — paste terminal output, never secrets. See [README §1](../README.md#when-to-use-cursor--vs-code-ai-chat).

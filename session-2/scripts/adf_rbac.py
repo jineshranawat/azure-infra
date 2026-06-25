@@ -1,27 +1,76 @@
-"""Ensure ADF managed identity can write to ADLS (check-before-create RBAC)."""
+"""Ensure ADF managed identity can write to ADLS (check-before-create RBAC).
+
+Uses Azure SDK (not `az datafactory show`) — CLI datafactory commands often hang
+on classroom VDI / shared machines (90s+ timeout).
+"""
 
 from __future__ import annotations
 
-import json
 import logging
-import subprocess
+import uuid
 
-from _config import SessionConfig, find_az
+from azure.core.exceptions import HttpResponseError
+from azure.mgmt.authorization import AuthorizationManagementClient
+from azure.mgmt.datafactory import DataFactoryManagementClient
+
+from _config import SessionConfig, get_credential
 
 logger = logging.getLogger(__name__)
 
 STORAGE_BLOB_DATA_CONTRIBUTOR = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
-_AZ_TIMEOUT_SEC = 90
 
 
-def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [find_az(), *args],
-        check=False,
-        text=True,
-        capture_output=True,
-        timeout=_AZ_TIMEOUT_SEC,
+def _role_definition_id(subscription_id: str, role_guid: str) -> str:
+    return (
+        f"/subscriptions/{subscription_id}/providers/"
+        f"Microsoft.Authorization/roleDefinitions/{role_guid}"
     )
+
+
+def _adf_principal_id(cfg: SessionConfig, data_factory: str) -> str:
+    """Read ADF system-assigned managed identity via SDK (fast on VDI)."""
+    adf = DataFactoryManagementClient(get_credential(), cfg.subscription_id)
+    factory = adf.factories.get(cfg.resource_group, data_factory)
+    identity = factory.identity
+    principal_id = identity.principal_id if identity else None
+    if not principal_id:
+        raise RuntimeError(f"No managed identity on ADF {data_factory}")
+    return principal_id
+
+
+def _ensure_role_on_scope(
+    auth_client: AuthorizationManagementClient,
+    *,
+    scope: str,
+    principal_id: str,
+    subscription_id: str,
+) -> None:
+    """Create Storage Blob Data Contributor if missing — idempotent by deterministic name."""
+    assignment_name = str(
+        uuid.uuid5(
+            uuid.NAMESPACE_DNS,
+            f"{scope}:{principal_id}:{STORAGE_BLOB_DATA_CONTRIBUTOR}",
+        )
+    )
+    try:
+        auth_client.role_assignments.create(
+            scope=scope,
+            role_assignment_name=assignment_name,
+            parameters={
+                "role_definition_id": _role_definition_id(
+                    subscription_id, STORAGE_BLOB_DATA_CONTRIBUTOR
+                ),
+                "principal_id": principal_id,
+                "principal_type": "ServicePrincipal",
+            },
+        )
+        logger.info("Assigned Storage Blob Data Contributor to ADF MI on %s", scope)
+    except HttpResponseError as exc:
+        code = exc.error.code if exc.error else ""
+        if code in ("RoleAssignmentExists", "RoleAssignmentUpdateNotPermitted"):
+            logger.info("ADF managed identity already has storage RBAC — skip")
+            return
+        raise
 
 
 def ensure_adf_storage_rbac(
@@ -30,48 +79,16 @@ def ensure_adf_storage_rbac(
     data_factory: str,
 ) -> None:
     """Grant ADF system-assigned MI Storage Blob Data Contributor on the lake account."""
-    logger.info("Checking ADF managed identity RBAC on %s...", storage_account)
-    show = _run(
-        [
-            "datafactory", "show",
-            "--resource-group", cfg.resource_group,
-            "--factory-name", data_factory,
-        ]
-    )
-    if show.returncode != 0:
-        raise RuntimeError(show.stderr or show.stdout)
-
-    factory = json.loads(show.stdout)
-    principal_id = factory.get("identity", {}).get("principalId")
-    if not principal_id:
-        raise RuntimeError(f"No managed identity on ADF {data_factory}")
-
+    logger.info("Checking ADF managed identity RBAC on %s (SDK)...", storage_account)
+    principal_id = _adf_principal_id(cfg, data_factory)
     scope = (
         f"/subscriptions/{cfg.subscription_id}/resourceGroups/{cfg.resource_group}"
         f"/providers/Microsoft.Storage/storageAccounts/{storage_account}"
     )
-
-    existing = _run(
-        [
-            "role", "assignment", "list",
-            "--assignee-object-id", principal_id,
-            "--scope", scope,
-            "--query", "length(@)",
-            "-o", "tsv",
-        ]
+    auth = AuthorizationManagementClient(get_credential(), cfg.subscription_id)
+    _ensure_role_on_scope(
+        auth,
+        scope=scope,
+        principal_id=principal_id,
+        subscription_id=cfg.subscription_id,
     )
-    if existing.stdout.strip() not in ("", "0"):
-        logger.info("ADF managed identity already has storage RBAC — skip")
-        return
-
-    _run(
-        [
-            "role", "assignment", "create",
-            "--role", "Storage Blob Data Contributor",
-            "--assignee-object-id", principal_id,
-            "--assignee-principal-type", "ServicePrincipal",
-            "--scope", scope,
-            "-o", "none",
-        ]
-    )
-    logger.info("Assigned Storage Blob Data Contributor to ADF MI on %s", storage_account)

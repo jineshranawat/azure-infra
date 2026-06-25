@@ -27,7 +27,12 @@ Maps to [azure.html](../azure.html) **Day 2: Azure Data Factory** (Hours 17–24
 | 10 | Open `infra/platform-services.bicep` ADF section | RG → Data Factory |
 | 5 | Show linked service `AdlsBronzeLinkedService` | ADF → Manage → Linked services |
 
-**Learners do:** [MANUAL-LAB §A + §D](MANUAL-LAB.md) — find resources, test linked service, tick verify boxes.
+**Learners do (in order):**
+
+1. [MANUAL-LAB §A — find resources](MANUAL-LAB.md#a-find-your-resources-5-min--block-1-step-1) (Step 1)
+2. [MANUAL-LAB §D — linked service](MANUAL-LAB.md#d-adf--open-studio--linked-service-10-min--block-1-step-2) (Step 2)
+
+Tick verify boxes in both sections.
 
 **Talking point:** Integration runtime types — we use Azure IR only (no self-hosted = no VM cost).
 
@@ -50,7 +55,7 @@ orchestrate.cmd
 
 **Exercise:** Re-run `orchestrate.cmd` — confirm no duplicate folders (same run_id pattern).
 
-**Learners do:** [MANUAL-LAB §C](MANUAL-LAB.md#c-verify-storage-after-orchestratecmd-10-min) — verify incoming path + watermark in portal.
+**Learners do:** Path M → [MANUAL-LAB §B](MANUAL-LAB.md#b-manual-path--storage-upload-15-min--block-2-path-m-only). Path S → `orchestrate.cmd` then [MANUAL-LAB §C](MANUAL-LAB.md#c-verify-storage-after-orchestratecmd-10-min--block-2-path-s-only).
 
 ---
 
@@ -66,9 +71,7 @@ orchestrate.cmd
 
 **Talking point:** Pipeline change = code commit + review (BoE change control).
 
-**Learners do:** [MANUAL-LAB §E](MANUAL-LAB.md#e-adf--datasets--pipeline-15-min) — open datasets and pipeline in Author; complete verify table.
-
-**Optional advanced:** [MANUAL-LAB §G](MANUAL-LAB.md#g-manual-adf--build-copy-pipeline-by-hand-optional-30-min) — build pipeline entirely in portal.
+**Learners do:** Path S / script-first → [MANUAL-LAB §E](MANUAL-LAB.md#e-adf--datasets--pipeline-15-min--block-3-path-s--path-m-verify). Path M portal-only → [MANUAL-LAB §G](MANUAL-LAB.md#g-manual-adf--build-copy-pipeline-by-hand-optional-30-min--block-3-path-m-only) (**not** both).
 
 ---
 
@@ -88,7 +91,7 @@ orchestrate.cmd --run-pipeline
 
 **If pipeline fails:** RBAC propagation — wait 2 min, re-run. See [MANUAL-LAB §F3](MANUAL-LAB.md#f3-if-run-failed--common-fixes).
 
-**Learners do:** [MANUAL-LAB §F + §H](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min) — Trigger now in studio OR `--run-pipeline`; compare Monitor to morning check.
+**Learners do:** [MANUAL-LAB §F](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min--block-4) — Trigger now in studio OR `--run-pipeline`; Block 5 → [MANUAL-LAB §H](MANUAL-LAB.md#h-morning-check--script-vs-portal-10-min--block-5) or `--morning-check`.
 
 ---
 
@@ -98,7 +101,7 @@ orchestrate.cmd --run-pipeline
 |-----|-----|
 | 5 | ADF pricing: factory free, pay per activity run |
 | 5 | Show `bronze/_control/watermark.json` |
-| 5 | Deliverables — [MANUAL-LAB §I](MANUAL-LAB.md#i-end-to-end-verification-checklist) full portal checklist |
+| 5 | Deliverables — [MANUAL-LAB §I](MANUAL-LAB.md#i-end-to-end-verification-checklist--block-5) full portal checklist |
 
 ---
 

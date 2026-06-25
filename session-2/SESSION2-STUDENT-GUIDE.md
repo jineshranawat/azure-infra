@@ -78,16 +78,18 @@ flowchart LR
 
 ## Choose your path (pick one — same result)
 
-| Block | **Path M — Manual (portal)** ← recommended if you prefer clicking | **Path S — Script (terminal)** |
+| Block | **Path M — Manual (portal)** | **Path S — Script (terminal)** |
 |---|---|---|
 | 0 | Sign in to portal | + `az login` if using scripts |
-| 1 | [MANUAL-LAB §A, §D](MANUAL-LAB.md) | Inspect resources after Class-1 |
-| 2 | [MANUAL-LAB §B](MANUAL-LAB.md) upload + watermark | `orchestrate.cmd` |
-| 3 | [MANUAL-LAB §G](MANUAL-LAB.md) build pipeline OR §E verify script | Inspect `adf_pipeline.py` + §E |
-| 4 | [MANUAL-LAB §F](MANUAL-LAB.md) **Trigger now** | `orchestrate.cmd --run-pipeline` |
-| 5 | [MANUAL-LAB §H](MANUAL-LAB.md) Monitor only | + `morning_check.py` output |
+| 1 | **Step 1:** [§A — Find resources](MANUAL-LAB.md#a-find-your-resources-5-min--block-1-step-1)<br>**Step 2:** [§D — Linked service](MANUAL-LAB.md#d-adf--open-studio--linked-service-10-min--block-1-step-2) | Same two steps in portal (inspect only) |
+| 2 | [§B — Upload + watermark](MANUAL-LAB.md#b-manual-path--storage-upload-15-min--block-2-path-m-only) | `orchestrate.cmd` then verify with [§C](MANUAL-LAB.md#c-verify-storage-after-orchestratecmd-10-min--block-2-path-s-only) |
+| 3 | **Pick one:** [§G — Build pipeline](MANUAL-LAB.md#g-manual-adf--build-copy-pipeline-by-hand-optional-30-min--block-3-path-m-only) (portal-only) **or** [§E — Verify script pipeline](MANUAL-LAB.md#e-adf--datasets--pipeline-15-min--block-3-path-s--path-m-verify) (if script ran) | `adf_pipeline.py` + [§E — Verify in Author](MANUAL-LAB.md#e-adf--datasets--pipeline-15-min--block-3-path-s--path-m-verify) |
+| 4 | [§F — Trigger now](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min--block-4) | `orchestrate.cmd --run-pipeline` |
+| 5 | [§H — Monitor](MANUAL-LAB.md#h-morning-check--script-vs-portal-10-min--block-5) in Studio | `orchestrate.cmd --morning-check` |
 
-You can **mix**: e.g. Path M for Blocks 2–4, Path S only for morning check.
+**Block 1:** §A then §D — **two steps in order**, not two alternatives.
+
+You can **mix** paths: e.g. Path M for Blocks 2–4, Path S only for `--morning-check` in Block 5.
 
 ---
 
@@ -161,11 +163,11 @@ Open: RG → **Data factory** → **Open Azure Data Factory Studio**.
 
 | Time | Block | Path M (portal) | Path S (script) |
 |---|---|---|---|
-| 0:00–0:20 | **1 — ADF anatomy** | Studio + linked service | Same |
-| 0:20–0:50 | **2 — Bronze ingest** | Upload CSV + watermark | `orchestrate.cmd` |
-| 0:50–1:20 | **3 — Pipeline** | Build in Author §G | Verify §E + code |
-| 1:20–1:45 | **4 — Operate** | Trigger now | `--run-pipeline` |
-| 1:45–2:00 | **5 — Checkpoint** | Monitor + checklist | + morning check |
+| 0:00–0:20 | **1 — ADF anatomy** | §A then §D (find RG → Studio + linked service) | Same |
+| 0:20–0:50 | **2 — Bronze ingest** | §B upload + watermark | `orchestrate.cmd` + §C verify |
+| 0:50–1:20 | **3 — Pipeline** | §G build **or** §E verify (not both) | `adf_pipeline.py` + §E |
+| 1:20–1:45 | **4 — Operate** | §F Trigger now | `--run-pipeline` |
+| 1:45–2:00 | **5 — Checkpoint** | §H Monitor + §I checklist | `--morning-check` + §I |
 
 ---
 
@@ -186,11 +188,16 @@ Open: RG → **Data factory** → **Open Azure Data Factory Studio**.
 
 Linked service **≠** dataset. Connection vs file path.
 
-> **Reference:** [MANUAL-LAB §A — find resources](MANUAL-LAB.md#a-find-your-resources-5-min) · [MANUAL-LAB §D — linked service](MANUAL-LAB.md#d-adf--open-studio--linked-service-10-min)
+> **Reference:** **Step 1** [MANUAL-LAB §A — find resources](MANUAL-LAB.md#a-find-your-resources-5-min--block-1-step-1) → **Step 2** [MANUAL-LAB §D — linked service](MANUAL-LAB.md#d-adf--open-studio--linked-service-10-min--block-1-step-2)
 
 ### Do — Path M (manual, 12 min)
 
+**Step 1 — Find resources ([§A](MANUAL-LAB.md#a-find-your-resources-5-min--block-1-step-1))**
+
 1. Portal → `rg-<learner>-class1` → note storage + factory names.
+
+**Step 2 — ADF Studio + linked service ([§D](MANUAL-LAB.md#d-adf--open-studio--linked-service-10-min--block-1-step-2))**
+
 2. **Data factory** → **Open Azure Data Factory Studio**.
 3. Left rail: name **Home**, **Author**, **Manage**, **Monitor**.
 4. **Manage** → **Linked services** → **`AdlsBronzeLinkedService`**.
@@ -232,7 +239,7 @@ Pick **one path** below.
 
 ### Path M — Manual portal (recommended) (20 min)
 
-> **Reference:** [MANUAL-LAB §B — storage upload](MANUAL-LAB.md#b-manual-path--storage-upload-15-min)
+> **Reference:** [MANUAL-LAB §B — storage upload](MANUAL-LAB.md#b-manual-path--storage-upload-15-min--block-2-path-m-only)
 
 **Step 1 — Choose your `run_id`**
 
@@ -296,7 +303,7 @@ Then verify in portal (same checks as Path M):
 1. `bronze/incoming/transactions/<run_id>/sample_transactions.csv`
 2. `bronze/_control/watermark.json`
 
-> **Reference:** [MANUAL-LAB §C — after orchestrate](MANUAL-LAB.md#c-verify-storage-after-orchestratecmd-10-min)
+> **Reference:** [MANUAL-LAB §C — after orchestrate](MANUAL-LAB.md#c-verify-storage-after-orchestratecmd-10-min--block-2-path-s-only)
 
 ---
 
@@ -333,7 +340,7 @@ Then verify in portal (same checks as Path M):
 
 Use this if you **did not** run `orchestrate.cmd` OR your trainer assigns portal-only.
 
-> **Reference:** [MANUAL-LAB §G — build copy by hand](MANUAL-LAB.md#g-manual-adf--build-copy-pipeline-by-hand-optional-30-min)  
+> **Reference:** [MANUAL-LAB §G — build copy by hand](MANUAL-LAB.md#g-manual-adf--build-copy-pipeline-by-hand-optional-30-min--block-3-path-m-only)  
 > **Deep dive:** [adf-course 01-02 manual copy](adf-course/module-01-copy-ingest/01-02-copy-activity-manual-pipeline.md)
 
 **Prerequisite:** `AdlsBronzeLinkedService` exists (Class-1 or Block 1). If missing, create per [adf-course 00-05](adf-course/module-00-foundations/00-05-link-adf-to-storage-step-by-step.md).
@@ -368,7 +375,7 @@ Use this if you **did not** run `orchestrate.cmd` OR your trainer assigns portal
 
 Use this if **`orchestrate.cmd` already ran** — inspect, do not rebuild.
 
-> **Reference:** [MANUAL-LAB §E — datasets & pipeline](MANUAL-LAB.md#e-adf--datasets--pipeline-15-min)
+> **Reference:** [MANUAL-LAB §E — datasets & pipeline](MANUAL-LAB.md#e-adf--datasets--pipeline-15-min--block-3-path-s--path-m-verify)
 
 1. **Author** → **Datasets** → open `ds_bronze_incoming_csv`, `ds_bronze_loaded_csv`.
 2. Note parameters `incoming_folder`, `loaded_folder`.
@@ -413,7 +420,7 @@ Open `scripts/adf_pipeline.py` alongside Studio.
 
 Success = Monitor **Succeeded** + file in `bronze/loaded/…`.
 
-> **Reference:** [MANUAL-LAB §F — trigger & monitor](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min)
+> **Reference:** [MANUAL-LAB §F — trigger & monitor](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min--block-4)
 
 ---
 
@@ -470,7 +477,7 @@ Then complete **Monitor** steps above in portal.
 |---|---|---|
 | 403 | IAM: ADF MI → Blob Data Contributor; wait 2 min | [00-05](adf-course/module-00-foundations/00-05-link-adf-to-storage-step-by-step.md) |
 | Path not found | Folder names must match exactly | [MANUAL-LAB §F3](MANUAL-LAB.md#f3-if-run-failed--common-fixes) |
-| Pipeline missing | Path M: complete §G; Path S: run `orchestrate.cmd` | [§G](MANUAL-LAB.md#g-manual-adf--build-copy-pipeline-by-hand-optional-30-min) |
+| Pipeline missing | Path M: complete [§G](MANUAL-LAB.md#g-manual-adf--build-copy-pipeline-by-hand-optional-30-min--block-3-path-m-only); Path S: run `orchestrate.cmd` | |
 
 ---
 
@@ -480,9 +487,9 @@ Then complete **Monitor** steps above in portal.
 
 **Path M:** **Monitor** → **Pipeline runs** — filter last 24 h.
 
-**Path S:** Also run `orchestrate.cmd` (no `--run-pipeline`) — compare terminal Phase 6 to Monitor.
+**Path S:** Run `orchestrate.cmd --morning-check` — compare terminal Phase 6 to Monitor.
 
-> **Reference:** [MANUAL-LAB §H — morning check](MANUAL-LAB.md#h-morning-check--script-vs-portal-10-min)
+> **Reference:** [MANUAL-LAB §H — morning check](MANUAL-LAB.md#h-morning-check--script-vs-portal-10-min--block-5)
 
 | # | Check | Pass |
 |---|---|:---:|
@@ -515,7 +522,7 @@ Then complete **Monitor** steps above in portal.
 - [ ] Pipeline + datasets published
 - [ ] At least one **Succeeded** run in Monitor
 
-> **Full checklist:** [MANUAL-LAB §I](MANUAL-LAB.md#i-end-to-end-verification-checklist)
+> **Full checklist:** [MANUAL-LAB §I](MANUAL-LAB.md#i-end-to-end-verification-checklist--block-5)
 
 ---
 
@@ -525,11 +532,11 @@ Then complete **Monitor** steps above in portal.
 |---|:---:|:---:|---|
 | ADF UI tour | Block 1 | Block 1 | [00-03](adf-course/module-00-foundations/00-03-studio-tour-every-pane.md) |
 | Linked service + MSI | Block 1 | Class-1 | [00-05](adf-course/module-00-foundations/00-05-link-adf-to-storage-step-by-step.md) |
-| Upload bronze | Block 2 §M | `bronze_loader.py` | [MANUAL-LAB §B](MANUAL-LAB.md#b-manual-path--storage-upload-15-min) |
-| Watermark | Block 2 §M | `watermark_store.py` | [MANUAL-LAB §B4](MANUAL-LAB.md#b4-optional--manual-watermark-file) |
-| Datasets + pipeline | Block 3 §M §G | `adf_pipeline.py` | [01-02](adf-course/module-01-copy-ingest/01-02-copy-activity-manual-pipeline.md) |
-| Trigger + Monitor | Block 4 §M | `--run-pipeline` | [MANUAL-LAB §F](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min) |
-| Run history | Block 5 Monitor | `morning_check.py` | [MANUAL-LAB §H](MANUAL-LAB.md#h-morning-check--script-vs-portal-10-min) |
+| Upload bronze | Block 2 Path M | `bronze_loader.py` | [MANUAL-LAB §B](MANUAL-LAB.md#b-manual-path--storage-upload-15-min--block-2-path-m-only) |
+| Watermark | Block 2 Path M | `watermark_store.py` | [MANUAL-LAB §B4](MANUAL-LAB.md#b4-optional--manual-watermark-file) |
+| Datasets + pipeline | Block 3 §G or §E | `adf_pipeline.py` | [01-02](adf-course/module-01-copy-ingest/01-02-copy-activity-manual-pipeline.md) |
+| Trigger + Monitor | Block 4 | `--run-pipeline` | [MANUAL-LAB §F](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min--block-4) |
+| Run history | Block 5 | `--morning-check` | [MANUAL-LAB §H](MANUAL-LAB.md#h-morning-check--script-vs-portal-10-min--block-5) |
 
 **Verdict:** Path M alone satisfies the full Session 2 use case without running any terminal commands.
 

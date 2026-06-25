@@ -12,15 +12,35 @@ Replace `<learner>` with your `.env` value (e.g. `jinesh`).
 
 ## How this fits the 2-hour session
 
-| Order | Path | When |
-|-------|------|------|
-| 1 | Run `orchestrate.cmd` | Automates RBAC, upload, pipeline deploy |
-| 2 | **This guide — Sections C–F** | Read each step → do in portal → tick verify |
-| 3 | Optional **Section B** | Build the same pipeline by hand in ADF Studio |
+**Start here:** [SESSION2-STUDENT-GUIDE.md](SESSION2-STUDENT-GUIDE.md) (Blocks 0–5). This file is **extra portal detail** per step.
+
+### Section map (read in order — letters are not interchangeable)
+
+| Section | What | Block | Path M (portal) | Path S (script) |
+|---------|------|-------|-----------------|-----------------|
+| **A** | Find RG, storage, factory | 1 **Step 1** | Always do first | Same (inspect portal) |
+| **D** | Open ADF Studio + linked service | 1 **Step 2** | After **A** — do not skip | Same (after **A**) |
+| **B** | Upload CSV + watermark by hand | 2 | Portal-only ingest | Skip — use **C** instead |
+| **C** | Verify storage after script | 2 | Skip if you did **B** | After `orchestrate.cmd` |
+| **G** | Build `pl_manual_copy` by hand | 3 | Portal-only pipeline | Skip — use **E** instead |
+| **E** | Verify `pl_bronze_copy` from script | 3 | After `orchestrate.cmd` only | With `adf_pipeline.py` |
+| **F** | Trigger now + Monitor run | 4 | **Trigger now** in Studio | `--run-pipeline` |
+| **H** | Compare run history | 5 | Monitor blade | `--morning-check` |
+| **I** | End-to-end checklist | 5 | Everyone before leaving | Everyone |
+
+> **Block 1 clarity:** **§A** and **§D** are **two steps in sequence** (find resources → open ADF). They are **not** two ways to do the same thing.
+
+### Typical flows
+
+**Path M — portal only (no terminal):** A → D → B → G → F → H → I  
+
+**Path S — script + portal verify:** A → D → `orchestrate.cmd` (covers **C**) → E → `--run-pipeline` + **F** → `--morning-check` (**H**) → I  
+
+**Mixed (common):** A → D → B → `orchestrate.cmd` for RBAC only → E → F in portal → I
 
 ---
 
-## A. Find your resources (5 min)
+## A. Find your resources (5 min) — Block 1, Step 1
 
 ### Do
 
@@ -41,7 +61,7 @@ Replace `<learner>` with your `.env` value (e.g. `jinesh`).
 
 ---
 
-## B. Manual path — Storage upload (15 min)
+## B. Manual path — Storage upload (15 min) — Block 2, Path M only
 
 *Skip if you already ran `orchestrate.cmd` — go to Section C to verify the script upload.*
 
@@ -97,7 +117,7 @@ Replace `<learner>` with your `.env` value (e.g. `jinesh`).
 
 ---
 
-## C. Verify Storage after `orchestrate.cmd` (10 min)
+## C. Verify Storage after `orchestrate.cmd` (10 min) — Block 2, Path S only
 
 *Run from `session-2` folder:*
 
@@ -146,7 +166,9 @@ orchestrate.cmd
 
 ---
 
-## D. ADF — open studio & linked service (10 min)
+## D. ADF — open studio & linked service (10 min) — Block 1, Step 2
+
+*Do this **after** [Section A](#a-find-your-resources-5-min--block-1-step-1). You need storage and factory names from Step 1.*
 
 ### D1. Open Data Factory
 
@@ -180,7 +202,7 @@ orchestrate.cmd
 
 ---
 
-## E. ADF — datasets & pipeline (15 min)
+## E. ADF — datasets & pipeline (15 min) — Block 3, Path S / Path M-verify
 
 ### E1. Verify script-deployed artefacts
 
@@ -208,7 +230,7 @@ In ADF Studio → **Author** (pencil icon):
 
 ---
 
-## F. Manual ADF — trigger pipeline run (15 min)
+## F. Manual ADF — trigger pipeline run (15 min) — Block 4
 
 You can trigger from **portal** or **script**:
 
@@ -255,7 +277,7 @@ orchestrate.cmd --run-pipeline
 
 ---
 
-## G. Manual ADF — build copy pipeline by hand (optional, 30 min)
+## G. Manual ADF — build copy pipeline by hand (optional, 30 min) — Block 3, Path M only
 
 *Do this only if your trainer assigns a portal-only exercise. Skip if you used `orchestrate.cmd`.*
 
@@ -291,12 +313,12 @@ orchestrate.cmd --run-pipeline
 
 ---
 
-## H. Morning check — script vs portal (10 min)
+## H. Morning check — script vs portal (10 min) — Block 5
 
 ### H1. Script
 
 ```text
-orchestrate.cmd
+orchestrate.cmd --morning-check
 ```
 
 Terminal Phase 6 lists pipeline runs (last 24h).
@@ -316,7 +338,7 @@ Terminal Phase 6 lists pipeline runs (last 24h).
 
 ---
 
-## I. End-to-end verification checklist
+## I. End-to-end verification checklist — Block 5
 
 Complete before leaving Session 2:
 
