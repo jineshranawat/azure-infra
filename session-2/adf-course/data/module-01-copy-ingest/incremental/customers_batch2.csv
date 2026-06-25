@@ -1,0 +1,4 @@
+customer_id,full_name,email,signup_date,segment
+CUS-014,Leo Ahmed,leo.ahmed@example.finledger.uk,2025-06-06,premium
+CUS-015,Chloe Wright,chloe.wright@example.finledger.uk,2025-06-07,standard
+CUS-016,George Reid,george.reid@example.finledger.uk,2025-06-08,premium

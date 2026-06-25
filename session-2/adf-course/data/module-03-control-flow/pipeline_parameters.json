@@ -1,0 +1,8 @@
+{
+  "pipeline_name": "pl_finledger_nightly",
+  "default_run_id": "manual",
+  "entities": ["transactions", "customers", "products"],
+  "notify_on_failure": true,
+  "owner_email": "data-eng@example.finledger.uk",
+  "max_parallel_copies": 2
+}

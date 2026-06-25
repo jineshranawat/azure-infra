@@ -1,0 +1,11 @@
+sku,product_name,category,unit_price_gbp,is_active
+SKU-100,Wireless Mouse,Electronics,24.99,true
+SKU-101,USB-C Hub,Electronics,39.50,true
+SKU-200,Organic Oats 1kg,Grocery,3.25,true
+SKU-201,Almond Milk 1L,Grocery,1.89,true
+SKU-300,Cotton T-Shirt,Apparel,14.00,true
+SKU-301,Denim Jacket,Apparel,59.00,true
+SKU-400,Yoga Mat,Sports,22.00,true
+SKU-401,Running Bottle,Sports,8.50,true
+SKU-500,Gift Card 50,Services,50.00,true
+SKU-501,Extended Warranty,Services,12.00,false

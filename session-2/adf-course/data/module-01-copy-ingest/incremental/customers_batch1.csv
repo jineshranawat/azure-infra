@@ -1,0 +1,6 @@
+customer_id,full_name,email,signup_date,segment
+CUS-009,Grace Turner,grace.turner@example.finledger.uk,2025-06-01,standard
+CUS-010,Harry Brooks,harry.brooks@example.finledger.uk,2025-06-02,premium
+CUS-011,Zara Patel,zara.patel@example.finledger.uk,2025-06-03,standard
+CUS-012,Jack Morrison,jack.morrison@example.finledger.uk,2025-06-04,premium
+CUS-013,Emily Shaw,emily.shaw@example.finledger.uk,2025-06-05,standard

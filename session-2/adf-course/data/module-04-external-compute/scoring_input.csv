@@ -1,0 +1,7 @@
+account_id,total_spend_gbp,transaction_count,last_transaction_date,segment
+ACC-8821,60150.50,4,2026-06-04,premium
+ACC-4410,3689.99,3,2026-06-05,premium
+ACC-2299,66.65,3,2026-06-06,standard
+ACC-7733,1420.00,2,2026-06-06,premium
+ACC-5512,15.99,1,2026-06-05,standard
+ACC-2299,8.75,1,2026-06-06,standard

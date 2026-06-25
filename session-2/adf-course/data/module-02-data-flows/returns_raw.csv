@@ -1,0 +1,7 @@
+return_id,transaction_id,return_date,reason,refund_gbp,channel
+RET-5001,TXN-10002,2026-06-05,defective,89.99,card
+RET-5002,TXN-10004,2026-06-06,changed_mind,12.40,card
+RET-5003,TXN-10006,2026-06-07,defective,220.00,card
+RET-5004,TXN-10009,2026-06-08,not_as_described,15.99,card
+RET-5005,TXN-10010,2026-06-09,changed_mind,199.00,fps
+RET-5006,TXN-10007,2026-06-10,defective,45.50,card

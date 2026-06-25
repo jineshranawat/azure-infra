@@ -4,7 +4,7 @@
 
 **Prerequisite:** Class-1 + ADF deployed from repo root (`orchestrate.cmd`).
 
-**Navigation:** [COVERAGE-MAP.md](../COVERAGE-MAP.md) — steps 10–12 | **UI lab:** [MANUAL-LAB.md](MANUAL-LAB.md)
+**Navigation:** [COVERAGE-MAP.md](../COVERAGE-MAP.md) — steps 10–12 | **UI lab:** [MANUAL-LAB.md](MANUAL-LAB.md) | **20h ADF course:** [adf-course/README.md](adf-course/README.md)
 
 ## A. What & why (read first)
 

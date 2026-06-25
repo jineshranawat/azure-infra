@@ -1,0 +1,13 @@
+# Module 0 — upload checklist (lesson 00-01)
+
+After creating container `bronze`, upload this folder's files to prove hierarchical namespace works.
+
+Target paths:
+  bronze/incoming/_seed/upload_manifest.txt  (this file)
+
+Verify in portal:
+  [ ] Container bronze exists
+  [ ] Hierarchical namespace = Enabled on storage account
+  [ ] Blob path bronze/incoming/_seed/upload_manifest.txt opens in Preview
+
+Next: create silver and gold containers (empty) per CASE-STUDY.md lake layout.

@@ -1,0 +1,6 @@
+store_id,store_name,city,region,postcode
+STO-LON-01,FinLedger Oxford Street,London,England,W1D 1BS
+STO-MAN-02,FinLedger Trafford,Manchester,England,M17 8AA
+STO-BIR-03,FinLedger Bullring,Birmingham,England,B5 4BU
+STO-EDI-04,FinLedger Princes Street,Edinburgh,Scotland,EH2 2AD
+STO-CDF-05,FinLedger Cardiff Central,Cardiff,Wales,CF10 1EP

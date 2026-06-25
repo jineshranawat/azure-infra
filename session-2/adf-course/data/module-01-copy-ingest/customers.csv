@@ -1,0 +1,9 @@
+customer_id,full_name,email,signup_date,segment
+CUS-001,Amelia Clarke,amelia.clarke@example.finledger.uk,2024-01-15,premium
+CUS-002,Noah Bennett,noah.bennett@example.finledger.uk,2024-03-22,standard
+CUS-003,Sophia Hughes,sophia.hughes@example.finledger.uk,2024-05-10,premium
+CUS-004,Ethan Morgan,ethan.morgan@example.finledger.uk,2024-07-01,standard
+CUS-005,Isla Fletcher,isla.fletcher@example.finledger.uk,2024-09-18,premium
+CUS-006,Oliver Price,oliver.price@example.finledger.uk,2025-01-05,standard
+CUS-007,Mia Campbell,mia.campbell@example.finledger.uk,2025-02-14,premium
+CUS-008,Lucas Edwards,lucas.edwards@example.finledger.uk,2025-04-30,standard

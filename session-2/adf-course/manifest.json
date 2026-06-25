@@ -1,0 +1,353 @@
+{
+  "course": "Azure Data Factory: Every Click, Every Pipeline",
+  "case_study": "FinLedger UK",
+  "data_root": "data/",
+  "trainer_guide": "TRAINER-GUIDE.md",
+  "verification_checklist": "docs/VERIFICATION-CHECKLIST.md",
+  "total_minutes_target": 1260,
+  "minutes_completed": 1260,
+  "lessons": [
+    {
+      "id": "00-00",
+      "file": "module-00-foundations/00-00-overview.md",
+      "title": "Overview & mental model of ADF",
+      "budget_min": 15,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/introduction",
+      "status": "done",
+      "word_count": 2136
+    },
+    {
+      "id": "00-01",
+      "file": "module-00-foundations/00-01-create-storage-adls-gen2.md",
+      "title": "Create the ADLS Gen2 storage account, containers, hierarchical namespace",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/storage/blobs/create-data-lake-storage-account",
+      "status": "done",
+      "word_count": 2079
+    },
+    {
+      "id": "00-02",
+      "file": "module-00-foundations/00-02-create-data-factory.md",
+      "title": "Create the Data Factory instance",
+      "budget_min": 20,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/quickstart-create-data-factory",
+      "status": "done",
+      "word_count": 1150
+    },
+    {
+      "id": "00-03",
+      "file": "module-00-foundations/00-03-studio-tour-every-pane.md",
+      "title": "ADF Studio tour — every pane, every icon",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/concepts-ux-overview",
+      "status": "done",
+      "word_count": 1450
+    },
+    {
+      "id": "00-04",
+      "file": "module-00-foundations/00-04-linked-services-and-integration-runtime.md",
+      "title": "Linked services & Integration Runtime concepts",
+      "budget_min": 25,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/concepts-linked-services",
+      "status": "done",
+      "word_count": 1280
+    },
+    {
+      "id": "00-05",
+      "file": "module-00-foundations/00-05-link-adf-to-storage-step-by-step.md",
+      "title": "Link ADF to storage, click-by-click (auth, managed identity, test connection)",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-copy-data-tool",
+      "status": "done",
+      "word_count": 1650
+    },
+    {
+      "id": "01-01",
+      "file": "module-01-copy-ingest/01-01-copy-data-tool.md",
+      "title": "Copy Data tool (guided wizard, end to end)",
+      "budget_min": 35,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-copy-data-tool",
+      "status": "done",
+      "word_count": 1420
+    },
+    {
+      "id": "01-02",
+      "file": "module-01-copy-ingest/01-02-copy-activity-manual-pipeline.md",
+      "title": "Copy activity built manually in a pipeline",
+      "budget_min": 35,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-copy-data-portal",
+      "status": "done",
+      "word_count": 1100
+    },
+    {
+      "id": "01-03",
+      "file": "module-01-copy-ingest/01-03-datasets-linked-services-parameters.md",
+      "title": "Datasets, linked services, parameters deep dive",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/concepts-datasets-linked-services",
+      "status": "done",
+      "word_count": 950
+    },
+    {
+      "id": "01-04",
+      "file": "module-01-copy-ingest/01-04-on-prem-to-cloud-self-hosted-ir.md",
+      "title": "On-prem to cloud with self-hosted IR",
+      "budget_min": 35,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-hybrid-copy-data-tool",
+      "status": "done",
+      "word_count": 900
+    },
+    {
+      "id": "01-05",
+      "file": "module-01-copy-ingest/01-05-conditional-execution-error-handling.md",
+      "title": "Conditional execution, retries & error handling",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-pipeline-failure-error-handling",
+      "status": "done",
+      "word_count": 850
+    },
+    {
+      "id": "01-06",
+      "file": "module-01-copy-ingest/01-06-amazon-s3-to-adls-gen2.md",
+      "title": "Amazon S3 to ADLS Gen2",
+      "budget_min": 25,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/load-azure-data-lake-storage-gen2",
+      "status": "done",
+      "word_count": 450
+    },
+    {
+      "id": "01-07",
+      "file": "module-01-copy-ingest/01-07-incremental-copy-patterns.md",
+      "title": "Incremental copy patterns (overview + watermark)",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-incremental-copy-overview",
+      "status": "done",
+      "word_count": 550
+    },
+    {
+      "id": "01-08",
+      "file": "module-01-copy-ingest/01-08-change-tracking-multiple-tables-cdc.md",
+      "title": "Change tracking, multiple tables, CDC intro",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-incremental-copy-change-tracking-feature-portal",
+      "status": "done",
+      "word_count": 650
+    },
+    {
+      "id": "02-01",
+      "file": "module-02-data-flows/02-01-data-flow-fundamentals-debug-canvas.md",
+      "title": "Data flow fundamentals, debug, the canvas",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/concepts-data-flow-overview",
+      "status": "done",
+      "word_count": 650
+    },
+    {
+      "id": "02-02",
+      "file": "module-02-data-flows/02-02-code-free-transformation-at-scale.md",
+      "title": "Code-free transformation at scale (source, transform, sink)",
+      "budget_min": 40,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-data-flow",
+      "status": "done",
+      "word_count": 2542
+    },
+    {
+      "id": "02-03",
+      "file": "module-02-data-flows/02-03-expressions-schema-drift-derived-columns.md",
+      "title": "Expressions, schema drift, derived columns",
+      "budget_min": 35,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/concepts-data-flow-expression-language",
+      "status": "done",
+      "word_count": 580
+    },
+    {
+      "id": "02-04",
+      "file": "module-02-data-flows/02-04-delta-lake-transformations.md",
+      "title": "Delta Lake transformations",
+      "budget_min": 35,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-data-flow-delta-lake",
+      "status": "done",
+      "word_count": 480
+    },
+    {
+      "id": "02-05",
+      "file": "module-02-data-flows/02-05-power-query-wrangling-data-flow.md",
+      "title": "Power Query (wrangling) data flow",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/wrangling-tutorial",
+      "status": "done",
+      "word_count": 520
+    },
+    {
+      "id": "02-06",
+      "file": "module-02-data-flows/02-06-writing-to-lake-partitioning-best-practices.md",
+      "title": "Writing to the lake — partitioning & best practices",
+      "budget_min": 40,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-data-flow-write-to-lake",
+      "status": "done",
+      "word_count": 550
+    },
+    {
+      "id": "03-01",
+      "file": "module-03-control-flow-orchestration/03-01-pipeline-activities-catalogue.md",
+      "title": "Pipeline activities catalogue (Lookup, Web, Set Variable, etc.)",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/concepts-pipelines-activities",
+      "status": "done",
+      "word_count": 680
+    },
+    {
+      "id": "03-02",
+      "file": "module-03-control-flow-orchestration/03-02-control-flow-foreach-if-until-switch.md",
+      "title": "Control flow: ForEach, If, Until, Switch",
+      "budget_min": 40,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-control-flow-portal",
+      "status": "done",
+      "word_count": 750
+    },
+    {
+      "id": "03-03",
+      "file": "module-03-control-flow-orchestration/03-03-parameters-variables-expressions-dynamic-content.md",
+      "title": "Parameters, variables, expressions & dynamic content",
+      "budget_min": 35,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/how-to-expression-builder-adf",
+      "status": "done",
+      "word_count": 520
+    },
+    {
+      "id": "03-04",
+      "file": "module-03-control-flow-orchestration/03-04-triggers-schedule-tumbling-event-custom.md",
+      "title": "Triggers: schedule, tumbling window, event, custom",
+      "budget_min": 40,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/concepts-triggers",
+      "status": "done",
+      "word_count": 580
+    },
+    {
+      "id": "03-05",
+      "file": "module-03-control-flow-orchestration/03-05-monitoring-email-notifications.md",
+      "title": "Monitoring + email notifications via Logic App / alerts",
+      "budget_min": 35,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/how-to-send-email",
+      "status": "done",
+      "word_count": 620
+    },
+    {
+      "id": "04-01",
+      "file": "module-04-external-compute/04-01-databricks-notebook-activity.md",
+      "title": "Databricks notebook activity from ADF",
+      "budget_min": 50,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/transform-data-using-databricks-notebook",
+      "status": "done",
+      "word_count": 720
+    },
+    {
+      "id": "04-02",
+      "file": "module-04-external-compute/04-02-hdinsight-spark-transformation.md",
+      "title": "HDInsight Spark transformation",
+      "budget_min": 50,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-transform-data-spark-portal",
+      "status": "done",
+      "word_count": 480
+    },
+    {
+      "id": "04-03",
+      "file": "module-04-external-compute/04-03-hive-transformation.md",
+      "title": "Hive transformation",
+      "budget_min": 50,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-transform-data-hive-virtual-network-portal",
+      "status": "done",
+      "word_count": 450
+    },
+    {
+      "id": "05-01",
+      "file": "module-05-networking-security/05-01-managed-vnet-private-endpoints-concepts.md",
+      "title": "Managed VNet & private endpoints concepts",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/concepts-managed-virtual-network",
+      "status": "done",
+      "word_count": 380
+    },
+    {
+      "id": "05-02",
+      "file": "module-05-networking-security/05-02-copy-pipeline-managed-vnet.md",
+      "title": "Copy pipeline inside a managed VNet",
+      "budget_min": 35,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-copy-data-portal-private",
+      "status": "done",
+      "word_count": 420
+    },
+    {
+      "id": "05-03",
+      "file": "module-05-networking-security/05-03-on-prem-sql-managed-private-endpoint.md",
+      "title": "On-prem SQL via managed private endpoint",
+      "budget_min": 35,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-managed-virtual-network-on-premise-sql-server",
+      "status": "done",
+      "word_count": 400
+    },
+    {
+      "id": "05-04",
+      "file": "module-05-networking-security/05-04-key-vault-managed-identity-rbac.md",
+      "title": "Key Vault, managed identity, RBAC for ADF",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/store-credentials-in-key-vault",
+      "status": "done",
+      "word_count": 480
+    },
+    {
+      "id": "06-01",
+      "file": "module-06-governance-cicd-ops/06-01-git-integration-azure-devops-github.md",
+      "title": "Git integration (Azure DevOps / GitHub) for ADF",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/source-control",
+      "status": "done",
+      "word_count": 350
+    },
+    {
+      "id": "06-02",
+      "file": "module-06-governance-cicd-ops/06-02-arm-templates-cicd-dev-test-prod.md",
+      "title": "ARM templates & CI/CD across dev/test/prod",
+      "budget_min": 40,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/continuous-integration-delivery",
+      "status": "done",
+      "word_count": 380
+    },
+    {
+      "id": "06-03",
+      "file": "module-06-governance-cicd-ops/06-03-push-lineage-to-purview.md",
+      "title": "Push lineage to Microsoft Purview",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/turorial-push-lineage-to-purview",
+      "status": "done",
+      "word_count": 320
+    },
+    {
+      "id": "06-04",
+      "file": "module-06-governance-cicd-ops/06-04-ssis-integration-runtime.md",
+      "title": "SSIS integration runtime (lift & shift)",
+      "budget_min": 30,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/tutorial-deploy-ssis-packages-azure",
+      "status": "done",
+      "word_count": 300
+    },
+    {
+      "id": "06-05",
+      "file": "module-06-governance-cicd-ops/06-05-cost-monitoring-alerts-runbook.md",
+      "title": "Cost monitoring, alerts & operational runbook",
+      "budget_min": 20,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/plan-manage-costs",
+      "status": "done",
+      "word_count": 350
+    },
+    {
+      "id": "CAPSTONE",
+      "file": "CAPSTONE.md",
+      "title": "End-to-end capstone project",
+      "budget_min": 40,
+      "source_url": "https://learn.microsoft.com/en-us/azure/data-factory/data-factory-tutorials",
+      "status": "done",
+      "word_count": 650
+    }
+  ]
+}

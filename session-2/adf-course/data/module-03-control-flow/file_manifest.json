@@ -1,0 +1,30 @@
+{
+  "manifest_version": "1.0",
+  "generated_utc": "2026-06-10T06:00:00Z",
+  "files": [
+    {
+      "entity": "transactions",
+      "source_path": "incoming/transactions/daily/transactions_daily.csv",
+      "sink_folder": "loaded/transactions",
+      "enabled": true
+    },
+    {
+      "entity": "customers",
+      "source_path": "incoming/customers/customers.csv",
+      "sink_folder": "loaded/customers",
+      "enabled": true
+    },
+    {
+      "entity": "products",
+      "source_path": "incoming/products/products.csv",
+      "sink_folder": "loaded/products",
+      "enabled": true
+    },
+    {
+      "entity": "stores",
+      "source_path": "incoming/stores/store_locations.csv",
+      "sink_folder": "loaded/stores",
+      "enabled": false
+    }
+  ]
+}
