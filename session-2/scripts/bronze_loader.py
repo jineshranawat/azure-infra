@@ -11,10 +11,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from azure.core.exceptions import ResourceExistsError
-from azure.identity import DefaultAzureCredential
 from azure.storage.filedatalake import DataLakeServiceClient
 
-from _config import SessionConfig
+from _config import SessionConfig, get_credential
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ def upload_bronze_feed(
     incoming_path = f"incoming/transactions/{run_id}/sample_transactions.csv"
 
     account_url = f"https://{storage_account}.dfs.core.windows.net"
-    credential = DefaultAzureCredential()
+    credential = get_credential()
     service = DataLakeServiceClient(account_url=account_url, credential=credential)
     fs = service.get_file_system_client("bronze")
     try:

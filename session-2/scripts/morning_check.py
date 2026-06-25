@@ -8,17 +8,16 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
-from azure.identity import DefaultAzureCredential
 from azure.mgmt.datafactory import DataFactoryManagementClient
 
-from _config import SessionConfig
+from _config import SessionConfig, get_credential
 
 logger = logging.getLogger(__name__)
 
 
 def print_morning_check(cfg: SessionConfig, data_factory: str, *, hours: int = 24) -> None:
     """List pipeline runs in the last N hours — failures highlighted."""
-    client = DataFactoryManagementClient(DefaultAzureCredential(), cfg.subscription_id)
+    client = DataFactoryManagementClient(get_credential(), cfg.subscription_id)
     end = datetime.now(timezone.utc)
     start = end - timedelta(hours=hours)
 

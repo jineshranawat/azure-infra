@@ -42,6 +42,32 @@ def _load_dotenv(path: Path) -> dict[str, str]:
     return values
 
 
+def get_credential():
+    """Prefer Azure CLI (fast after az login); skip slow Windows credential brokers."""
+    from azure.identity import (
+        AzureCliCredential,
+        ChainedTokenCredential,
+        DefaultAzureCredential,
+    )
+
+    excludes: dict[str, bool] = {
+        "exclude_interactive_browser_credential": True,
+        "exclude_visual_studio_code_credential": True,
+        "exclude_shared_token_cache_credential": True,
+    }
+    if platform.system() == "Windows":
+        excludes["exclude_powershell_credential"] = True
+
+    try:
+        find_az()
+        return ChainedTokenCredential(
+            AzureCliCredential(),
+            DefaultAzureCredential(**excludes),
+        )
+    except SystemExit:
+        return DefaultAzureCredential(**excludes)
+
+
 def find_az() -> str:
     """Resolve Azure CLI on Windows (az.cmd) and POSIX (az on PATH)."""
     az = shutil.which("az")

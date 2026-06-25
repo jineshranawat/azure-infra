@@ -4,7 +4,7 @@
 
 **Prerequisite:** Class-1 + ADF deployed from repo root (`orchestrate.cmd`).
 
-**Navigation:** [COVERAGE-MAP.md](../COVERAGE-MAP.md) — steps 10–12 | **UI lab:** [MANUAL-LAB.md](MANUAL-LAB.md) | **20h ADF course:** [adf-course/README.md](adf-course/README.md)
+**Navigation:** [COVERAGE-MAP.md](../COVERAGE-MAP.md) — steps 10–12 | **Classroom guide (start here):** [SESSION2-STUDENT-GUIDE.md](SESSION2-STUDENT-GUIDE.md) | **Portal steps:** [MANUAL-LAB.md](MANUAL-LAB.md) | **20h ADF course:** [adf-course/README.md](adf-course/README.md)
 
 ## A. What & why (read first)
 
@@ -49,18 +49,23 @@
 
 ## B. How to run (Windows)
 
+**Students:** follow [SESSION2-STUDENT-GUIDE.md](SESSION2-STUDENT-GUIDE.md) in class (Blocks 0–5).
+
 ```text
 cd session-2
 orchestrate.cmd
 ```
 
-Optional — trigger ADF copy (small activity-run cost):
+Optional flags:
 
 ```text
-orchestrate.cmd --run-pipeline
+orchestrate.cmd --morning-check    # query ADF run history (Block 5 / Hour 23)
+orchestrate.cmd --run-pipeline     # trigger ADF copy (small activity-run cost)
 ```
 
-**Re-run (idempotent):** same command — SDK `create_or_update`, RBAC check-before-create, upload overwrite.
+**First run:** creates the repo-root `.venv` if missing (1–2 min pip install) — does **not** re-run the full Class-1 deploy.
+
+**Re-run (idempotent):** same command — skips ADF deploy when artefacts exist, RBAC check-before-create, upload overwrite.
 
 **Manual portal steps (read → do → verify):** [MANUAL-LAB.md](MANUAL-LAB.md) — Storage upload, ADF linked service, datasets, pipeline trigger, and verification tables.
 
@@ -104,7 +109,8 @@ Use [MANUAL-LAB.md §I](MANUAL-LAB.md#i-end-to-end-verification-checklist) for p
 | `scripts/watermark_store.py` | Incremental control file |
 | `scripts/morning_check.py` | Pipeline run report |
 | `data/sample_transactions.csv` | Synthetic banking feed |
-| `MANUAL-LAB.md` | **Portal steps: read, do, verify** (Storage + ADF) |
+| `SESSION2-STUDENT-GUIDE.md` | **Classroom handout — start here** (agenda, ADF UI, steps) |
+| `MANUAL-LAB.md` | Portal micro-steps and verify tables |
 
 ---
 
@@ -121,7 +127,8 @@ ADF factory idle ≈ £0. `--run-pipeline` triggers copy activity runs (free-tie
 | ADF not found | Run `..\orchestrate.cmd` (full lab) first |
 | Storage upload 403 | Re-run root `orchestrate.cmd` (RBAC); wait 2 min for propagation |
 | Pipeline run failed | Check ADF MI has *Storage Blob Data Contributor* — re-run session `orchestrate.cmd` |
-| No runs in morning check | Expected until `--run-pipeline` |
-| Import errors | From repo root: `orchestrate.cmd --skip-setup` (installs new requirements) |
+| No runs in morning check | Expected until `--run-pipeline`; use `orchestrate.cmd --morning-check` |
+| Import errors | Re-run `orchestrate.cmd` (auto-creates `.venv` + pip install) |
+| Script appears hung | First run loads Azure SDK (~30s); ensure `az login` via repo root `orchestrate.cmd` |
 
 Use Cursor / VS Code AI chat to explain errors — paste terminal output, never secrets. See [README §1](../README.md#when-to-use-cursor--vs-code-ai-chat).

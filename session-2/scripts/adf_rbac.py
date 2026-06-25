@@ -11,10 +11,17 @@ from _config import SessionConfig, find_az
 logger = logging.getLogger(__name__)
 
 STORAGE_BLOB_DATA_CONTRIBUTOR = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
+_AZ_TIMEOUT_SEC = 90
 
 
 def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([find_az(), *args], check=False, text=True, capture_output=True)
+    return subprocess.run(
+        [find_az(), *args],
+        check=False,
+        text=True,
+        capture_output=True,
+        timeout=_AZ_TIMEOUT_SEC,
+    )
 
 
 def ensure_adf_storage_rbac(
@@ -23,6 +30,7 @@ def ensure_adf_storage_rbac(
     data_factory: str,
 ) -> None:
     """Grant ADF system-assigned MI Storage Blob Data Contributor on the lake account."""
+    logger.info("Checking ADF managed identity RBAC on %s...", storage_account)
     show = _run(
         [
             "datafactory", "show",

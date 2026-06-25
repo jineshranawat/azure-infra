@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from dataclasses import dataclass
 from typing import Any
 
 from _config import SessionConfig, find_az
+
+logger = logging.getLogger(__name__)
+
+_AZ_TIMEOUT_SEC = 90
 
 
 @dataclass(frozen=True)
@@ -23,6 +28,7 @@ def _az_json(args: list[str]) -> Any:
         check=True,
         text=True,
         capture_output=True,
+        timeout=_AZ_TIMEOUT_SEC,
     )
     return json.loads(result.stdout)
 

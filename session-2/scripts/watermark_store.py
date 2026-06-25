@@ -10,8 +10,9 @@ import logging
 from datetime import datetime, timezone
 
 from azure.core.exceptions import ResourceExistsError
-from azure.identity import DefaultAzureCredential
 from azure.storage.filedatalake import DataLakeServiceClient
+
+from _config import get_credential
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ WATERMARK_PATH = "_control/watermark.json"
 def read_watermark(storage_account: str) -> dict[str, str] | None:
     """Return parsed watermark JSON or None if not yet created."""
     account_url = f"https://{storage_account}.dfs.core.windows.net"
-    credential = DefaultAzureCredential()
+    credential = get_credential()
     fs = DataLakeServiceClient(account_url=account_url, credential=credential).get_file_system_client(
         "bronze"
     )
@@ -42,7 +43,7 @@ def write_watermark(storage_account: str, run_id: str, loaded_path: str) -> dict
         "feed": "sample_transactions",
     }
     account_url = f"https://{storage_account}.dfs.core.windows.net"
-    credential = DefaultAzureCredential()
+    credential = get_credential()
     fs = DataLakeServiceClient(account_url=account_url, credential=credential).get_file_system_client(
         "bronze"
     )

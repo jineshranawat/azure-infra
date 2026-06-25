@@ -1,5 +1,7 @@
 # Session 2 — Manual portal lab (read, do, verify)
 
+> **Classroom:** use [SESSION2-STUDENT-GUIDE.md](SESSION2-STUDENT-GUIDE.md) first — it orchestrates this lab, the scripts, and the 20h [adf-course](adf-course/README.md). This file has **extra portal detail** per section.
+
 Follow these steps in the **Azure Portal** and **ADF Studio**. You can run them **after** `orchestrate.cmd` (verify what the script built) or use **Section B** as a full hands-on path without the script.
 
 Replace `<learner>` with your `.env` value (e.g. `jinesh`).

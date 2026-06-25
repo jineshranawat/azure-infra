@@ -4,7 +4,8 @@ Maps to [azure.html](../azure.html) **Day 2: Azure Data Factory** (Hours 17–24
 
 **Prerequisite:** Learners completed Class-1 / Session 1 (`orchestrate.cmd` at repo root).
 
-**Learner handout:** [MANUAL-LAB.md](MANUAL-LAB.md) — every block below maps to a portal section (read → do → verify).
+**Learner handout:** [SESSION2-STUDENT-GUIDE.md](SESSION2-STUDENT-GUIDE.md) — **Path M (portal)** or **Path S (script)**; students bored with code should use **Path M** only.  
+**Portal detail:** [MANUAL-LAB.md](MANUAL-LAB.md)
 
 ---
 

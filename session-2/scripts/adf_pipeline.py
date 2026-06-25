@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 
-from azure.identity import DefaultAzureCredential
+from azure.core.exceptions import ResourceNotFoundError
 from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.mgmt.datafactory.models import (
     AzureBlobFSLocation,
@@ -28,7 +28,7 @@ from azure.mgmt.datafactory.models import (
     ActivityPolicy,
 )
 
-from _config import SessionConfig
+from _config import SessionConfig, get_credential
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,32 @@ PIPELINE_NAME = "pl_bronze_copy"
 
 
 def _client(cfg: SessionConfig) -> DataFactoryManagementClient:
-    return DataFactoryManagementClient(DefaultAzureCredential(), cfg.subscription_id)
+    return DataFactoryManagementClient(get_credential(), cfg.subscription_id)
+
+
+def _artifacts_already_deployed(
+    adf: DataFactoryManagementClient,
+    rg: str,
+    data_factory: str,
+) -> bool:
+    """Skip slow create_or_update when Session 2 artefacts already exist."""
+    names = (LINKED_SERVICE_NAME, SOURCE_DATASET, SINK_DATASET, PIPELINE_NAME)
+    getters = (
+        adf.linked_services.get,
+        adf.datasets.get,
+        adf.datasets.get,
+        adf.pipelines.get,
+    )
+    for name, getter in zip(names, getters):
+        try:
+            getter(rg, data_factory, name)
+        except ResourceNotFoundError:
+            return False
+        except Exception as exc:
+            if "ResourceNotFound" in str(exc) or "NotFound" in str(exc):
+                return False
+            raise
+    return True
 
 
 def ensure_adf_artifacts(
@@ -50,6 +75,16 @@ def ensure_adf_artifacts(
     """Create or update linked service (MSI), datasets, and copy pipeline."""
     adf = _client(cfg)
     rg = cfg.resource_group
+
+    if _artifacts_already_deployed(adf, rg, data_factory):
+        logger.info(
+            "ADF artefacts already present (%s, datasets, %s) — skip SDK deploy",
+            LINKED_SERVICE_NAME,
+            PIPELINE_NAME,
+        )
+        return
+
+    logger.info("Deploying ADF artefacts via SDK (30-60 sec)...")
     dfs_url = f"https://{storage_account}.dfs.core.windows.net"
 
     # Linked service — MSI auth for factory copy activities
