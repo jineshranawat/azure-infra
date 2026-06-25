@@ -2,9 +2,11 @@
 
 > **Classroom:** use [SESSION2-STUDENT-GUIDE.md](SESSION2-STUDENT-GUIDE.md) first — it orchestrates this lab, the scripts, and the 20h [adf-course](adf-course/README.md). This file has **extra portal detail** per section.
 
-Follow these steps in the **Azure Portal** and **ADF Studio**. You can run them **after** `orchestrate.cmd` (verify what the script built) or use **Section B** as a full hands-on path without the script.
+Follow these steps in the **Azure Portal** and **ADF Studio**.
 
-Replace `<learner>` with your `.env` value (e.g. `jinesh`).
+**Normal classroom:** trainer already ran `orchestrate.cmd` — you **verify** ([lab-c](#lab-c), [lab-e](#lab-e)) and **trigger** ([lab-f](#lab-f)) in the portal. Use [lab-b](#lab-b) / [lab-g](#lab-g) only if the script did not run.
+
+Replace `<learner>` with your `.env` value (e.g. `santosh`).
 
 **Portal:** [https://portal.azure.com](https://portal.azure.com)
 
@@ -32,13 +34,31 @@ Replace `<learner>` with your `.env` value (e.g. `jinesh`).
 
 ### Typical flows
 
-**Path M — portal only (no terminal):** A → D → B → G → F → H → I  
+**Classroom (script pre-run — default):** [lab-a](#lab-a) → [lab-d](#lab-d) → [lab-c](#lab-c) → [lab-e](#lab-e) → [lab-f](#lab-f) → [lab-h](#lab-h) → [lab-i](#lab-i)
 
-**Path S — script + portal verify:** A → D → `orchestrate.cmd` (covers **C**) → E → `--run-pipeline` + **F** → `--morning-check` (**H**) → I  
+**Portal-only (no script):** [lab-a](#lab-a) → [lab-d](#lab-d) → [lab-b](#lab-b) → [lab-g](#lab-g) → [lab-f](#lab-f) → [lab-h](#lab-h) → [lab-i](#lab-i)
 
-**Mixed (common):** A → D → B → `orchestrate.cmd` for RBAC only → E → F in portal → I
+**Self-study script:** run `orchestrate.cmd` then same as classroom verify path.
+
+<a id="jump-links"></a>
+
+### Jump links (click in VS Code / GitHub)
+
+| Section | Link |
+|---------|------|
+| A — Find resources | [lab-a](#lab-a) |
+| B — Upload by hand | [lab-b](#lab-b) |
+| C — Verify after script | [lab-c](#lab-c) |
+| D — Linked service | [lab-d](#lab-d) |
+| E — Verify pipeline | [lab-e](#lab-e) |
+| F — Trigger & monitor | [lab-f](#lab-f) |
+| G — Build pipeline by hand | [lab-g](#lab-g) |
+| H — Morning check | [lab-h](#lab-h) |
+| I — Final checklist | [lab-i](#lab-i) |
 
 ---
+
+<a id="lab-a"></a>
 
 ## A. Find your resources (5 min) — Block 1, Step 1
 
@@ -61,6 +81,8 @@ Replace `<learner>` with your `.env` value (e.g. `jinesh`).
 
 ---
 
+<a id="lab-b"></a>
+
 ## B. Manual path — Storage upload (15 min) — Block 2, Path M only
 
 *Skip if you already ran `orchestrate.cmd` — go to Section C to verify the script upload.*
@@ -75,10 +97,10 @@ Replace `<learner>` with your `.env` value (e.g. `jinesh`).
 
 1. Click **Upload**.
 2. Click **Browse for files** → select `session-2\data\sample_transactions.csv` from your repo clone.
-3. Under **Advanced** → **Upload to folder**, enter:
+3. Under **Advanced** → **Upload to folder**, enter the **folder only** (no file name):
 
    ```text
-   incoming/transactions/manual-run/sample_transactions.csv
+   incoming/transactions/manual-run
    ```
 
 4. Click **Upload**.
@@ -88,7 +110,7 @@ Replace `<learner>` with your `.env` value (e.g. `jinesh`).
 | Check | Where | Expected |
 |-------|--------|----------|
 | File exists | bronze → `incoming` → `transactions` → `manual-run` | `sample_transactions.csv` |
-| File size | Click blob → **Properties** | ~300 bytes, 6 data rows + header |
+| File size | Click blob → **Properties** | ~316 bytes (5 data rows + 1 header = 6 lines) |
 | Tier | Properties → Access tier | **Hot** |
 
 - [ ] Blob path matches: `bronze/incoming/transactions/manual-run/sample_transactions.csv`
@@ -116,6 +138,8 @@ Replace `<learner>` with your `.env` value (e.g. `jinesh`).
 - [ ] JSON opens and shows `last_run_id`
 
 ---
+
+<a id="lab-c"></a>
 
 ## C. Verify Storage after `orchestrate.cmd` (10 min) — Block 2, Path S only
 
@@ -166,9 +190,11 @@ orchestrate.cmd
 
 ---
 
+<a id="lab-d"></a>
+
 ## D. ADF — open studio & linked service (10 min) — Block 1, Step 2
 
-*Do this **after** [Section A](#a-find-your-resources-5-min--block-1-step-1). You need storage and factory names from Step 1.*
+*Do this **after** [Section A](#lab-a). You need storage and factory names from Step 1.*
 
 ### D1. Open Data Factory
 
@@ -202,6 +228,8 @@ orchestrate.cmd
 
 ---
 
+<a id="lab-e"></a>
+
 ## E. ADF — datasets & pipeline (15 min) — Block 3, Path S / Path M-verify
 
 ### E1. Verify script-deployed artefacts
@@ -229,6 +257,8 @@ In ADF Studio → **Author** (pencil icon):
 | 5 | Pipeline has parameters `incoming_folder` and `loaded_folder` | [ ] |
 
 ---
+
+<a id="lab-f"></a>
 
 ## F. Manual ADF — trigger pipeline run (15 min) — Block 4
 
@@ -269,6 +299,8 @@ orchestrate.cmd --run-pipeline
 
 ### F3. If run **Failed** — common fixes
 
+<a id="lab-f3"></a>
+
 | Error hint | Portal action |
 |------------|----------------|
 | 403 / Authorization | Storage → IAM → confirm ADF MI role; wait 2 min, **Trigger now** again |
@@ -276,6 +308,8 @@ orchestrate.cmd --run-pipeline
 | Linked service fail | Manage → Linked services → **Test connection** |
 
 ---
+
+<a id="lab-g"></a>
 
 ## G. Manual ADF — build copy pipeline by hand (optional, 30 min) — Block 3, Path M only
 
@@ -313,6 +347,8 @@ orchestrate.cmd --run-pipeline
 
 ---
 
+<a id="lab-h"></a>
+
 ## H. Morning check — script vs portal (10 min) — Block 5
 
 ### H1. Script
@@ -337,6 +373,8 @@ Terminal Phase 6 lists pipeline runs (last 24h).
 | 3 | Run timestamp is today | [ ] |
 
 ---
+
+<a id="lab-i"></a>
 
 ## I. End-to-end verification checklist — Block 5
 

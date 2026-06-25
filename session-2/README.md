@@ -51,6 +51,8 @@
 
 **Students:** follow [SESSION2-STUDENT-GUIDE.md](SESSION2-STUDENT-GUIDE.md) in class (Blocks 0–5).
 
+**Normal classroom:** trainer runs `orchestrate.cmd` before class; students **verify in portal** — see guide **START HERE** section.
+
 ```text
 cd session-2
 orchestrate.cmd
@@ -73,13 +75,17 @@ orchestrate.cmd --run-pipeline     # trigger ADF copy (small activity-run cost)
 
 ## C. Two-hour schedule
 
-| Time | Block | Activity | Portal |
-|------|-------|----------|--------|
-| 0:00–0:20 | **1 — ADF anatomy** | §A then §D — find RG → Studio + linked service | ADF → Manage |
-| 0:20–0:50 | **2 — Bronze ingest** | §B upload **or** `orchestrate.cmd` + §C verify | Storage → bronze |
-| 0:50–1:20 | **3 — Pipeline as code** | §G build **or** §E verify (not both) | ADF → datasets + pipeline |
-| 1:20–1:45 | **4 — Operate** | [MANUAL-LAB §F](MANUAL-LAB.md#f-manual-adf--trigger-pipeline-run-15-min--block-4) Trigger now + Monitor | ADF → Monitor |
-| 1:45–2:00 | **5 — Checkpoint** | [MANUAL-LAB §I](MANUAL-LAB.md#i-end-to-end-verification-checklist--block-5) full checklist | Cost Management |
+**Default classroom = script pre-run; students verify + trigger in the portal.**
+
+| Time | Block | Students do in portal | Portal |
+|------|-------|-----------------------|--------|
+| 0:00–0:20 | **1 — ADF anatomy** | [lab-a](MANUAL-LAB.md#lab-a) then [lab-d](MANUAL-LAB.md#lab-d) — find RG → Studio + linked service | ADF → Manage |
+| 0:20–0:50 | **2 — Bronze ingest** | [lab-c](MANUAL-LAB.md#lab-c) verify the file + watermark the script landed | Storage → bronze |
+| 0:50–1:20 | **3 — Pipeline** | [lab-e](MANUAL-LAB.md#lab-e) inspect `pl_bronze_copy` (do not rebuild) | ADF → Author |
+| 1:20–1:45 | **4 — Operate** | [lab-f](MANUAL-LAB.md#lab-f) **Trigger now** + Monitor | ADF → Monitor |
+| 1:45–2:00 | **5 — Checkpoint** | [lab-h](MANUAL-LAB.md#lab-h) run history + [lab-i](MANUAL-LAB.md#lab-i) checklist | Cost Management |
+
+No-script fallback: Block 2 → [lab-b](MANUAL-LAB.md#lab-b), Block 3 → [lab-g](MANUAL-LAB.md#lab-g).
 
 Trainer detail: [GUIDE.md](GUIDE.md) | **Portal handout:** [MANUAL-LAB.md](MANUAL-LAB.md)
 
@@ -87,9 +93,9 @@ Trainer detail: [GUIDE.md](GUIDE.md) | **Portal handout:** [MANUAL-LAB.md](MANUA
 
 ## D. Deliverables checklist
 
-Use [MANUAL-LAB.md §I](MANUAL-LAB.md#i-end-to-end-verification-checklist--block-5) for portal verification tables.
+Use [MANUAL-LAB lab-i](MANUAL-LAB.md#lab-i) for portal verification tables.
 
-**MANUAL-LAB section order:** Block 1 = **§A then §D** (sequential steps). Block 2 = **§B** (portal) or **§C** (after script). Block 3 = **§G** or **§E** (pick one). See [MANUAL-LAB section map](MANUAL-LAB.md#section-map-read-in-order--letters-are-not-interchangeable).
+**MANUAL-LAB section order (jump links `lab-a` … `lab-i`):** Block 1 = [lab-a](MANUAL-LAB.md#lab-a) then [lab-d](MANUAL-LAB.md#lab-d) (sequential). Block 2 = [lab-c](MANUAL-LAB.md#lab-c) (verify script) or [lab-b](MANUAL-LAB.md#lab-b) (portal upload). Block 3 = [lab-e](MANUAL-LAB.md#lab-e) (verify) or [lab-g](MANUAL-LAB.md#lab-g) (build by hand).
 
 - [ ] `orchestrate.cmd` exits 0
 - [ ] `bronze/incoming/transactions/<run_id>/sample_transactions.csv` exists

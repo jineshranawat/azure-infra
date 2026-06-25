@@ -16,7 +16,7 @@ A self-paced, **20+ hour** course for working data engineers and analysts. Every
 6. Look up terms in [GLOSSARY.md](GLOSSARY.md).
 7. Generation progress is tracked in [manifest.json](manifest.json).
 
-**Trainers:** [TRAINER-GUIDE.md](TRAINER-GUIDE.md) — facilitation, activity types per module, timing.
+**Trainers:** [CLASS-PLAN.md](CLASS-PLAN.md) — run the 20+ hours as **12 portal-first classes** (start here to teach across sessions) · [TRAINER-GUIDE.md](TRAINER-GUIDE.md) — facilitation, activity types, timing.
 
 **Generation status:** **Course complete** — 38/38 lessons + CAPSTONE. See Phase Final audit notes in [CAPSTONE.md](CAPSTONE.md).
 
@@ -203,6 +203,12 @@ All lessons ground on official tutorials: [ADF tutorials index](https://learn.mi
 ---
 
 ## Start here
+
+**Students — open ONE doc in class:** → [STUDENT-GUIDE.md](STUDENT-GUIDE.md) (per class: what to **Open / Execute / Show**, theory beside practical).
+
+**Teaching across multiple classes?** → [CLASS-PLAN.md](CLASS-PLAN.md) maps these 38 lessons into 12 portal-first classes (~24 h), each with a visual "wow" moment.
+
+Self-paced:
 
 1. [SETUP.md](SETUP.md) — naming, region, cost guardrails
 2. [CASE-STUDY.md](CASE-STUDY.md) — business context

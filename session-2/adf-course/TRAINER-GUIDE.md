@@ -3,6 +3,8 @@
 **Audience:** Instructors facilitating [FinLedger UK](CASE-STUDY.md) hands-on labs.  
 **Learner handout pattern:** Every lesson uses **Read → Do → Verify** (same as [Session 2 MANUAL-LAB.md](../MANUAL-LAB.md)).
 
+> **Running this as a course across multiple classes?** Use **[CLASS-PLAN.md](CLASS-PLAN.md)** — it sequences all lessons into 12 portal-first, 2-hour classes (each with a visual "wow" moment) and flags which lessons are full click-by-click vs. trainer-demo.
+
 ---
 
 ## How learners use this course
