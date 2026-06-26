@@ -17,7 +17,7 @@
 |---------|--------|------------|----------|----------------|-------------------|
 | **Session 1** — Class-1 landing zone | repo root | Day 1 (Hours 9–16) | ~6 h class | `orchestrate.cmd` | [README §10](README.md#10-azure-portal--complete-novice-practical-guide) + [WORKFLOW-AND-CODE](docs/WORKFLOW-AND-CODE.md) |
 | **Session 2** — ADF ingestion | `session-2/` | Day 2 (Hours 17–24) | 2 h | `session-2\orchestrate.cmd` | [session-2/MANUAL-LAB.md](session-2/MANUAL-LAB.md) |
-| Session 3 — Databricks | *planned* | Day 3 | — | — | — |
+| **Session 3** — Databricks lakehouse | `session-3/` | Day 3 (Hours 25–32) | 2 h | `session-3\orchestrate.cmd` | [session-3/MANUAL-LAB.md](session-3/MANUAL-LAB.md) |
 | Session 4 — Purview | *planned* | Day 4 | — | — | — |
 | Session 5+ — Operate / Engineering | *planned* | Day 5–7 | — | — | — |
 
@@ -41,7 +41,10 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 | **10** | **Session 2** start | [session-2/README](session-2/README.md) §A theory | `cd session-2` | — | Class-1 + ADF exist in RG |
 | **11** | Session 2 automate | [session-2/README](session-2/README.md) §B | `orchestrate.cmd` | — | Phases 1–6 OK in terminal |
 | **12** | Session 2 UI lab | [session-2/MANUAL-LAB](session-2/MANUAL-LAB.md) §A→I | `orchestrate.cmd --run-pipeline` (optional) | Storage **bronze** + ADF Studio | [MANUAL-LAB §I](session-2/MANUAL-LAB.md#i-end-to-end-verification-checklist) |
-| **13** | Teardown | [README §1 teardown](README.md#other-commands) | `orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes` | RG deleted | RG gone in portal |
+| **13** | **Session 3** start | [session-3/README](session-3/README.md) §A theory | `cd session-3` | — | Class-1 + Databricks workspace exist |
+| **14** | Session 3 prep | [session-3/README](session-3/README.md) §B | `orchestrate.cmd` | — | Prints `abfss://` paths |
+| **15** | Session 3 UI lab | [session-3/MANUAL-LAB](session-3/MANUAL-LAB.md) §A→I | `orchestrate.cmd --verify-storage` (after notebooks) | Databricks workspace + Storage silver/gold | [MANUAL-LAB §I](session-3/MANUAL-LAB.md#lab-i) |
+| **16** | Teardown | [README §1 teardown](README.md#other-commands) | `orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes` | RG deleted | RG gone in portal |
 
 **Re-run anytime (Session 1):** `orchestrate.cmd` — [README §C](README.md#c-the-re-run-command)  
 **Re-run anytime (Session 2):** `cd session-2` → `orchestrate.cmd`
@@ -62,6 +65,11 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 | **[session-2/README.md](session-2/README.md)** | Learners | Session 2 theory + 2h schedule |
 | **[session-2/MANUAL-LAB.md](session-2/MANUAL-LAB.md)** | Learners | **Session 2 UI: read → do → verify** |
 | **[session-2/GUIDE.md](session-2/GUIDE.md)** | Trainers | Session 2 timed blocks |
+| **[session-3/README.md](session-3/README.md)** | Learners | Session 3 theory + 2h schedule |
+| **[session-3/MANUAL-LAB.md](session-3/MANUAL-LAB.md)** | Learners | **Session 3 UI: Databricks + Storage** |
+| **[session-3/UI-OVERVIEW.md](session-3/UI-OVERVIEW.md)** | Learners | **Theory + UI graphs** |
+| **[session-3/SESSION3-STUDENT-GUIDE.md](session-3/SESSION3-STUDENT-GUIDE.md)** | Learners | **Session 3 classroom handout** |
+| **[session-3/GUIDE.md](session-3/GUIDE.md)** | Trainers | Session 3 timed blocks |
 
 ---
 
@@ -106,7 +114,25 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 
 ---
 
-## 6. Commands quick reference
+## 6. Session 3 — Databricks: read / run / portal map
+
+**Prerequisite:** Session 1 complete (Databricks workspace in RG).  
+**Command:** `session-3\orchestrate.cmd`
+
+| Block | Read | Run | Portal / Databricks (verify) | Doc section |
+|-------|------|-----|------------------------------|-------------|
+| Find resources | MANUAL-LAB §A | — | RG → storage + Databricks | MANUAL-LAB §A verify |
+| Bronze prep | `bronze_prep.py` | `orchestrate.cmd` | Storage → bronze → **loaded/run=session3-lab** | MANUAL-LAB §E |
+| Workspace tour | SESSION3-STUDENT-GUIDE Block 1 | — | Launch Databricks → Compute | MANUAL-LAB §B–C |
+| Read bronze | `nb_01_read_bronze.py` | Run all in UI | Notebook output 5 rows | MANUAL-LAB §E |
+| Silver Delta | `nb_02_bronze_to_silver.py` | Run all | silver → **transactions/_delta_log** | MANUAL-LAB §F |
+| Gold Delta | `nb_03_silver_to_gold.py` | Run all | gold → **daily_channel_summary** | MANUAL-LAB §G |
+| Verify + cost | MANUAL-LAB §I | `orchestrate.cmd --verify-storage` | Terminate cluster | MANUAL-LAB §I |
+| ADF optional | module-04-adf | — | ADF Notebook activity | databricks-course/04-01 |
+
+---
+
+## 7. Commands quick reference
 
 | Goal | Where | Command |
 |------|-------|---------|
@@ -116,11 +142,13 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 | Re-run (safe) | repo root | `orchestrate.cmd` |
 | Session 2 lab | `session-2\` | `orchestrate.cmd` |
 | Session 2 + pipeline run | `session-2\` | `orchestrate.cmd --run-pipeline` |
+| Session 3 lab | `session-3\` | `orchestrate.cmd` |
+| Session 3 verify Delta | `session-3\` | `orchestrate.cmd --verify-storage` |
 | Teardown | repo root | `orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes` |
 
 ---
 
-## 7. Portal URLs (after deploy)
+## 8. Portal URLs (after deploy)
 
 | What | How to open |
 |------|-------------|
@@ -128,31 +156,35 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 | Cost analysis | Cost Management → filter resource group |
 | Storage bronze | RG → storage → Containers → **bronze** |
 | Data Factory | RG → ADF → **Open Azure Data Factory Studio** |
+| Databricks | RG → Databricks workspace → **Launch workspace** |
 | Purview | [web.purview.azure.com](https://web.purview.azure.com) |
 | Fabric (MPN workaround) | [app.fabric.microsoft.com](https://app.fabric.microsoft.com) |
 
 ---
 
-## 8. When things go wrong
+## 9. When things go wrong
 
 | Situation | Go to |
 |-----------|--------|
 | Setup / login / deploy errors | [README §1 failures](README.md#failures--workarounds-short-guide) |
 | Session 2 script errors | [session-2/README §G](session-2/README.md#g-failures--workarounds) |
 | Session 2 portal errors | [session-2/MANUAL-LAB §K](session-2/MANUAL-LAB.md#k-troubleshooting-portal) |
+| Session 3 Databricks errors | [session-3/MANUAL-LAB §K](session-3/MANUAL-LAB.md#lab-k) |
+| Session 3 script errors | [session-3/README §G](session-3/README.md#g-failures--workarounds) |
 | MPN Synapse / Fabric blocked | [docs/GOVERNANCE-DEPLOY.md](docs/GOVERNANCE-DEPLOY.md) |
 | Explain an error with AI | [README — Cursor / VS Code AI](README.md#when-to-use-cursor--vs-code-ai-chat) |
 
 ---
 
-## 9. Trainer one-page flow
+## 10. Trainer one-page flow
 
 ```text
 Day A (Session 1):  README §1 → orchestrate.cmd → README §10 + WORKFLOW + CLASS-GUIDE
 Day B (Session 2):  session-2/README → orchestrate.cmd → MANUAL-LAB (learners tick §I)
-Wrap-up:            teardown demo → COVERAGE-MAP step 13
+Day C (Session 3):  session-3/README → orchestrate.cmd → Databricks notebooks + MANUAL-LAB §I
+Wrap-up:            teardown demo → COVERAGE-MAP step 16
 ```
 
 ---
 
-*Last aligned with: Session 1 (root orchestrator) + Session 2 (ADF). Update this file when new session folders are added.*
+*Last aligned with: Session 1 (root) + Session 2 (ADF) + Session 3 (Databricks).*

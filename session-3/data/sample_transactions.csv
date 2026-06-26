@@ -1,0 +1,6 @@
+transaction_id,account_id,amount_gbp,value_date,channel,status
+TXN-10001,ACC-8821,1250.50,2026-06-01,wire,posted
+TXN-10002,ACC-4410,89.99,2026-06-01,card,posted
+TXN-10003,ACC-8821,50000.00,2026-06-02,wire,pending
+TXN-10004,ACC-2299,12.40,2026-06-02,card,posted
+TXN-10005,ACC-4410,3400.00,2026-06-03,fps,posted
