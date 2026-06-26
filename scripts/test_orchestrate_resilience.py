@@ -14,10 +14,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from orchestrate import (  # noqa: E402
     Config,
+    DATABRICKS_LOCATION,
     ServicePrincipalAuth,
     _core_platforms_ready,
+    _databricks_managed_rg_name,
     _deployment_text,
     _ensure_az_login,
+    _ensure_databricks_eastus2,
     _parse_deployment_outputs,
     _platform_bicep_params,
     _purview_tenant_exists_error,
@@ -55,6 +58,7 @@ class PlatformParamTests(unittest.TestCase):
         self.assertIn("deploySynapse=false", joined)
         self.assertIn("deployFabric=false", joined)
         self.assertIn("deployPurview=true", joined)
+        self.assertIn(f"databricksLocation={DATABRICKS_LOCATION}", joined)
 
     def test_purview_off_params(self) -> None:
         params = _platform_bicep_params(self._cfg(), "stgdemo", deploy_purview=False)
@@ -101,7 +105,9 @@ class PlatformDeployFallbackTests(unittest.TestCase):
 
         mock_run.side_effect = [purview_error, success]
 
-        with patch("orchestrate._register_platform_providers"):
+        with patch("orchestrate._register_platform_providers"), patch(
+            "orchestrate._ensure_databricks_eastus2"
+        ):
             outputs = _deploy_platforms(
                 "az",
                 self._cfg(),
@@ -126,7 +132,9 @@ class PlatformDeployFallbackTests(unittest.TestCase):
             "databricksWorkspaceName": "dbw-sunil-abc123",
         }
 
-        with patch("orchestrate._register_platform_providers"):
+        with patch("orchestrate._register_platform_providers"), patch(
+            "orchestrate._ensure_databricks_eastus2"
+        ):
             outputs = _deploy_platforms(
                 "az",
                 self._cfg(),
@@ -183,6 +191,74 @@ class ServicePrincipalLoginTests(unittest.TestCase):
 
 
 class HelperTests(unittest.TestCase):
+    def test_databricks_managed_rg_name(self) -> None:
+        cfg = Config(
+            subscription_id="sub",
+            learner="demo",
+            owner_email="trainer@example.com",
+            location="uksouth",
+            principal_type="User",
+            service_principal=None,
+        )
+        self.assertEqual(
+            _databricks_managed_rg_name("dbw-demo-abc123", cfg),
+            "rg-demo-dbw-abc123",
+        )
+        self.assertIsNone(_databricks_managed_rg_name("dbw-other-abc123", cfg))
+
+    @patch("orchestrate._delete_databricks_managed_rg")
+    @patch("orchestrate._wait_databricks_deleted")
+    @patch("orchestrate._run")
+    def test_ensure_databricks_deletes_wrong_region(
+        self, mock_run: MagicMock, mock_wait: MagicMock, mock_delete_rg: MagicMock
+    ) -> None:
+        cfg = Config(
+            subscription_id="sub",
+            learner="demo",
+            owner_email="trainer@example.com",
+            location="uksouth",
+            principal_type="User",
+            service_principal=None,
+        )
+        list_ok = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout=json.dumps(
+                [{"name": "dbw-demo-abc123", "location": "uksouth"}]
+            ),
+            stderr="",
+        )
+        delete_ok = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+        mock_run.side_effect = [list_ok, delete_ok]
+
+        _ensure_databricks_eastus2("az", cfg)
+
+        mock_wait.assert_called_once_with("az", cfg, "dbw-demo-abc123")
+        mock_delete_rg.assert_called_once_with("az", "rg-demo-dbw-abc123")
+
+    @patch("orchestrate._run")
+    def test_ensure_databricks_skips_when_already_eastus2(self, mock_run: MagicMock) -> None:
+        cfg = Config(
+            subscription_id="sub",
+            learner="demo",
+            owner_email="trainer@example.com",
+            location="uksouth",
+            principal_type="User",
+            service_principal=None,
+        )
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout=json.dumps(
+                [{"name": "dbw-demo-abc123", "location": DATABRICKS_LOCATION}]
+            ),
+            stderr="",
+        )
+
+        _ensure_databricks_eastus2("az", cfg)
+
+        self.assertEqual(mock_run.call_count, 1)
+
     def test_core_platforms_ready(self) -> None:
         ready, missing = _core_platforms_ready(
             {"dataFactoryName": "adf", "databricksWorkspaceName": "dbw"}

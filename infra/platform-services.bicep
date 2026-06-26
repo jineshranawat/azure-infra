@@ -34,6 +34,9 @@ param deployPurview bool = true
 @description('Purview region (eastus when tenant free tier is in US).')
 param purviewLocation string = 'eastus'
 
+@description('Databricks workspace region (eastus2 — broader quota/SKU availability on training subscriptions).')
+param databricksLocation string = 'eastus2'
+
 @description('Deploy Microsoft Fabric capacity (F2 — billable).')
 param deployFabric bool = true
 
@@ -167,7 +170,7 @@ resource fabricCapacity 'Microsoft.Fabric/capacities@2023-11-01' = if (deployFab
 // ── 4. Azure Databricks workspace (no cluster — DBU only when clusters run) ─────
 resource databricksWorkspace 'Microsoft.Databricks/workspaces@2024-05-01' = {
   name: databricksName
-  location: location
+  location: databricksLocation
   tags: tags
   sku: {
     name: 'premium'

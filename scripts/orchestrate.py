@@ -34,6 +34,7 @@ import shutil
 import string
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -48,6 +49,8 @@ BICEP_TEMPLATE = REPO_ROOT / "infra" / "main.bicep"
 PLATFORM_BICEP = REPO_ROOT / "infra" / "platform-services.bicep"
 
 ALLOWED_LOCATIONS = frozenset({"uksouth", "ukwest"})
+# Databricks workspace region — explicit exception (Purview uses eastus similarly).
+DATABRICKS_LOCATION = "eastus2"
 LEARNER_RE = re.compile(r"^[a-z0-9]{2,10}$")
 
 MANDATORY_TAGS: dict[str, str] = {
@@ -666,6 +669,7 @@ def _platform_bicep_params(
         f"deploySynapse={'true' if deploy_synapse else 'false'}",
         f"deployFabric={'true' if deploy_fabric else 'false'}",
         "purviewLocation=eastus",
+        f"databricksLocation={DATABRICKS_LOCATION}",
         f"fabricAdminMembers={admin_json}",
     ]
 
@@ -740,6 +744,140 @@ def _synapse_sql_password() -> str:
             return pwd
 
 
+def _databricks_managed_rg_name(workspace_name: str, cfg: Config) -> str | None:
+    """Map dbw-{learner}-{hash} → rg-{learner}-dbw-{hash} (platform-services.bicep)."""
+    prefix = f"dbw-{cfg.learner}-"
+    if not workspace_name.startswith(prefix):
+        return None
+    return f"rg-{cfg.learner}-dbw-{workspace_name[len(prefix):]}"
+
+
+def _list_databricks_workspaces(az: str, cfg: Config) -> list[dict[str, str]]:
+    result = _run(
+        [
+            az,
+            "resource",
+            "list",
+            "--resource-group",
+            cfg.resource_group,
+            "--resource-type",
+            "Microsoft.Databricks/workspaces",
+            "-o",
+            "json",
+        ],
+        capture=True,
+    )
+    resources = json.loads(result.stdout)
+    return [
+        {"name": r["name"], "location": (r.get("location") or "").lower().replace(" ", "")}
+        for r in resources
+    ]
+
+
+def _resource_group_exists(az: str, name: str) -> bool:
+    result = _run([az, "group", "exists", "--name", name], capture=True)
+    return result.stdout.strip().lower() == "true"
+
+
+def _databricks_workspace_exists(az: str, cfg: Config, name: str) -> bool:
+    result = _run(
+        [
+            az,
+            "databricks",
+            "workspace",
+            "show",
+            "--resource-group",
+            cfg.resource_group,
+            "--name",
+            name,
+        ],
+        check=False,
+        capture=True,
+    )
+    return result.returncode == 0
+
+
+def _wait_databricks_deleted(
+    az: str, cfg: Config, name: str, *, timeout_sec: int = 900
+) -> None:
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        if not _databricks_workspace_exists(az, cfg, name):
+            return
+        time.sleep(10)
+    raise SystemExit(
+        f"Timed out waiting for Databricks workspace '{name}' deletion. "
+        "Terminate clusters in the workspace, then re-run orchestrate.cmd."
+    )
+
+
+def _delete_databricks_managed_rg(az: str, managed_rg: str) -> None:
+    if not _resource_group_exists(az, managed_rg):
+        logger.info("Databricks managed RG %s not present — skip", managed_rg)
+        return
+    _step(f"Deleting Databricks managed resource group '{managed_rg}'")
+    delete = _run([az, "group", "delete", "--name", managed_rg, "--yes"], check=False, capture=True)
+    if delete.returncode != 0:
+        _warn(
+            f"Could not delete managed RG '{managed_rg}' — delete manually if Bicep recreate fails"
+        )
+        logger.debug(delete.stderr or delete.stdout)
+        return
+    _ok(f"Databricks managed RG '{managed_rg}' deleted")
+
+
+def _ensure_databricks_eastus2(az: str, cfg: Config) -> None:
+    """Delete Databricks workspace when not in eastus2 so Bicep can recreate there.
+
+    Azure cannot change workspace region in-place; incremental deploy leaves a uksouth
+    workspace unchanged if databricksLocation moves to eastus2.
+    """
+    workspaces = _list_databricks_workspaces(az, cfg)
+    if not workspaces:
+        return
+
+    wrong_region = [w for w in workspaces if w["location"] != DATABRICKS_LOCATION]
+    if not wrong_region:
+        logger.info(
+            "Databricks workspace already in %s — skip delete/recreate", DATABRICKS_LOCATION
+        )
+        return
+
+    for ws in wrong_region:
+        name, loc = ws["name"], ws["location"]
+        _step(
+            f"Deleting Databricks workspace '{name}' in {loc} "
+            f"(recreate in {DATABRICKS_LOCATION})"
+        )
+        delete = _run(
+            [
+                az,
+                "databricks",
+                "workspace",
+                "delete",
+                "--resource-group",
+                cfg.resource_group,
+                "--name",
+                name,
+                "--yes",
+            ],
+            check=False,
+            capture=True,
+        )
+        if delete.returncode != 0:
+            logger.error(delete.stderr or delete.stdout)
+            raise SystemExit(
+                f"Failed to delete Databricks workspace '{name}' in {loc}. "
+                "Terminate any running clusters, then re-run orchestrate.cmd."
+            )
+        _ok(f"Databricks workspace '{name}' delete requested")
+        _wait_databricks_deleted(az, cfg, name)
+
+        managed_rg = _databricks_managed_rg_name(name, cfg)
+        if managed_rg:
+            _delete_databricks_managed_rg(az, managed_rg)
+
+
 def _register_platform_providers(az: str) -> None:
     _step("Registering Azure resource providers (idempotent)")
     for ns in (
@@ -762,6 +900,8 @@ def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) 
         raise SystemExit(
             "Class-1 storage account not found. Run main deploy first (orchestrate without --platforms-only)."
         )
+
+    _ensure_databricks_eastus2(az, cfg)
 
     _step("Deploying platform services (incremental — ADF, Purview, Databricks)")
     _register_platform_providers(az)
