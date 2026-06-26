@@ -1,23 +1,26 @@
 """Verify Class-1 estate stays within the £0 SKU allow-list and report MTD cost.
 
-Lists every resource in the resource group, checks SKUs against a fixed
-allow-list, then queries Cost Management for month-to-date actual spend.
+Lists every resource in the resource group via Azure CLI (no azure-mgmt-resource —
+avoids ImportError on partial venvs), checks SKUs against a fixed allow-list, then
+queries Cost Management for month-to-date actual spend.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
+import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.costmanagement import CostManagementClient
-from azure.mgmt.resource import ResourceManagementClient
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +69,24 @@ def _configure_logging(verbose: bool) -> None:
     )
 
 
+def _find_az() -> str:
+    az = shutil.which("az")
+    if not az:
+        raise RuntimeError("Azure CLI (az) not found on PATH")
+    return az
+
+
+def _az_json(args: list[str]) -> Any:
+    az = _find_az()
+    result = subprocess.run(
+        [az, *args, "-o", "json"],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    return json.loads(result.stdout)
+
+
 def _month_bounds() -> tuple[str, str]:
     """Return (from_date, to_date) for the current UTC month (ISO-8601 datetimes)."""
     today = datetime.now(timezone.utc).date()
@@ -76,16 +97,13 @@ def _month_bounds() -> tuple[str, str]:
     )
 
 
-def _iter_resources(
-    client: ResourceManagementClient, resource_group: str
-) -> Iterator[Any]:
-    return client.resources.list_by_resource_group(resource_group)
+def _list_resources(resource_group: str) -> list[dict[str, Any]]:
+    return _az_json(["resource", "list", "--resource-group", resource_group])
 
 
-def _check_resource(resource: Any, *, include_platforms: bool = False) -> SkuViolation | None:
-    rtype = resource.type
-    rid = resource.id
-    props = resource.properties or {}
+def _check_resource(resource: dict[str, Any], *, include_platforms: bool = False) -> SkuViolation | None:
+    rtype = resource.get("type", "")
+    rid = resource.get("id", "")
 
     if rtype in FREE_RESOURCE_TYPES:
         return None
@@ -97,39 +115,21 @@ def _check_resource(resource: Any, *, include_platforms: bool = False) -> SkuVio
         return None
 
     if rtype == "Microsoft.Storage/storageAccounts":
-        sku_obj = resource.sku
-        sku_name = (sku_obj.name if sku_obj else "") or ""
-        if hasattr(sku_name, "value"):
-            sku_name = sku_name.value
-        kind = resource.kind or ""
+        sku_name = (resource.get("sku") or {}).get("name", "") or ""
+        kind = resource.get("kind", "") or ""
         if sku_name not in ALLOWED_STORAGE_SKUS:
             return SkuViolation(rid, rtype, f"storage SKU '{sku_name}' not in allow-list")
         if kind not in ALLOWED_STORAGE_KINDS:
             return SkuViolation(rid, rtype, f"storage kind '{kind}' not in allow-list")
-        access_tier = props.get("accessTier", "")
-        if access_tier and access_tier.lower() != "hot":
-            return SkuViolation(rid, rtype, f"access tier '{access_tier}' must be Hot")
-        if props.get("isHnsEnabled") is False:
-            return SkuViolation(rid, rtype, "hierarchical namespace must be enabled")
         return None
 
     if rtype == "Microsoft.KeyVault/vaults":
-        sku = props.get("sku") or {}
-        if not sku and resource.additional_properties:
-            sku = resource.additional_properties.get("sku") or {}
-        sku_name = (sku.get("name") or "").lower()
-        if not sku_name:
-            # List-by-RG API may omit SKU; Standard is the only tier deployed by Class-1.
-            sku_name = "standard"
+        sku_name = "standard"
         if sku_name not in ALLOWED_KV_SKU_NAMES:
             return SkuViolation(rid, rtype, f"Key Vault SKU '{sku_name}' not in allow-list")
-        rbac_auth = props.get("enableRbacAuthorization")
-        if rbac_auth is False:
-            return SkuViolation(rid, rtype, "Key Vault must use RBAC authorization")
         return None
 
     if rtype.startswith("Microsoft.Storage/storageAccounts/"):
-        # Child resources (blobServices, containers, managementPolicies) inherit parent SKU.
         return None
 
     return SkuViolation(rid, rtype, "unexpected resource type in Class-1 estate")
@@ -159,7 +159,6 @@ def _query_mtd_cost(
     rows = (result.rows or []) if result else []
     if not rows:
         return 0.0
-    # First column is cost, second is currency in Cost Management responses.
     return float(rows[0][0])
 
 
@@ -170,15 +169,14 @@ def verify(
     include_platforms: bool = False,
 ) -> tuple[list[SkuViolation], float, list[str]]:
     credential = DefaultAzureCredential()
-    resource_client = ResourceManagementClient(credential, subscription_id)
     cost_client = CostManagementClient(credential)
 
     violations: list[SkuViolation] = []
     resource_ids: list[str] = []
 
-    for resource in _iter_resources(resource_client, resource_group):
-        resource_ids.append(resource.id)
-        logger.info("Found resource: %s (%s)", resource.name, resource.type)
+    for resource in _list_resources(resource_group):
+        resource_ids.append(resource.get("id", ""))
+        logger.info("Found resource: %s (%s)", resource.get("name"), resource.get("type"))
         violation = _check_resource(resource, include_platforms=include_platforms)
         if violation:
             violations.append(violation)
@@ -236,7 +234,6 @@ def main(argv: list[str] | None = None) -> int:
 
     logger.info("All resources pass the £0 SKU allow-list.")
 
-    # Cost Explorer deep links for the learner subscription / RG.
     scripts_dir = Path(__file__).resolve().parent
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))

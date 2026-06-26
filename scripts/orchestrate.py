@@ -12,6 +12,9 @@ Full lab (default, safe to re-run — idempotent incremental deploys):
 Class-1 landing zone only:
     orchestrate.cmd --class1-only
 
+Fast Databricks only in eastus2 (no blocking delete — skips ADF/Purview):
+    orchestrate.cmd --databricks-eastus2-only
+
 Teardown:
     orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 
@@ -35,6 +38,7 @@ import string
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,6 +51,7 @@ ENV_EXAMPLE = REPO_ROOT / ".env.example"
 REQUIREMENTS = REPO_ROOT / "requirements.txt"
 BICEP_TEMPLATE = REPO_ROOT / "infra" / "main.bicep"
 PLATFORM_BICEP = REPO_ROOT / "infra" / "platform-services.bicep"
+DATABRICKS_ONLY_BICEP = REPO_ROOT / "infra" / "databricks-only.bicep"
 
 ALLOWED_LOCATIONS = frozenset({"uksouth", "ukwest"})
 # Databricks workspace region — explicit exception (Purview uses eastus similarly).
@@ -656,6 +661,7 @@ def _platform_bicep_params(
     deploy_purview: bool,
     deploy_synapse: bool = False,
     deploy_fabric: bool = False,
+    deploy_databricks: bool = True,
     synapse_sql_password: str = "Unused0!Password",
 ) -> list[str]:
     admin_json = json.dumps([cfg.owner_email])
@@ -668,6 +674,7 @@ def _platform_bicep_params(
         f"deployPurview={'true' if deploy_purview else 'false'}",
         f"deploySynapse={'true' if deploy_synapse else 'false'}",
         f"deployFabric={'true' if deploy_fabric else 'false'}",
+        f"deployDatabricks={'true' if deploy_databricks else 'false'}",
         "purviewLocation=eastus",
         f"databricksLocation={DATABRICKS_LOCATION}",
         f"fabricAdminMembers={admin_json}",
@@ -682,6 +689,7 @@ def _run_platform_bicep(
     deploy_purview: bool,
     deploy_synapse: bool = False,
     deploy_fabric: bool = False,
+    deploy_databricks: bool = True,
     synapse_sql_password: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     return _run(
@@ -705,6 +713,7 @@ def _run_platform_bicep(
                 deploy_purview=deploy_purview,
                 deploy_synapse=deploy_synapse,
                 deploy_fabric=deploy_fabric,
+                deploy_databricks=deploy_databricks,
                 synapse_sql_password=synapse_sql_password or "Unused0!Password",
             ),
             "-o",
@@ -752,6 +761,50 @@ def _databricks_managed_rg_name(workspace_name: str, cfg: Config) -> str | None:
     return f"rg-{cfg.learner}-dbw-{workspace_name[len(prefix):]}"
 
 
+def _managed_rg_from_workspace(az: str, cfg: Config, workspace_name: str) -> str | None:
+    show = _run(
+        [
+            az,
+            "resource",
+            "show",
+            "--ids",
+            _databricks_workspace_id(cfg, workspace_name),
+            "-o",
+            "json",
+        ],
+        check=False,
+        capture=True,
+    )
+    if show.returncode != 0:
+        return _databricks_managed_rg_name(workspace_name, cfg)
+    body = json.loads(show.stdout)
+    managed_id = (body.get("properties") or {}).get("managedResourceGroupId") or ""
+    if managed_id:
+        return managed_id.rstrip("/").split("/")[-1]
+    return _databricks_managed_rg_name(workspace_name, cfg)
+
+
+def _databricks_workspace_id(cfg: Config, name: str) -> str:
+    return (
+        f"/subscriptions/{cfg.subscription_id}/resourceGroups/{cfg.resource_group}"
+        f"/providers/Microsoft.Databricks/workspaces/{name}"
+    )
+
+
+def _databricks_provisioning_state(az: str, resource_id: str) -> str | None:
+    """Return provisioningState, or None when the workspace resource is gone."""
+    show = _run(
+        [az, "resource", "show", "--ids", resource_id, "-o", "json"],
+        check=False,
+        capture=True,
+    )
+    if show.returncode != 0:
+        return None
+    body = json.loads(show.stdout)
+    props = body.get("properties") or {}
+    return str(props.get("provisioningState") or body.get("provisioningState") or "")
+
+
 def _list_databricks_workspaces(az: str, cfg: Config) -> list[dict[str, str]]:
     result = _run(
         [
@@ -774,108 +827,114 @@ def _list_databricks_workspaces(az: str, cfg: Config) -> list[dict[str, str]]:
     ]
 
 
-def _resource_group_exists(az: str, name: str) -> bool:
-    result = _run([az, "group", "exists", "--name", name], capture=True)
-    return result.stdout.strip().lower() == "true"
-
-
 def _databricks_workspace_exists(az: str, cfg: Config, name: str) -> bool:
-    result = _run(
-        [
-            az,
-            "databricks",
-            "workspace",
-            "show",
-            "--resource-group",
-            cfg.resource_group,
-            "--name",
-            name,
-        ],
+    return _databricks_provisioning_state(az, _databricks_workspace_id(cfg, name)) is not None
+
+
+def _delete_resource_group_async(az: str, name: str) -> None:
+    if not _resource_group_exists(az, name):
+        return
+    _run([az, "group", "delete", "--name", name, "--yes", "--no-wait"], check=False)
+    _ok(f"Managed RG '{name}' delete started in background")
+
+
+def _databricks_wrong_region_workspaces(az: str, cfg: Config) -> list[dict[str, str]]:
+    return [w for w in _list_databricks_workspaces(az, cfg) if w["location"] != DATABRICKS_LOCATION]
+
+
+def _databricks_in_eastus2(az: str, cfg: Config) -> bool:
+    return any(w["location"] == DATABRICKS_LOCATION for w in _list_databricks_workspaces(az, cfg))
+
+
+def _trigger_databricks_cleanup_async(az: str, cfg: Config, workspace_name: str) -> None:
+    """Fire-and-forget: workspace + managed RG (VNet, storage, connector, etc.)."""
+    _request_databricks_delete(az, cfg, workspace_name)
+    managed_rg = _managed_rg_from_workspace(az, cfg, workspace_name)
+    if managed_rg:
+        _delete_resource_group_async(az, managed_rg)
+
+
+def _trigger_all_databricks_cleanup_async(az: str, cfg: Config) -> bool:
+    """Start background delete for every Databricks workspace not in eastus2."""
+    wrong = _databricks_wrong_region_workspaces(az, cfg)
+    if not wrong:
+        return False
+    _step(
+        f"Background cleanup of {len(wrong)} Databricks workspace(s) "
+        f"(async — focusing on {DATABRICKS_LOCATION} create)"
+    )
+    with ThreadPoolExecutor(max_workers=len(wrong)) as pool:
+        futures = [
+            pool.submit(_trigger_databricks_cleanup_async, az, cfg, ws["name"]) for ws in wrong
+        ]
+        for future in futures:
+            future.result()
+    _warn(
+        "Old Databricks resources delete in Azure background (20–45 min). "
+        "If eastus2 create fails, re-run: orchestrate.cmd --databricks-eastus2-only"
+    )
+    return True
+
+
+def _request_databricks_delete(az: str, cfg: Config, name: str) -> None:
+    """Start workspace delete via ARM (returns in seconds — does not block 30+ min).
+
+    Avoid az databricks workspace delete: it waits for full teardown and often hangs.
+    """
+    resource_id = _databricks_workspace_id(cfg, name)
+    state = _databricks_provisioning_state(az, resource_id)
+    if state is None:
+        return
+    if state.lower() == "deleting":
+        _ok(f"Databricks '{name}' delete already in progress")
+        return
+
+    delete = _run(
+        [az, "resource", "delete", "--ids", resource_id, "--no-wait"],
         check=False,
         capture=True,
     )
-    return result.returncode == 0
-
-
-def _wait_databricks_deleted(
-    az: str, cfg: Config, name: str, *, timeout_sec: int = 900
-) -> None:
-    deadline = time.monotonic() + timeout_sec
-    while time.monotonic() < deadline:
-        if not _databricks_workspace_exists(az, cfg, name):
-            return
-        time.sleep(10)
+    text = _deployment_text(delete)
+    state_after = _databricks_provisioning_state(az, resource_id)
+    if state_after is None or (state_after and state_after.lower() == "deleting"):
+        _ok(f"Databricks workspace '{name}' delete started (Azure teardown runs in background)")
+        return
+    logger.error(text)
     raise SystemExit(
-        f"Timed out waiting for Databricks workspace '{name}' deletion. "
-        "Terminate clusters in the workspace, then re-run orchestrate.cmd."
+        f"Failed to start delete for Databricks workspace '{name}'. "
+        "Terminate any running clusters in the Databricks UI, then re-run orchestrate.cmd."
     )
 
 
-def _delete_databricks_managed_rg(az: str, managed_rg: str) -> None:
-    if not _resource_group_exists(az, managed_rg):
-        logger.info("Databricks managed RG %s not present — skip", managed_rg)
-        return
-    _step(f"Deleting Databricks managed resource group '{managed_rg}'")
-    delete = _run([az, "group", "delete", "--name", managed_rg, "--yes"], check=False, capture=True)
-    if delete.returncode != 0:
-        _warn(
-            f"Could not delete managed RG '{managed_rg}' — delete manually if Bicep recreate fails"
-        )
-        logger.debug(delete.stderr or delete.stdout)
-        return
-    _ok(f"Databricks managed RG '{managed_rg}' deleted")
-
-
-def _ensure_databricks_eastus2(az: str, cfg: Config) -> None:
-    """Delete Databricks workspace when not in eastus2 so Bicep can recreate there.
-
-    Azure cannot change workspace region in-place; incremental deploy leaves a uksouth
-    workspace unchanged if databricksLocation moves to eastus2.
-    """
-    workspaces = _list_databricks_workspaces(az, cfg)
-    if not workspaces:
-        return
-
-    wrong_region = [w for w in workspaces if w["location"] != DATABRICKS_LOCATION]
-    if not wrong_region:
-        logger.info(
-            "Databricks workspace already in %s — skip delete/recreate", DATABRICKS_LOCATION
-        )
-        return
-
-    for ws in wrong_region:
-        name, loc = ws["name"], ws["location"]
-        _step(
-            f"Deleting Databricks workspace '{name}' in {loc} "
-            f"(recreate in {DATABRICKS_LOCATION})"
-        )
-        delete = _run(
-            [
-                az,
-                "databricks",
-                "workspace",
-                "delete",
-                "--resource-group",
-                cfg.resource_group,
-                "--name",
-                name,
-                "--yes",
-            ],
-            check=False,
-            capture=True,
-        )
-        if delete.returncode != 0:
-            logger.error(delete.stderr or delete.stdout)
-            raise SystemExit(
-                f"Failed to delete Databricks workspace '{name}' in {loc}. "
-                "Terminate any running clusters, then re-run orchestrate.cmd."
+def _wait_databricks_deleted(
+    az: str, cfg: Config, name: str, *, timeout_sec: int = 3600
+) -> None:
+    """Poll until workspace resource is gone (Azure may take 30–45 min for managed VNet/storage)."""
+    resource_id = _databricks_workspace_id(cfg, name)
+    start = time.monotonic()
+    deadline = start + timeout_sec
+    last_log = -30
+    _step(f"Waiting for Azure to finish deleting '{name}' (can take 30–45 min)")
+    while time.monotonic() < deadline:
+        state = _databricks_provisioning_state(az, resource_id)
+        if state is None:
+            _ok(f"Databricks workspace '{name}' deleted")
+            return
+        elapsed = int(time.monotonic() - start)
+        if elapsed - last_log >= 30:
+            logger.info(
+                "    ... delete in progress (%dm %ds, state=%s) — terminate clusters if any are running",
+                elapsed // 60,
+                elapsed % 60,
+                state,
             )
-        _ok(f"Databricks workspace '{name}' delete requested")
-        _wait_databricks_deleted(az, cfg, name)
-
-        managed_rg = _databricks_managed_rg_name(name, cfg)
-        if managed_rg:
-            _delete_databricks_managed_rg(az, managed_rg)
+            last_log = elapsed
+        time.sleep(15)
+    raise SystemExit(
+        f"Timed out after {timeout_sec // 60} min waiting for Databricks workspace '{name}' deletion. "
+        "Check Portal → resource group → workspace (Deleting?). "
+        "Terminate clusters, then re-run orchestrate.cmd --databricks-eastus2-only"
+    )
 
 
 def _register_platform_providers(az: str) -> None:
@@ -891,6 +950,71 @@ def _register_platform_providers(az: str) -> None:
     _ok("Provider registration requested")
 
 
+def _register_databricks_provider(az: str) -> None:
+    _run([az, "provider", "register", "--namespace", "Microsoft.Databricks"], check=False)
+
+
+def _run_databricks_only_bicep(az: str, cfg: Config, *, best_effort: bool = False) -> dict[str, Any]:
+    deploy = _run(
+        [
+            az,
+            "deployment",
+            "group",
+            "create",
+            "--resource-group",
+            cfg.resource_group,
+            "--name",
+            "databricks-eastus2",
+            "--mode",
+            "Incremental",
+            "--template-file",
+            str(DATABRICKS_ONLY_BICEP),
+            "--parameters",
+            f"learner={cfg.learner}",
+            f"ownerEmail={cfg.owner_email}",
+            f"databricksLocation={DATABRICKS_LOCATION}",
+            "-o",
+            "json",
+        ],
+        check=False,
+        capture=True,
+    )
+    if deploy.returncode != 0:
+        text = _deployment_text(deploy)
+        if best_effort:
+            _warn(
+                "Databricks eastus2 create not ready yet (old workspace may still be deleting). "
+                "Re-run: orchestrate.cmd --databricks-eastus2-only"
+            )
+            logger.debug(text)
+            return {}
+        logger.error(text)
+        if "already exists" in text.lower() or "inprogress" in text.lower():
+            raise SystemExit(
+                "Databricks workspace name still in use (delete may still be running). "
+                "Wait ~10 minutes, then re-run: orchestrate.cmd --databricks-eastus2-only"
+            )
+        raise SystemExit("Databricks-only deploy failed — see log above.")
+    outputs = _parse_deployment_outputs(deploy)
+    _ok(f"Databricks workspace ready in {DATABRICKS_LOCATION}")
+    return outputs
+
+
+def _deploy_databricks_eastus2_only(az: str, cfg: Config) -> dict[str, Any]:
+    """Fast path: async cleanup + eastus2 create only."""
+    _step(f"Fast Databricks-only deploy in {DATABRICKS_LOCATION} (skips ADF/Purview/verify)")
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        cleanup = pool.submit(_trigger_all_databricks_cleanup_async, az, cfg)
+        provider = pool.submit(_register_databricks_provider, az)
+        migrating = cleanup.result()
+        provider.result()
+    if migrating or not _databricks_in_eastus2(az, cfg):
+        platform_outputs = _run_databricks_only_bicep(az, cfg, best_effort=True)
+    else:
+        platform_outputs = _run_databricks_only_bicep(az, cfg)
+    return {**_discover_outputs(az, cfg), **platform_outputs}
+
+
 def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) -> dict[str, Any]:
     storage_name = outputs.get("storageAccountName")
     if not storage_name:
@@ -901,7 +1025,8 @@ def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) 
             "Class-1 storage account not found. Run main deploy first (orchestrate without --platforms-only)."
         )
 
-    _ensure_databricks_eastus2(az, cfg)
+    migrating = _trigger_all_databricks_cleanup_async(az, cfg)
+    skip_databricks_in_platform = migrating or not _databricks_in_eastus2(az, cfg)
 
     _step("Deploying platform services (incremental — ADF, Purview, Databricks)")
     _register_platform_providers(az)
@@ -920,6 +1045,7 @@ def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) 
             cfg,
             storage_name,
             deploy_purview=deploy_purview,
+            deploy_databricks=not skip_databricks_in_platform,
         )
         if deploy.returncode == 0:
             platform_outputs = _parse_deployment_outputs(deploy)
@@ -927,6 +1053,9 @@ def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) 
             merged = {**outputs, **platform_outputs}
             if not deploy_purview:
                 merged["purviewAccountName"] = "skipped-tenant-catalog-exists"
+            if skip_databricks_in_platform:
+                dbw_out = _run_databricks_only_bicep(az, cfg, best_effort=True)
+                merged = {**merged, **dbw_out}
             return merged
 
         last_error = _deployment_text(deploy)
@@ -941,6 +1070,10 @@ def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) 
 
     merged = {**outputs, **_discover_outputs(az, cfg), **platform_outputs}
     ready, missing = _core_platforms_ready(merged)
+    if skip_databricks_in_platform and not merged.get("databricksWorkspaceName"):
+        dbw_out = _run_databricks_only_bicep(az, cfg, best_effort=True)
+        merged = {**merged, **dbw_out}
+        ready, missing = _core_platforms_ready(merged)
     if ready:
         if _purview_tenant_exists_error(last_error):
             merged.setdefault("purviewAccountName", "skipped-tenant-catalog-exists")
@@ -951,6 +1084,12 @@ def _deploy_platforms(az: str, cfg: Config, outputs: dict[str, Any], vpy: Path) 
         return merged
 
     logger.error(last_error)
+    if missing == ["Databricks"] and skip_databricks_in_platform:
+        _warn(
+            "ADF deployed; Databricks eastus2 still pending (background delete). "
+            "Re-run: orchestrate.cmd --databricks-eastus2-only"
+        )
+        return merged
     raise SystemExit(
         "Platform services deployment failed — missing: "
         + ", ".join(missing)
@@ -1194,6 +1333,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Deploy platform services only (Class-1 must already exist)",
     )
+    mode.add_argument(
+        "--databricks-eastus2-only",
+        action="store_true",
+        help="Fast: deploy only Databricks in eastus2 (async delete, skips ADF/Purview/verify)",
+    )
     parser.add_argument("--subscription-id", help="Azure subscription GUID")
     parser.add_argument("--learner", help="2-10 char learner id (lowercase)")
     parser.add_argument("--owner-email", help="Owner email for tags and budget alerts")
@@ -1226,6 +1370,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _lab_mode_label(args: argparse.Namespace) -> str:
+    if args.databricks_eastus2_only:
+        return "databricks-eastus2-only"
     if args.platforms_only:
         return "platforms-only"
     if args.class1_only:
@@ -1246,7 +1392,9 @@ def main(argv: list[str] | None = None) -> int:
     _configure_logging(args.verbose)
     lab_mode = _lab_mode_label(args)
     run_platforms = _run_platforms(args)
-    run_compare = not args.skip_compare and run_platforms
+    run_compare = (
+        not args.skip_compare and run_platforms and not args.databricks_eastus2_only
+    )
 
     logger.info("Azure ETL lab orchestrator — mode: %s — repo: %s", lab_mode, REPO_ROOT)
 
@@ -1291,7 +1439,7 @@ def main(argv: list[str] | None = None) -> int:
     outputs: dict[str, Any] = {}
 
     # Phase 1: Class-1 landing zone (budget, KV, storage, RBAC)
-    if not args.platforms_only:
+    if not args.platforms_only and not args.databricks_eastus2_only:
         if method == "bicep":
             outputs = _deploy_bicep(
                 az, cfg, principal_id, principal_type=principal_type
@@ -1301,13 +1449,15 @@ def main(argv: list[str] | None = None) -> int:
         _ensure_rbac(az, cfg, principal_id, outputs, principal_type=principal_type)
 
     # Phase 2: Platform services (ADF, Purview, Databricks; Synapse/Fabric best-effort)
-    if run_platforms:
+    if args.databricks_eastus2_only:
+        outputs = _deploy_databricks_eastus2_only(az, cfg)
+    elif run_platforms:
         if args.platforms_only:
             outputs = _discover_outputs(az, cfg)
         outputs = _deploy_platforms(az, cfg, outputs, vpy)
 
     # Phase 3: Verify SKUs + MTD cost
-    if not args.skip_verify:
+    if not args.skip_verify and not args.databricks_eastus2_only:
         _verify(vpy, cfg, include_platforms=run_platforms)
 
     # Phase 4: List-price comparison + Cost Explorer links

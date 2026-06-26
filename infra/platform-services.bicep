@@ -34,6 +34,9 @@ param deployPurview bool = true
 @description('Purview region (eastus when tenant free tier is in US).')
 param purviewLocation string = 'eastus'
 
+@description('Deploy Azure Databricks workspace (set false while async region migration runs).')
+param deployDatabricks bool = true
+
 @description('Databricks workspace region (eastus2 — broader quota/SKU availability on training subscriptions).')
 param databricksLocation string = 'eastus2'
 
@@ -168,7 +171,7 @@ resource fabricCapacity 'Microsoft.Fabric/capacities@2023-11-01' = if (deployFab
 }
 
 // ── 4. Azure Databricks workspace (no cluster — DBU only when clusters run) ─────
-resource databricksWorkspace 'Microsoft.Databricks/workspaces@2024-05-01' = {
+resource databricksWorkspace 'Microsoft.Databricks/workspaces@2024-05-01' = if (deployDatabricks) {
   name: databricksName
   location: databricksLocation
   tags: tags
@@ -193,5 +196,5 @@ output purviewAccountName string = deployPurview ? purviewAccount.name : 'skippe
 output purviewPortalUrl string = deployPurview ? 'https://web.purview.azure.com/resource/${purviewAccount.id}/overview' : ''
 output fabricCapacityName string = deployFabric ? fabricCapacity.name : 'skipped'
 output fabricCapacityId string = deployFabric ? fabricCapacity.id : ''
-output databricksWorkspaceName string = databricksWorkspace.name
-output databricksManagedResourceGroup string = managedRgName
+output databricksWorkspaceName string = deployDatabricks ? databricksWorkspace.name : 'skipped-async-eastus2-migration'
+output databricksManagedResourceGroup string = deployDatabricks ? managedRgName : 'skipped'

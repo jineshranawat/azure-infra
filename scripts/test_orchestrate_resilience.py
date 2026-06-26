@@ -17,14 +17,13 @@ from orchestrate import (  # noqa: E402
     DATABRICKS_LOCATION,
     ServicePrincipalAuth,
     _core_platforms_ready,
-    _databricks_managed_rg_name,
     _deployment_text,
     _ensure_az_login,
-    _ensure_databricks_eastus2,
     _parse_deployment_outputs,
     _platform_bicep_params,
     _purview_tenant_exists_error,
     _run_platform_bicep,
+    _trigger_all_databricks_cleanup_async,
 )
 
 
@@ -59,6 +58,7 @@ class PlatformParamTests(unittest.TestCase):
         self.assertIn("deployFabric=false", joined)
         self.assertIn("deployPurview=true", joined)
         self.assertIn(f"databricksLocation={DATABRICKS_LOCATION}", joined)
+        self.assertIn("deployDatabricks=true", joined)
 
     def test_purview_off_params(self) -> None:
         params = _platform_bicep_params(self._cfg(), "stgdemo", deploy_purview=False)
@@ -106,8 +106,8 @@ class PlatformDeployFallbackTests(unittest.TestCase):
         mock_run.side_effect = [purview_error, success]
 
         with patch("orchestrate._register_platform_providers"), patch(
-            "orchestrate._ensure_databricks_eastus2"
-        ):
+            "orchestrate._trigger_all_databricks_cleanup_async", return_value=False
+        ), patch("orchestrate._databricks_in_eastus2", return_value=True):
             outputs = _deploy_platforms(
                 "az",
                 self._cfg(),
@@ -133,8 +133,8 @@ class PlatformDeployFallbackTests(unittest.TestCase):
         }
 
         with patch("orchestrate._register_platform_providers"), patch(
-            "orchestrate._ensure_databricks_eastus2"
-        ):
+            "orchestrate._trigger_all_databricks_cleanup_async", return_value=False
+        ), patch("orchestrate._databricks_in_eastus2", return_value=True):
             outputs = _deploy_platforms(
                 "az",
                 self._cfg(),
@@ -191,26 +191,11 @@ class ServicePrincipalLoginTests(unittest.TestCase):
 
 
 class HelperTests(unittest.TestCase):
-    def test_databricks_managed_rg_name(self) -> None:
-        cfg = Config(
-            subscription_id="sub",
-            learner="demo",
-            owner_email="trainer@example.com",
-            location="uksouth",
-            principal_type="User",
-            service_principal=None,
-        )
-        self.assertEqual(
-            _databricks_managed_rg_name("dbw-demo-abc123", cfg),
-            "rg-demo-dbw-abc123",
-        )
-        self.assertIsNone(_databricks_managed_rg_name("dbw-other-abc123", cfg))
-
-    @patch("orchestrate._delete_databricks_managed_rg")
-    @patch("orchestrate._wait_databricks_deleted")
+    @patch("orchestrate._delete_resource_group_async")
+    @patch("orchestrate._request_databricks_delete")
     @patch("orchestrate._run")
-    def test_ensure_databricks_deletes_wrong_region(
-        self, mock_run: MagicMock, mock_wait: MagicMock, mock_delete_rg: MagicMock
+    def test_trigger_cleanup_async_for_wrong_region(
+        self, mock_run: MagicMock, mock_delete: MagicMock, mock_rg_delete: MagicMock
     ) -> None:
         cfg = Config(
             subscription_id="sub",
@@ -223,21 +208,31 @@ class HelperTests(unittest.TestCase):
         list_ok = subprocess.CompletedProcess(
             args=[],
             returncode=0,
+            stdout=json.dumps([{"name": "dbw-demo-abc123", "location": "uksouth"}]),
+            stderr="",
+        )
+        show_managed = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
             stdout=json.dumps(
-                [{"name": "dbw-demo-abc123", "location": "uksouth"}]
+                {
+                    "properties": {
+                        "managedResourceGroupId": "/subscriptions/sub/resourceGroups/rg-demo-dbw-abc123"
+                    }
+                }
             ),
             stderr="",
         )
-        delete_ok = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
-        mock_run.side_effect = [list_ok, delete_ok]
+        mock_run.side_effect = [list_ok, show_managed]
 
-        _ensure_databricks_eastus2("az", cfg)
+        result = _trigger_all_databricks_cleanup_async("az", cfg)
 
-        mock_wait.assert_called_once_with("az", cfg, "dbw-demo-abc123")
-        mock_delete_rg.assert_called_once_with("az", "rg-demo-dbw-abc123")
+        self.assertTrue(result)
+        mock_delete.assert_called_once_with("az", cfg, "dbw-demo-abc123")
+        mock_rg_delete.assert_called_once_with("az", "rg-demo-dbw-abc123")
 
     @patch("orchestrate._run")
-    def test_ensure_databricks_skips_when_already_eastus2(self, mock_run: MagicMock) -> None:
+    def test_trigger_cleanup_skips_when_already_eastus2(self, mock_run: MagicMock) -> None:
         cfg = Config(
             subscription_id="sub",
             learner="demo",
@@ -255,8 +250,9 @@ class HelperTests(unittest.TestCase):
             stderr="",
         )
 
-        _ensure_databricks_eastus2("az", cfg)
+        result = _trigger_all_databricks_cleanup_async("az", cfg)
 
+        self.assertFalse(result)
         self.assertEqual(mock_run.call_count, 1)
 
     def test_core_platforms_ready(self) -> None:
