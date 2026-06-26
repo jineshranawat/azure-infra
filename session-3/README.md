@@ -155,6 +155,7 @@ Trainer detail: [GUIDE.md](GUIDE.md)
 
 | Symptom | Fix |
 |---------|-----|
+| `ImportError: ResourceManagementClient` or `azure.mgmt.resource` | `cd ..` then delete `.venv` and re-run `session-3\orchestrate.cmd` (recreates venv), or `git pull` for latest fix |
 | `Databricks workspace not found` | Repo root `orchestrate.cmd` (full deploy) |
 | `Permission denied` on `abfss://` | Storage → IAM → your user needs **Storage Blob Data Contributor** (Class-1 grants this) |
 | Cluster won't start (quota) | Use smallest node; MPN quota 0 → portal walkthrough + code review only |

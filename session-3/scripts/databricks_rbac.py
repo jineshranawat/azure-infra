@@ -1,24 +1,24 @@
 """Ensure Databricks workspace access connector MI can read/write ADLS (idempotent RBAC).
 
-Uses Azure Resource Manager SDK — NOT `az databricks workspace show` (hangs 90s+ on VDI).
+Uses Azure CLI `az resource show` only — no azure-mgmt-resource import (breaks on partial venvs).
 """
 
 from __future__ import annotations
 
+import json
 import logging
+import subprocess
 import uuid
 
-from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
+from azure.core.exceptions import HttpResponseError
 from azure.mgmt.authorization import AuthorizationManagementClient
-from azure.mgmt.resource import ResourceManagementClient
 
-from _config import SessionConfig, get_credential
+from _config import SessionConfig, find_az, get_credential
 
 logger = logging.getLogger(__name__)
 
 STORAGE_BLOB_DATA_CONTRIBUTOR = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
-_DATABRICKS_API = "2024-05-01"
-_CONNECTOR_API = "2022-10-01"
+_AZ_TIMEOUT_SEC = 20
 
 
 def _role_definition_id(subscription_id: str, role_guid: str) -> str:
@@ -28,40 +28,56 @@ def _role_definition_id(subscription_id: str, role_guid: str) -> str:
     )
 
 
-def _workspace_access_connector_principal(cfg: SessionConfig, workspace_name: str) -> str | None:
-    """Return principal ID of the workspace access connector managed identity, if present."""
-    client = ResourceManagementClient(get_credential(), cfg.subscription_id)
+def _az_json(args: list[str]) -> dict | None:
+    """Run az … -o json with short timeout; return None on failure (non-fatal)."""
     try:
-        ws = client.resources.get(
-            resource_group_name=cfg.resource_group,
-            resource_provider_namespace="Microsoft.Databricks",
-            parent_resource_path="",
-            resource_type="workspaces",
-            resource_name=workspace_name,
-            api_version=_DATABRICKS_API,
+        result = subprocess.run(
+            [find_az(), *args, "-o", "json"],
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=_AZ_TIMEOUT_SEC,
         )
-    except ResourceNotFoundError:
-        logger.info("Databricks workspace resource not found — skip connector RBAC")
+    except subprocess.TimeoutExpired:
+        logger.info("Azure CLI timed out (%ss) — skip connector RBAC", _AZ_TIMEOUT_SEC)
         return None
-    except HttpResponseError as exc:
-        logger.info("Workspace read skipped (%s) — Class-1 user RBAC applies", exc.message)
+    if result.returncode != 0:
+        return None
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError:
         return None
 
-    props = ws.properties or {}
-    connector_id = props.get("accessConnectorId")
+
+def _workspace_access_connector_principal(cfg: SessionConfig, workspace_name: str) -> str | None:
+    """Return principal ID of the workspace access connector managed identity, if present."""
+    ws = _az_json(
+        [
+            "resource",
+            "show",
+            "--resource-group",
+            cfg.resource_group,
+            "--resource-type",
+            "Microsoft.Databricks/workspaces",
+            "--name",
+            workspace_name,
+        ]
+    )
+    if not ws:
+        logger.info("Workspace metadata unavailable — Class-1 user RBAC applies for abfss://")
+        return None
+
+    connector_id = (ws.get("properties") or {}).get("accessConnectorId")
     if not connector_id:
         logger.info("No access connector — interactive user RBAC from Class-1 applies")
         return None
 
-    try:
-        ac = client.resources.get_by_id(connector_id, api_version=_CONNECTOR_API)
-    except (ResourceNotFoundError, HttpResponseError):
+    ac = _az_json(["resource", "show", "--ids", connector_id])
+    if not ac:
         return None
 
-    identity = getattr(ac, "identity", None)
-    if identity and getattr(identity, "principal_id", None):
-        return identity.principal_id
-    return None
+    identity = ac.get("identity") or {}
+    return identity.get("principalId")
 
 
 def _ensure_role_on_scope(

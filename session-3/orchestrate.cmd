@@ -31,6 +31,13 @@ if not exist "..\.venv\Scripts\python.exe" (
   cd session-3
   echo [One-time setup] Ready.
   echo.
+) else (
+  echo [Setup] Ensuring Azure SDK packages are installed...
+  "..\.venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r ..\requirements.txt
+  if errorlevel 1 (
+    echo ERROR: pip install failed. Check network and re-run orchestrate.cmd
+    exit /b 1
+  )
 )
 
 "..\.venv\Scripts\python.exe" scripts\run_session3.py %*
