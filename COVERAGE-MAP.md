@@ -3,6 +3,7 @@
 **Start here if you are lost.** This file is the master index for the whole repo: which **session**, which **document**, which **command**, and which **portal** blade — in order.
 
 **Curriculum source:** [azure.html](azure.html) (60h programme, Day 0–7)
+**Student course (Data Engineering):** [docs/data-engineering-course.html](docs/data-engineering-course.html) — 60h practical programme; Storage, Data Factory, Databricks, Purview, SQL — theory + hands-on
 
 | Role | Start |
 |------|--------|

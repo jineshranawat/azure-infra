@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Engineering — 60-Hour Practical Course</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#08312e;--ink-2:#0b3d3a;--ink-3:#0f4d49;
+    --parch:#f5f1e8;--parch-2:#efe9db;--paper:#fbf9f3;
+    --brass:#a9803a;--brass-lt:#c79a52;
+    --slate:#2c3a38;--slate-2:#52605d;--line:#d9d1be;
+    --py:#1f6f6b;--lab:#8a5a2b;--dbx:#c1471d;--sql:#43386b;--cost:#4a5a2a;--gov:#7a2f3a;
+    --code-bg:#0c2b29;--code-ink:#d7e7e3;--code-key:#c79a52;--code-str:#89b8a2;--code-com:#5f7a76;
+    --white:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',system-ui,sans-serif;color:var(--slate);background:var(--parch);line-height:1.6}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+  .hero{background:var(--ink);color:var(--parch);padding:60px 0 50px;border-bottom:3px solid var(--brass);position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 88% 8%,rgba(193,71,29,.22),transparent 42%),repeating-linear-gradient(90deg,rgba(255,255,255,.025) 0 1px,transparent 1px 64px)}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--brass-lt);margin-bottom:18px}
+  .hero h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(30px,5vw,52px);line-height:1.03;color:var(--white);max-width:22ch}
+  .hero .sub{margin-top:20px;max-width:66ch;font-size:17.5px;color:#cfe0dc}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
+  .chip{font-family:'JetBrains Mono',monospace;font-size:12px;border:1px solid rgba(199,154,82,.5);color:var(--brass-lt);padding:6px 12px;border-radius:2px}
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:36px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1)}
+  .stat{background:var(--ink-2);padding:16px 18px}
+  .stat .n{font-family:'Space Grotesk';font-weight:700;font-size:28px;color:var(--brass-lt)}
+  .stat .l{font-size:12px;color:#a9c0bb;margin-top:2px}
+
+  main{padding:44px 0 70px}
+  .panel{background:var(--paper);border:1px solid var(--line);padding:26px 30px;margin-bottom:24px;border-radius:3px}
+  .panel.dark{background:var(--ink-2);color:var(--parch);border-color:var(--ink-3)}
+  .panel.dark h3{color:var(--white)}.panel.dark p{color:#cfe0dc}
+  h2.section{font-family:'Space Grotesk';font-weight:700;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);margin-bottom:6px}
+  .panel h3{font-family:'Space Grotesk';font-weight:600;font-size:23px;color:var(--ink);margin-bottom:12px}
+  .panel.dark h3{color:var(--white)}
+  .panel p{margin-bottom:11px}.panel p:last-child{margin-bottom:0}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;font-size:12.5px;color:var(--slate-2)}
+  .legend div{display:flex;align-items:center;gap:7px}
+  .dot{width:11px;height:11px;border-radius:2px;flex:none}
+
+  .jump{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+  .jump a{font-family:'JetBrains Mono';font-size:12px;text-decoration:none;color:var(--ink-3);border:1px solid var(--line);padding:5px 11px;border-radius:20px;background:var(--paper)}
+  .jump a:hover{background:var(--parch-2);border-color:var(--brass)}
+
+  .phase{margin:34px 0 6px;padding-bottom:12px;border-bottom:2px solid var(--ink)}
+  .phase .k{font-family:'Space Grotesk';font-weight:700;font-size:12px;letter-spacing:.2em;color:var(--brass);text-transform:uppercase}
+  .phase h2{font-family:'Space Grotesk';font-weight:700;font-size:clamp(21px,3vw,28px);color:var(--ink);margin-top:2px}
+
+  .card{border:1px solid var(--line);border-radius:5px;background:var(--paper);margin-bottom:16px;overflow:hidden;display:grid;grid-template-columns:60px 1fr}
+  .card .g{background:var(--ink-2);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px 0;gap:8px}
+  .card .g .n{font-family:'Space Grotesk';font-weight:700;font-size:19px;width:38px;height:38px;border:1.5px solid var(--brass);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--brass-lt)}
+  .card .g .done{font-size:15px;color:#6fae86}
+  .card .b{padding:16px 22px 18px}
+  .card h4{font-family:'Space Grotesk';font-weight:600;font-size:18px;color:var(--ink);margin-bottom:4px}
+  .card .obj{font-size:13.6px;color:var(--slate-2);font-style:italic;margin-bottom:11px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
+  .tag{font-family:'JetBrains Mono';font-size:9.5px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:3px;color:#fff}
+  .t-dbx{background:var(--dbx)}.t-py{background:var(--py)}.t-sql{background:var(--sql)}.t-lab{background:var(--lab)}
+  .t-cost{background:var(--cost)}.t-gov{background:var(--gov)}.t-adf{background:var(--slate)}.t-easy{background:#3c6e44}
+  .t-theory{background:#6a4e8c}.t-store{background:#2f6f8f}
+  .rowlist{font-size:13.8px;margin:0 0 4px}
+  .rowlist b{font-family:'JetBrains Mono';font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+  .rowlist ul{margin:4px 0 12px 2px;list-style:none}
+  .rowlist li{padding:3px 0 3px 16px;position:relative}
+  .rowlist li::before{content:"▹";position:absolute;left:0;color:var(--brass)}
+
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:5px;padding:15px 17px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12.7px;line-height:1.62;margin:6px 0 12px;border:1px solid #123f3b}
+  pre .c{color:var(--code-com)}pre .k{color:var(--code-key)}pre .s{color:var(--code-str)}
+  pre .cap{display:block;color:var(--brass-lt);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+
+  table.at{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  table.at th,table.at td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.at th{font-family:'Space Grotesk';font-weight:600;color:var(--ink);font-size:12px}
+  table.at td.n{font-family:'JetBrains Mono';color:var(--brass);white-space:nowrap}
+  .done-b{color:#3c6e44;font-weight:600}
+
+  .note{border-left:3px solid var(--brass);background:var(--parch-2);padding:12px 16px;font-size:13.6px;border-radius:0 3px 3px 0;margin-top:12px}
+  .note b{color:var(--ink)}
+  .panel.dark .note{background:rgba(255,255,255,.05);border-left-color:var(--brass-lt);color:#cfe0dc}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .stack li{list-style:none;padding:6px 0;border-bottom:1px dashed var(--line);display:flex;gap:12px;font-size:13.2px}
+  .stack .pkg{font-family:'JetBrains Mono';font-size:11.5px;color:var(--ink-3);width:210px;flex:none}
+  footer{background:var(--ink);color:#9fbcb6;padding:28px 0;font-size:13px;text-align:center;border-top:3px solid var(--brass)}
+  footer b{color:var(--brass-lt)}
+  @media(max-width:820px){.stat-row{grid-template-columns:repeat(2,1fr)}.twocol{grid-template-columns:1fr}.card{grid-template-columns:1fr}.card .g{flex-direction:row;padding:10px}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Bank of England · FinLedger UK · Data Platform Enablement</div>
+    <h1>Data Engineering</h1>
+    <p class="sub">A practical 60-hour course on the <b>FinLedger UK</b> data platform. You build a real lakehouse with <b>Azure Storage, Databricks, SQL, Data Factory and Purview</b> — batch and snapshot processing, Python-first labs, and every topic taught as <b>theory then hands-on</b>. Databricks and PySpark do the heavy lifting; the other services connect around them.</p>
+    <div class="hero-meta">
+      <span class="chip">PySpark</span>
+      <span class="chip">Delta Lake</span>
+      <span class="chip">Batch &amp; snapshots</span>
+      <span class="chip">Unity Catalog</span>
+      <span class="chip">Python SDKs</span>
+      <span class="chip">Theory + practical</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="n">60</div><div class="l">contact hours</div></div>
+      <div class="stat"><div class="n">30</div><div class="l">×2-hour sessions</div></div>
+      <div class="stat"><div class="n">5</div><div class="l">already done</div></div>
+      <div class="stat"><div class="n">£0</div><div class="l">target lab spend</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<main>
+
+  <!-- HOW TO READ -->
+  <section class="panel">
+    <h2 class="section">Orientation</h2>
+    <h3>How this course is run</h3>
+    <p>Every session follows the same rhythm: <b>a short theory grounding, a live demo, then a practical you run yourself</b>. Concepts come first so the hands-on part makes sense; code is provided ready to execute, so you spend your time understanding and running, not fighting syntax.</p>
+    <div class="rowlist">
+      <b>Design choices (kept deliberately approachable)</b>
+      <ul>
+        <li><b>Theory + practical for every topic</b> — Storage, Data Factory, Databricks, SQL and Purview each get their concepts explained, then a hands-on lab. Nothing is "just a look".</li>
+        <li><b>Databricks + Python are the backbone</b> — PySpark is the workhorse and Delta is the storage format; the other services connect around them.</li>
+        <li><b>Batch &amp; snapshot</b> — full loads and <code>MERGE</code> upserts, plus Delta time-travel snapshots. Streaming is a short awareness note at the end, so the labs stay reliable.</li>
+        <li><b>SQL kept practical</b> — read/write Azure SQL from Python; concepts covered, without a deep T-SQL detour.</li>
+        <li><b>Advanced topics flagged for awareness</b> — change-data-capture, private endpoints, Atlas API automation and multi-stage CI/CD are introduced conceptually so you know they exist, with hands-on left for a follow-on course.</li>
+      </ul>
+    </div>
+    <div class="legend">
+      <div><span class="dot" style="background:var(--dbx)"></span>Databricks</div>
+      <div><span class="dot" style="background:var(--py)"></span>Python</div>
+      <div><span class="dot" style="background:var(--sql)"></span>SQL</div>
+      <div><span class="dot" style="background:var(--slate)"></span>Data Factory</div>
+      <div><span class="dot" style="background:var(--gov)"></span>Governance / Purview</div>
+      <div><span class="dot" style="background:var(--cost)"></span>Cost</div>
+      <div><span class="dot" style="background:#3c6e44"></span>Theory + practical</div>
+    </div>
+  </section>
+
+  <div class="jump">
+    <a href="#a">Done (1–5)</a>
+    <a href="#b">Python + Databricks core (6–14)</a>
+    <a href="#c">Serve, SQL &amp; Data Factory (15–19)</a>
+    <a href="#d">Reusable, tested, tuned (20–23)</a>
+    <a href="#e">Govern, cost, operate (24–29)</a>
+    <a href="#f">Capstone (30)</a>
+    <a href="#stack">Toolchain</a>
+  </div>
+
+  <!-- AT A GLANCE -->
+  <section class="panel">
+    <h2 class="section">Map</h2>
+    <h3>All 30 sessions at a glance</h3>
+    <table class="at">
+      <tr><th>#</th><th>Session</th><th>Focus</th><th>Status</th></tr>
+      <tr><td class="n">1</td><td>Azure infra &amp; landing zone</td><td>Setup</td><td class="done-b">done</td></tr>
+      <tr><td class="n">2</td><td>ADLS Gen2 &amp; medallion lake</td><td>Storage</td><td class="done-b">done</td></tr>
+      <tr><td class="n">3</td><td>ADF UI overview</td><td>ADF (tour)</td><td class="done-b">done</td></tr>
+      <tr><td class="n">4</td><td>Databricks workspace overview</td><td>Databricks</td><td class="done-b">done</td></tr>
+      <tr><td class="n">5</td><td>PySpark notebooks bronze→silver→gold</td><td>Databricks</td><td class="done-b">done</td></tr>
+      <tr><td class="n">6</td><td>Python for data engineers</td><td>Python</td><td>—</td></tr>
+      <tr><td class="n">7</td><td>Storage concepts + read the lake with PySpark</td><td>Storage + Databricks</td><td>—</td></tr>
+      <tr><td class="n">8</td><td>PySpark transformations you'll actually use</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">9</td><td>Clean &amp; validate (batch): cast, dedupe, quarantine</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">10</td><td>Delta Lake basics: write, ACID, schema</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">11</td><td>Snapshots &amp; time travel (the safe re-run)</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">12</td><td>Batch incremental the easy way: MERGE upsert</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">13</td><td>Medallion end-to-end in one batch run</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">14</td><td>Gold: aggregations &amp; reporting tables</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">15</td><td>Databricks SQL: query Delta with SQL</td><td>SQL</td><td>—</td></tr>
+      <tr><td class="n">16</td><td>Azure SQL with Python (snapshot load in/out)</td><td>SQL + Python</td><td>—</td></tr>
+      <tr><td class="n">17</td><td>Unity Catalog basics: tables &amp; grants</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">18</td><td>Databricks Jobs: schedule the batch</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">19</td><td>Data Factory: orchestrate the batch (concepts + run)</td><td>Data Factory</td><td>—</td></tr>
+      <tr><td class="n">20</td><td>Reusable notebooks: widgets &amp; functions</td><td>Python</td><td>—</td></tr>
+      <tr><td class="n">21</td><td>Testing PySpark with pytest + chispa</td><td>Python</td><td>—</td></tr>
+      <tr><td class="n">22</td><td>Performance made simple (OPTIMIZE, partition)</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">23</td><td>Databricks cost control (DBU, auto-terminate)</td><td>Cost</td><td>—</td></tr>
+      <tr><td class="n">24</td><td>Purview concepts + register &amp; scan the estate</td><td>Governance</td><td>—</td></tr>
+      <tr><td class="n">25</td><td>Lineage &amp; classification (concepts + hands-on)</td><td>Governance</td><td>—</td></tr>
+      <tr><td class="n">26</td><td>Cost report with Python (FinOps-lite)</td><td>Cost + Python</td><td>—</td></tr>
+      <tr><td class="n">27</td><td>Data quality checks as code</td><td>Python</td><td>—</td></tr>
+      <tr><td class="n">28</td><td>Observability: a morning-check script</td><td>Python</td><td>—</td></tr>
+      <tr><td class="n">29</td><td>Recovery &amp; safety (Delta restore, secrets)</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">30</td><td>Capstone: new feed, bronze→gold, run via Data Factory</td><td>Capstone</td><td>—</td></tr>
+    </table>
+    <div class="note"><b>Streaming?</b> Covered as a <b>5-minute awareness note in Session 30</b> only — we deliberately stay in batch/snapshot so the course stays easy and reliable to run.</div>
+  </section>
+
+  <!-- ============ PHASE A ============ -->
+  <section id="a" class="phase"><div class="k">Phase A · already delivered</div><h2>Foundations you've completed</h2></section>
+
+  <div class="card"><div class="g"><div class="n">1</div><div class="done">✓</div></div><div class="b">
+    <h4>Azure infra &amp; landing zone</h4>
+    <p class="obj">Resource group, tags, Key Vault, budget, storage — deployed with one command.</p>
+    <div class="tags"><span class="tag t-easy">done</span></div>
+  </div></div>
+  <div class="card"><div class="g"><div class="n">2</div><div class="done">✓</div></div><div class="b">
+    <h4>ADLS Gen2 &amp; the medallion lake</h4>
+    <p class="obj">bronze / silver / gold / audit containers on hierarchical-namespace storage.</p>
+    <div class="tags"><span class="tag t-easy">done</span></div>
+  </div></div>
+  <div class="card"><div class="g"><div class="n">3</div><div class="done">✓</div></div><div class="b">
+    <h4>ADF UI overview</h4>
+    <p class="obj">A tour of the orchestrator — enough to recognise it when we run the sample later.</p>
+    <div class="tags"><span class="tag t-easy">done</span></div>
+  </div></div>
+  <div class="card"><div class="g"><div class="n">4</div><div class="done">✓</div></div><div class="b">
+    <h4>Databricks workspace overview</h4>
+    <p class="obj">Workspace, notebooks, serverless compute — our home for the rest of the course.</p>
+    <div class="tags"><span class="tag t-easy">done</span></div>
+  </div></div>
+  <div class="card"><div class="g"><div class="n">5</div><div class="done">✓</div></div><div class="b">
+    <h4>PySpark notebooks bronze→silver→gold</h4>
+    <p class="obj">First taste of reading, transforming and writing across the medallion layers.</p>
+    <div class="tags"><span class="tag t-easy">done</span></div>
+  </div></div>
+
+  <!-- ============ PHASE B ============ -->
+  <section id="b" class="phase"><div class="k">Phase B · sessions 6–14</div><h2>Python + Databricks core (batch &amp; snapshot)</h2></section>
+
+  <div class="card"><div class="g"><div class="n">6</div></div><div class="b">
+    <h4>Python for data engineers</h4>
+    <p class="obj">The small amount of Python that everything else in the course uses.</p>
+    <div class="tags"><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Variables, functions, lists/dicts; f-strings; <code>pathlib</code>; reading a CSV two ways (pandas vs Spark).</li>
+      <li>Logging instead of <code>print</code>; simple config with a dictionary/dataclass.</li>
+    </ul></div>
+    <div class="rowlist"><b>You'll run</b></div>
+<pre><span class="cap">notebook — python basics</span><span class="c"># a tiny, readable transform function you can test later</span>
+<span class="k">from</span> dataclasses <span class="k">import</span> dataclass
+<span class="k">import</span> logging
+log = logging.getLogger(<span class="s">"finledger"</span>)
+
+<span class="k">@dataclass</span>
+<span class="k">class</span> RunConfig:
+    run_date: str
+    bronze_path: str
+
+<span class="k">def</span> clean_amount(value):
+    <span class="s">"""Return a float, or 0.0 if the cell is blank/garbage."""</span>
+    <span class="k">try</span>:
+        <span class="k">return</span> float(value)
+    <span class="k">except</span> (TypeError, ValueError):
+        log.warning(<span class="s">"bad amount: %r"</span>, value)
+        <span class="k">return</span> 0.0
+
+print(clean_amount(<span class="s">"50000"</span>), clean_amount(<span class="s">"oops"</span>))</pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">7</div></div><div class="b">
+    <h4>Storage concepts + read the lake with PySpark</h4>
+    <p class="obj">Understand how ADLS Gen2 stores our data, then point Databricks at it and load a DataFrame.</p>
+    <div class="tags"><span class="tag t-store">Storage</span><span class="tag t-dbx">Databricks</span><span class="tag t-theory">theory + practical</span></div>
+    <div class="rowlist"><b>Theory (we explain first)</b><ul>
+      <li>What ADLS Gen2 is and why <b>hierarchical namespace (HNS)</b> matters for a data lake (real folders, not flat blobs).</li>
+      <li>Containers &amp; the <b>medallion layout</b> (bronze/silver/gold/audit); the <code>abfss://</code> path anatomy.</li>
+      <li>Access <b>tiers</b> (hot/cool) and <b>redundancy</b> (LRS) in one line each — how they map to cost and durability.</li>
+      <li>How Databricks authenticates to storage (managed identity / credential) — no keys in code.</li>
+    </ul></div>
+    <div class="rowlist"><b>Practical — you'll learn &amp; run</b><ul>
+      <li>What a DataFrame is; lazy vs action (<code>.show()</code>, <code>.count()</code>); reading CSV/Parquet/Delta from each container.</li>
+      <li>Inspecting schema with <code>.printSchema()</code> and <code>.display()</code>.</li>
+    </ul></div>
+<pre><span class="cap">notebook — read bronze</span>bronze = <span class="s">"abfss://bronze@stfinledger.dfs.core.windows.net"</span>
+
+df = (spark.read
+        .option(<span class="s">"header"</span>, <span class="s">"true"</span>)
+        .csv(f<span class="s">"{bronze}/loaded/run=session3-lab/sample_transactions.csv"</span>))
+
+df.printSchema()
+df.display()        <span class="c"># interactive grid in Databricks</span>
+print(<span class="s">"rows:"</span>, df.count())</pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">8</div></div><div class="b">
+    <h4>PySpark transformations you'll actually use</h4>
+    <p class="obj">The 8 operations that cover 90% of batch data work.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li><code>select</code>, <code>withColumn</code>, <code>filter</code>, <code>drop_duplicates</code>, <code>join</code>, <code>groupBy</code>, <code>orderBy</code>, and a window.</li>
+    </ul></div>
+<pre><span class="cap">notebook — core transforms</span><span class="k">from</span> pyspark.sql <span class="k">import</span> functions <span class="k">as</span> F
+<span class="k">from</span> pyspark.sql.window <span class="k">import</span> Window
+
+clean = (df
+    .withColumn(<span class="s">"amount"</span>, F.col(<span class="s">"amount"</span>).cast(<span class="s">"double"</span>))
+    .filter(F.col(<span class="s">"amount"</span>) &gt; 0)                 <span class="c"># keep valid rows</span>
+    .dropDuplicates([<span class="s">"txn_id"</span>]))
+
+by_channel = (clean
+    .groupBy(<span class="s">"channel"</span>)
+    .agg(F.count(<span class="s">"*"</span>).alias(<span class="s">"txns"</span>),
+         F.sum(<span class="s">"amount"</span>).alias(<span class="s">"total"</span>))
+    .orderBy(F.desc(<span class="s">"total"</span>)))
+
+by_channel.display()</pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">9</div></div><div class="b">
+    <h4>Clean &amp; validate (batch): cast, dedupe, quarantine</h4>
+    <p class="obj">Split good rows from bad ones — the FinLedger silver rule.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Type casting; null handling; the "quarantine bad rows, keep the pipeline running" pattern (like a dead-letter, but in Spark).</li>
+    </ul></div>
+<pre><span class="cap">notebook — silver split</span>typed = df.withColumn(<span class="s">"amount"</span>, F.col(<span class="s">"amount"</span>).cast(<span class="s">"double"</span>))
+
+good = typed.filter(F.col(<span class="s">"amount"</span>).isNotNull() &amp; (F.col(<span class="s">"amount"</span>) &gt; 0))
+bad  = typed.filter(F.col(<span class="s">"amount"</span>).isNull()   | (F.col(<span class="s">"amount"</span>) &lt;= 0))
+
+print(<span class="s">"good:"</span>, good.count(), <span class="s">"quarantined:"</span>, bad.count())
+<span class="c"># TXN-20003 (messy row) lands in `bad` — we keep it for review, not lose it</span></pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">10</div></div><div class="b">
+    <h4>Delta Lake basics: write, ACID, schema</h4>
+    <p class="obj">Save data as Delta and get transactional safety for free.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Why Delta (ACID, schema enforcement) beats raw CSV/Parquet; <code>overwrite</code> vs <code>append</code>; reading it back.</li>
+    </ul></div>
+<pre><span class="cap">notebook — write silver as Delta</span>silver = <span class="s">"abfss://silver@stfinledger.dfs.core.windows.net/transactions"</span>
+
+(good.write
+    .format(<span class="s">"delta"</span>)
+    .mode(<span class="s">"overwrite"</span>)          <span class="c"># full snapshot write</span>
+    .save(silver))
+
+back = spark.read.format(<span class="s">"delta"</span>).load(silver)
+print(<span class="s">"silver rows:"</span>, back.count())</pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">11</div></div><div class="b">
+    <h4>Snapshots &amp; time travel (the safe re-run)</h4>
+    <p class="obj">Every write is a versioned snapshot — read yesterday's, or roll back.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Delta versions; <code>versionAsOf</code>; <code>DESCRIBE HISTORY</code>; <code>RESTORE</code>; why this makes batch re-runs safe.</li>
+    </ul></div>
+<pre><span class="cap">notebook — time travel</span><span class="c"># snapshot history</span>spark.sql(f<span class="s">"DESCRIBE HISTORY delta.`{silver}`"</span>).display()
+
+<span class="c"># read an earlier snapshot</span>v0 = (spark.read.format(<span class="s">"delta"</span>)
+        .option(<span class="s">"versionAsOf"</span>, 0)
+        .load(silver))
+print(<span class="s">"version 0 rows:"</span>, v0.count())
+
+<span class="c"># roll the table back to a known-good snapshot</span>spark.sql(f<span class="s">"RESTORE TABLE delta.`{silver}` TO VERSION AS OF 0"</span>)</pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">12</div></div><div class="b">
+    <h4>Batch incremental the easy way: MERGE upsert</h4>
+    <p class="obj">Load a new day's snapshot and merge it in — no duplicates, no CDC.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>The one incremental pattern we use: <code>MERGE</code> on a key — update if present, insert if new. Re-runnable by design.</li>
+    </ul></div>
+<pre><span class="cap">notebook — merge upsert</span><span class="k">from</span> delta.tables <span class="k">import</span> DeltaTable
+
+target = DeltaTable.forPath(spark, silver)
+updates = good                                   <span class="c"># today's snapshot</span>
+
+(target.alias(<span class="s">"t"</span>)
+   .merge(updates.alias(<span class="s">"s"</span>), <span class="s">"t.txn_id = s.txn_id"</span>)
+   .whenMatchedUpdateAll()
+   .whenNotMatchedInsertAll()
+   .execute())
+<span class="c"># run it twice — row count stays the same. That is idempotency.</span></pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">13</div></div><div class="b">
+    <h4>Medallion end-to-end in one batch run</h4>
+    <p class="obj">bronze → silver → gold, start to finish, one notebook.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Chain the previous sessions into one runnable pipeline; what belongs in each layer.</li>
+    </ul></div>
+<pre><span class="cap">notebook — full batch run</span><span class="k">def</span> run_medallion(run_date):
+    raw   = spark.read.option(<span class="s">"header"</span>,<span class="s">"true"</span>).csv(f<span class="s">"{bronze}/loaded/run={run_date}/"</span>)
+    clean = (raw.withColumn(<span class="s">"amount"</span>, F.col(<span class="s">"amount"</span>).cast(<span class="s">"double"</span>))
+                .filter(F.col(<span class="s">"amount"</span>) &gt; 0).dropDuplicates([<span class="s">"txn_id"</span>]))
+    clean.write.format(<span class="s">"delta"</span>).mode(<span class="s">"overwrite"</span>).save(silver)
+
+    gold = clean.groupBy(<span class="s">"channel"</span>).agg(F.sum(<span class="s">"amount"</span>).alias(<span class="s">"total"</span>))
+    gold.write.format(<span class="s">"delta"</span>).mode(<span class="s">"overwrite"</span>).save(gold_path)
+    <span class="k">return</span> gold.count()
+
+print(<span class="s">"gold rows:"</span>, run_medallion(<span class="s">"session3-lab"</span>))</pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">14</div></div><div class="b">
+    <h4>Gold: aggregations &amp; reporting tables</h4>
+    <p class="obj">Build the business-ready tables analysts actually query.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Daily/channel rollups; <code>pivot</code>; running totals with a window; writing partitioned gold.</li>
+    </ul></div>
+<pre><span class="cap">notebook — gold rollups</span>daily = (clean
+    .groupBy(<span class="s">"channel"</span>, F.to_date(<span class="s">"txn_ts"</span>).alias(<span class="s">"day"</span>))
+    .agg(F.sum(<span class="s">"amount"</span>).alias(<span class="s">"total"</span>)))
+
+pivoted = daily.groupBy(<span class="s">"day"</span>).pivot(<span class="s">"channel"</span>).sum(<span class="s">"total"</span>)
+pivoted.display()
+
+(daily.write.format(<span class="s">"delta"</span>).mode(<span class="s">"overwrite"</span>)
+      .partitionBy(<span class="s">"day"</span>)
+      .save(<span class="s">"abfss://gold@stfinledger.dfs.core.windows.net/daily_channel_summary"</span>))</pre>
+  </div></div>
+
+  <!-- ============ PHASE C ============ -->
+  <section id="c" class="phase"><div class="k">Phase C · sessions 15–19</div><h2>Serve, a little SQL, and orchestration with Data Factory</h2></section>
+
+  <div class="card"><div class="g"><div class="n">15</div></div><div class="b">
+    <h4>Databricks SQL: query Delta with SQL</h4>
+    <p class="obj">Same data, SQL instead of PySpark — for the SQL-minded.</p>
+    <div class="tags"><span class="tag t-sql">SQL</span><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Register a table, then query with plain SQL in a <code>%sql</code> cell; SQL ↔ PySpark equivalence.</li>
+    </ul></div>
+<pre><span class="cap">notebook — %sql cell</span><span class="k">CREATE TABLE IF NOT EXISTS</span> finledger.silver_txn
+<span class="k">USING</span> delta LOCATION <span class="s">'abfss://silver@stfinledger.dfs.core.windows.net/transactions'</span>;
+
+<span class="k">SELECT</span> channel, count(*) <span class="k">AS</span> txns, round(sum(amount)) <span class="k">AS</span> total
+<span class="k">FROM</span>   finledger.silver_txn
+<span class="k">GROUP BY</span> channel
+<span class="k">ORDER BY</span> total <span class="k">DESC</span>;</pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">16</div></div><div class="b">
+    <h4>Azure SQL with Python (snapshot load in/out)</h4>
+    <p class="obj">Read from and write to a managed database — from a notebook, in batch.</p>
+    <div class="tags"><span class="tag t-sql">SQL</span><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Serverless Azure SQL (auto-pause = £0 idle); read a table into Spark via JDBC; write a gold snapshot back.</li>
+    </ul></div>
+<pre><span class="cap">notebook — spark jdbc to azure sql</span>url = (<span class="s">"jdbc:sqlserver://finledger.database.windows.net:1433;"</span>
+       <span class="s">"database=finledger;encrypt=true"</span>)
+props = {<span class="s">"user"</span>: user, <span class="s">"password"</span>: secret, 
+         <span class="s">"driver"</span>: <span class="s">"com.microsoft.sqlserver.jdbc.SQLServerDriver"</span>}
+
+<span class="c"># read a snapshot from SQL</span>src = spark.read.jdbc(url, <span class="s">"dbo.fact_transaction"</span>, properties=props)
+
+<span class="c"># write the gold snapshot back to SQL</span>(pivoted.write.jdbc(url, <span class="s">"dbo.gold_channel_daily"</span>,
+                    mode=<span class="s">"overwrite"</span>, properties=props))</pre>
+    <div class="note"><b>Kept easy:</b> secret comes from Key Vault (shown, not typed); no CDC, no stored-proc gymnastics — just batch read/write.</div>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">17</div></div><div class="b">
+    <h4>Unity Catalog basics: tables &amp; grants</h4>
+    <p class="obj">Give tables real names and control who can read them.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-gov">Governance</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li><code>catalog.schema.table</code>; create a managed table; <code>GRANT SELECT</code> to an analyst group; see built-in lineage.</li>
+    </ul></div>
+<pre><span class="cap">notebook — %sql unity catalog</span><span class="k">CREATE CATALOG IF NOT EXISTS</span> finledger;
+<span class="k">CREATE SCHEMA  IF NOT EXISTS</span> finledger.gold;
+
+<span class="k">CREATE TABLE</span> finledger.gold.channel_daily <span class="k">AS</span>
+<span class="k">SELECT</span> * <span class="k">FROM</span> daily;
+
+<span class="k">GRANT SELECT ON TABLE</span> finledger.gold.channel_daily <span class="k">TO</span> `analysts`;</pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">18</div></div><div class="b">
+    <h4>Databricks Jobs: schedule the batch</h4>
+    <p class="obj">Turn the notebook into a scheduled, monitored job.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Create a Job from the UI; pass a <code>run_date</code> parameter; read run history; the same via the Python SDK (show &amp; run).</li>
+    </ul></div>
+<pre><span class="cap">python — databricks-sdk (show &amp; run)</span><span class="k">from</span> databricks.sdk <span class="k">import</span> WorkspaceClient
+w = WorkspaceClient()                     <span class="c"># uses your logged-in profile</span>
+
+run = w.jobs.run_now(job_id=JOB_ID,
+                     notebook_params={<span class="s">"run_date"</span>: <span class="s">"session3-lab"</span>})
+print(<span class="s">"started run:"</span>, run.run_id)</pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">19</div></div><div class="b">
+    <h4>Data Factory: orchestrate the batch (concepts + run)</h4>
+    <p class="obj">Learn how Azure's orchestrator schedules and chains our work, then run a pipeline and wire an activity yourself.</p>
+    <div class="tags"><span class="tag t-adf">Data Factory</span><span class="tag t-theory">theory + practical</span></div>
+    <div class="rowlist"><b>Theory (we explain first)</b><ul>
+      <li>What ADF is and where it sits — the <b>orchestrator</b> that triggers and sequences Databricks work on a schedule.</li>
+      <li>The building blocks: <b>pipelines, activities, linked services, datasets, triggers</b> and the <b>integration runtime</b> — each in plain language.</li>
+      <li>When to reach for ADF vs a Databricks Job, and how <b>parameters</b> (like <code>run_date</code>) flow from pipeline to notebook.</li>
+    </ul></div>
+    <div class="rowlist"><b>Practical — you'll do</b><ul>
+      <li>Open the prebuilt <code>pl_databricks_finledger</code> pipeline, read its Notebook activity, and hit <b>Trigger now</b>; watch it run in the monitor.</li>
+      <li>Then <b>add a Databricks Notebook activity yourself</b>, set its <code>run_date</code> parameter, and re-run — your first hands-on pipeline edit.</li>
+    </ul></div>
+<pre><span class="cap">adf — the notebook activity you'll configure</span>{
+  <span class="s">"name"</span>: <span class="s">"Transform_bronze_to_gold"</span>,
+  <span class="s">"type"</span>: <span class="s">"DatabricksNotebook"</span>,
+  <span class="s">"typeProperties"</span>: {
+    <span class="s">"notebookPath"</span>: <span class="s">"/finledger/nb_04_end_to_end"</span>,
+    <span class="s">"baseParameters"</span>: { <span class="s">"run_date"</span>: <span class="s">"@pipeline().parameters.run_date"</span> }
+  },
+  <span class="s">"linkedServiceName"</span>: { <span class="s">"referenceName"</span>: <span class="s">"ls_databricks_finledger"</span> }
+}</pre>
+    <div class="note"><b>ADF orchestrates, Databricks does the heavy lifting.</b> You leave this session able to read a pipeline, trigger it, and add an activity — with the deeper transformation logic living in your notebooks.</div>
+  </div></div>
+
+  <!-- ============ PHASE D ============ -->
+  <section id="d" class="phase"><div class="k">Phase D · sessions 20–23</div><h2>Make it reusable, tested and fast</h2></section>
+
+  <div class="card"><div class="g"><div class="n">20</div></div><div class="b">
+    <h4>Reusable notebooks: widgets &amp; functions</h4>
+    <p class="obj">One notebook, many run dates — driven by parameters.</p>
+    <div class="tags"><span class="tag t-py">Python</span><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Databricks <code>widgets</code> for parameters; wrapping logic in functions so it's reusable and testable.</li>
+    </ul></div>
+<pre><span class="cap">notebook — widgets</span>dbutils.widgets.text(<span class="s">"run_date"</span>, <span class="s">"session3-lab"</span>)
+run_date = dbutils.widgets.get(<span class="s">"run_date"</span>)
+
+result = run_medallion(run_date)          <span class="c"># function from Session 13</span>
+dbutils.notebook.exit(str(result))        <span class="c"># return value to the caller (ADF/Job)</span></pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">21</div></div><div class="b">
+    <h4>Testing PySpark with pytest + chispa</h4>
+    <p class="obj">Prove a transform is correct in seconds, before any cloud run.</p>
+    <div class="tags"><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Write a tiny test for a pure transform function; compare DataFrames with <code>chispa</code>; run <code>pytest</code>.</li>
+    </ul></div>
+<pre><span class="cap">test_transform.py</span><span class="k">from</span> chispa <span class="k">import</span> assert_df_equality
+<span class="k">from</span> mypipe <span class="k">import</span> clean_txns
+
+<span class="k">def</span> test_removes_bad_rows(spark):
+    src = spark.createDataFrame(
+        [(<span class="s">"T1"</span>, <span class="s">"50"</span>), (<span class="s">"T2"</span>, <span class="s">"oops"</span>)], [<span class="s">"txn_id"</span>, <span class="s">"amount"</span>])
+    out = clean_txns(src)
+    <span class="k">assert</span> out.count() == 1        <span class="c"># the bad row is gone</span></pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">22</div></div><div class="b">
+    <h4>Performance made simple</h4>
+    <p class="obj">Three levers that make batch jobs fast — nothing exotic.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>Partitioning &amp; the small-files problem; <code>OPTIMIZE</code> + Z-order; <code>cache()</code>; a glance at the Spark UI.</li>
+    </ul></div>
+<pre><span class="cap">notebook — %sql optimize</span><span class="c">-- compact many small files into few big ones, sorted by a common filter key</span>
+<span class="k">OPTIMIZE</span> finledger.gold.channel_daily
+<span class="k">ZORDER BY</span> (channel);
+
+<span class="c">-- reuse a DataFrame you hit repeatedly in one run</span>
+<span class="c"># clean.cache(); clean.count()   # (PySpark)</span></pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">23</div></div><div class="b">
+    <h4>Databricks cost control</h4>
+    <p class="obj">Keep spend near zero without thinking hard about it.</p>
+    <div class="tags"><span class="tag t-cost">Cost</span><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll learn</b><ul>
+      <li>The DBU idea in plain words; <b>auto-termination</b>; serverless vs classic; why Free-Edition quotas are a natural guardrail.</li>
+      <li>Habit: terminate clusters at the end of every session.</li>
+    </ul></div>
+  </div></div>
+
+  <!-- ============ PHASE E ============ -->
+  <section id="e" class="phase"><div class="k">Phase E · sessions 24–29</div><h2>Govern, cost and operate</h2></section>
+
+  <div class="card"><div class="g"><div class="n">24</div></div><div class="b">
+    <h4>Purview concepts + register &amp; scan the estate</h4>
+    <p class="obj">Understand data governance, then build one searchable map of the whole estate yourself.</p>
+    <div class="tags"><span class="tag t-gov">Governance</span><span class="tag t-theory">theory + practical</span></div>
+    <div class="rowlist"><b>Theory (we explain first)</b><ul>
+      <li>Why governance matters for a bank: <b>discovery, classification, lineage, stewardship</b> — the questions Purview answers.</li>
+      <li>The Purview building blocks: the <b>Data Map</b>, <b>sources</b>, <b>scans</b>, the <b>catalog</b> and <b>collections</b> — each in one line.</li>
+      <li>Where Purview fits alongside Unity Catalog (Session 17) — governance across the whole estate vs inside Databricks.</li>
+    </ul></div>
+    <div class="rowlist"><b>Practical — you'll do</b><ul>
+      <li>Register ADLS + Databricks as sources; configure and run a scan; browse and search the discovered assets. Scanning is free.</li>
+    </ul></div>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">25</div></div><div class="b">
+    <h4>Lineage &amp; classification (concepts + hands-on)</h4>
+    <p class="obj">"Where did this number come from?" — trace it, and flag sensitive columns yourself.</p>
+    <div class="tags"><span class="tag t-gov">Governance</span><span class="tag t-theory">theory + practical</span></div>
+    <div class="rowlist"><b>Theory (we explain first)</b><ul>
+      <li>What <b>lineage</b> is and why auditors ask for it; how it's captured from pipelines.</li>
+      <li><b>Classification &amp; sensitivity labels</b> (e.g. account numbers as PII), and the role of a <b>data steward</b>.</li>
+    </ul></div>
+    <div class="rowlist"><b>Practical — you'll do</b><ul>
+      <li>Trace a gold column back to bronze in the lineage view; apply a sensitivity classification to an account-number column; assign a steward.</li>
+    </ul></div>
+    <div class="note"><b>Awareness only:</b> programmatic Purview via the Atlas REST API exists for automation — we name it, but keep this session point-and-click.</div>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">26</div></div><div class="b">
+    <h4>Cost report with Python (FinOps-lite)</h4>
+    <p class="obj">Pull spend by tag into a small report — run it, read it.</p>
+    <div class="tags"><span class="tag t-cost">Cost</span><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll run</b></div>
+<pre><span class="cap">python — month-to-date cost (repo: scripts/verify_cost.py)</span><span class="k">from</span> azure.identity <span class="k">import</span> DefaultAzureCredential
+<span class="k">from</span> azure.mgmt.costmanagement <span class="k">import</span> CostManagementClient
+
+client = CostManagementClient(DefaultAzureCredential())
+<span class="c"># query month-to-date spend for the resource group, print the total</span>
+<span class="c"># (full working script already in the repo — we just run it)</span></pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">27</div></div><div class="b">
+    <h4>Data quality checks as code</h4>
+    <p class="obj">Simple assertions that stop bad data reaching gold.</p>
+    <div class="tags"><span class="tag t-py">Python</span><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll run</b></div>
+<pre><span class="cap">notebook — quality gate</span><span class="k">def</span> assert_quality(df):
+    assert df.count() &gt; 0,                    <span class="s">"silver is empty!"</span>
+    assert df.filter(F.col(<span class="s">"txn_id"</span>).isNull()).count() == 0, <span class="s">"null keys"</span>
+    print(<span class="s">"quality OK:"</span>, df.count(), <span class="s">"rows"</span>)
+
+assert_quality(good)   <span class="c"># fail fast, before writing gold</span></pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">28</div></div><div class="b">
+    <h4>Observability: a morning-check script</h4>
+    <p class="obj">Answer "did last night's job run?" without opening a portal.</p>
+    <div class="tags"><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll run</b></div>
+<pre><span class="cap">python — morning check (databricks-sdk)</span><span class="k">from</span> databricks.sdk <span class="k">import</span> WorkspaceClient
+w = WorkspaceClient()
+
+<span class="k">for</span> run <span class="k">in</span> w.jobs.list_runs(job_id=JOB_ID, limit=5):
+    print(run.start_time, run.state.result_state, run.run_page_url)</pre>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">29</div></div><div class="b">
+    <h4>Recovery &amp; safety (Delta restore, secrets)</h4>
+    <p class="obj">Undo a bad load; keep secrets out of code.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
+    <div class="rowlist"><b>You'll run</b></div>
+<pre><span class="cap">notebook — recover &amp; read a secret safely</span><span class="c"># oops — a bad overwrite. Roll back to the previous snapshot:</span>
+spark.sql(f<span class="s">"RESTORE TABLE delta.`{silver}` TO VERSION AS OF 2"</span>)
+
+<span class="c"># read a secret from a Databricks scope (never hard-code)</span>pw = dbutils.secrets.get(scope=<span class="s">"finledger"</span>, key=<span class="s">"sql-password"</span>)</pre>
+  </div></div>
+
+  <!-- ============ PHASE F ============ -->
+  <section id="f" class="phase"><div class="k">Phase F · session 30</div><h2>Capstone</h2></section>
+
+  <div class="card"><div class="g"><div class="n">30</div></div><div class="b">
+    <h4>Capstone: new feed, bronze→gold, run via Data Factory</h4>
+    <p class="obj">Put it all together on a fresh FinLedger feed — batch, Databricks, orchestrated, verified.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-py">Python</span><span class="tag t-adf">Data Factory</span></div>
+    <div class="rowlist"><b>You'll do</b><ul>
+      <li>Take a new CSV feed; write a parametrised notebook (bronze→silver with quarantine→gold rollup as Delta).</li>
+      <li>Add one quality check and one test; register the gold table in Unity Catalog.</li>
+      <li>Orchestrate it end-to-end from a Data Factory pipeline; confirm the run in the monitor; roll back with time travel if needed.</li>
+    </ul></div>
+    <div class="note"><b>Streaming — awareness only (5 min):</b> we mention Auto Loader / Structured Streaming exists for continuous feeds, and explain that <b>for FinLedger's nightly snapshots, batch is simpler, cheaper and the right choice.</b> No streaming lab.</div>
+  </div></div>
+
+  <!-- TOOLCHAIN -->
+  <section id="stack" class="panel">
+    <h2 class="section">Reference</h2>
+    <h3>The small Python toolchain we actually use</h3>
+    <p>Code is provided ready to run. The same login (<code>DefaultAzureCredential</code>) threads through every library.</p>
+    <div class="twocol">
+      <ul class="stack">
+        <li><span class="pkg">pyspark</span><span>DataFrames + Delta — the core of every session</span></li>
+        <li><span class="pkg">delta (delta.tables)</span><span>MERGE upserts, time travel, restore</span></li>
+        <li><span class="pkg">databricks-sdk</span><span>Run jobs, read run history — show &amp; run</span></li>
+        <li><span class="pkg">azure-identity</span><span>One login object, no secrets in code</span></li>
+      </ul>
+      <ul class="stack">
+        <li><span class="pkg">azure-storage-file-datalake</span><span>Simple file ops on ADLS from Python</span></li>
+        <li><span class="pkg">azure-mgmt-costmanagement</span><span>The cost report script (run it)</span></li>
+        <li><span class="pkg">pytest + chispa</span><span>Fast local tests for transforms</span></li>
+        <li><span class="pkg">JDBC (SQL Server driver)</span><span>Batch read/write to Azure SQL</span></li>
+      </ul>
+    </div>
+    <div class="note"><b>Not required from you:</b> writing hard code cold. Most snippets here are AI-generated and repo-hosted — the skill we build is <b>reading, running and reasoning about</b> them.</div>
+  </section>
+
+</main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <b>Data Engineering</b> · 60 hours · 30 × 2-hour sessions · FinLedger UK / Bank of England<br>
+    Batch &amp; snapshot focus · every topic gets theory + practical · streaming is awareness-only. Confirm free-tier terms per cohort.
+  </div>
+</footer>
+
+</body>
+</html>
