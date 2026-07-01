@@ -19,6 +19,7 @@
 | **Session 1** — Class-1 landing zone | repo root | Day 1 (Hours 9–16) | ~6 h class | `orchestrate.cmd` | [README §10](README.md#10-azure-portal--complete-novice-practical-guide) + [WORKFLOW-AND-CODE](docs/WORKFLOW-AND-CODE.md) |
 | **Session 2** — ADF ingestion | `session-2/` | Day 2 (Hours 17–24) | 2 h | `session-2\orchestrate.cmd` | [session-2/MANUAL-LAB.md](session-2/MANUAL-LAB.md) |
 | **Session 3** — Databricks lakehouse | `session-3/` | Day 3 (Hours 25–32) | 2 h | `session-3\orchestrate.cmd` | [session-3/MANUAL-LAB.md](session-3/MANUAL-LAB.md) |
+| **Day 6** — Python for data engineers | `day6/` | [data-engineering-course.html](docs/data-engineering-course.html) S6 | 2 h | `day6\orchestrate.cmd` | [day6/MANUAL-LAB.md](day6/MANUAL-LAB.md) |
 | Session 4 — Purview | *planned* | Day 4 | — | — | — |
 | Session 5+ — Operate / Engineering | *planned* | Day 5–7 | — | — | — |
 
