@@ -44,6 +44,54 @@
 
 ---
 
+## Before notebooks — storage credentials (one time per learner)
+
+> **Why this exists:** Shared Databricks clusters cannot always read ADLS without credentials. Saving secrets **inside** a notebook often fails (`dbutils.secrets.put` blocked). We fix that from **your Windows PC** instead.
+
+### What your trainer / you run once
+
+```text
+# 1) Add to repo-root .env (never commit to git):
+#    STORAGE_ACCOUNT_KEY = from Azure Portal → Storage → Access keys
+#    DATABRICKS_TOKEN    = from Databricks → User settings → Access token
+
+cd session-3
+orchestrate.cmd --setup-secrets
+```
+
+### What happens in Azure / Databricks
+
+```mermaid
+flowchart LR
+    PC[Your laptop orchestrate.cmd]
+    CLI[Databricks CLI]
+    SCOPE["Secret scope: finledger"]
+    NB[Notebooks nb_01 to nb_04]
+    ADLS[ADLS bronze silver gold]
+
+    PC --> CLI --> SCOPE
+    SCOPE --> NB
+    NB --> ADLS
+```
+
+| Secret key | Contains | Used by |
+|---|---|---|
+| `storage-account` | e.g. `stjineshfqdcgg` | `_storage_auth.py` |
+| `storage-key` | Storage key1 (hidden) | Spark `fs.azure.account.key.*` |
+
+### What you do in Databricks after setup
+
+| Widget | Value |
+|---|---|
+| `auth_mode` | `auto` (default) |
+| `storage_account` | **leave empty** — loaded from secrets |
+
+You **do not** paste the storage key into notebook widgets in class.
+
+Full steps: [SECRET-SCOPE-SETUP.md](SECRET-SCOPE-SETUP.md) · [MANUAL-LAB §D2](MANUAL-LAB.md#lab-d)
+
+---
+
 ### What YOU do in class (Databricks UI — 2 hours)
 
 | Block | Time | Your job | Guide |
@@ -180,8 +228,8 @@ bronze_df.count()  # ACTION — hits storage
 
 ### Do
 
-1. [lab-d](./MANUAL-LAB.md#lab-d) — import `nb_01_read_bronze.py`; set `storage_account`.
-2. [lab-e](./MANUAL-LAB.md#lab-e) — **Run all**; confirm 5 rows and TXN-10003.
+1. [lab-d](./MANUAL-LAB.md#lab-d) — import notebooks (`_storage_auth.py` + `nb_01`…); confirm `--setup-secrets` ran (or trainer did it).
+2. [lab-e](./MANUAL-LAB.md#lab-e) — **Run all** with `auth_mode=auto`, `storage_account` empty; confirm 5 rows and TXN-10003.
 
 ### Checkpoint
 
@@ -266,6 +314,8 @@ orchestrate.cmd --verify-storage
 
 | Notebook | File | Purpose |
 |---|---|---|
+| 00 Setup (fallback) | `notebooks/nb_00_setup_credentials.py` | Only if CLI setup unavailable |
+| — Shared auth | `notebooks/_storage_auth.py` | Loaded by `%run` in every lab notebook |
 | 01 Read bronze | `notebooks/nb_01_read_bronze.py` | `spark.read.csv(abfss://...)` |
 | 02 Silver | `notebooks/nb_02_bronze_to_silver.py` | Cleanse + Delta write |
 | 03 Gold | `notebooks/nb_03_silver_to_gold.py` | Aggregations |

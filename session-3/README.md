@@ -81,7 +81,8 @@ orchestrate.cmd
 Optional:
 
 ```text
-orchestrate.cmd --verify-storage   # after notebooks: check Delta in silver/gold
+orchestrate.cmd --setup-secrets   # one-time: save storage key to Databricks (see §H)
+orchestrate.cmd --verify-storage  # after notebooks: check Delta in silver/gold
 ```
 
 **First run:** uses repo-root `.venv` (same as Session 2).
@@ -123,9 +124,15 @@ Trainer detail: [GUIDE.md](GUIDE.md)
 |------|---------|
 | `orchestrate.cmd` | Session 3 entry point |
 | `scripts/run_session3.py` | Phase orchestrator |
+| `scripts/databricks_secrets.py` | **CLI secret setup** (`--setup-secrets`) |
+| `scripts/storage_access.py` | Prints storage-access options after orchestrate |
 | `scripts/bronze_prep.py` | Upload bronze CSV for Databricks |
 | `scripts/databricks_rbac.py` | Storage RBAC for access connector |
 | `scripts/storage_verify.py` | Verify Delta outputs |
+| `notebooks/_storage_auth.py` | Shared auth (`%run` — auto loads secrets) |
+| `notebooks/nb_00_setup_credentials.py` | **One-time** save account + key to secrets |
+| [SECRET-SCOPE-SETUP.md](SECRET-SCOPE-SETUP.md) | **Detailed** secret scope + CLI + notebook steps |
+| `notebooks/nb_00_unity_catalog_storage.py` | Optional Unity Catalog (access connector) |
 | `notebooks/nb_01_read_bronze.py` | Read from ADLS |
 | `notebooks/nb_02_bronze_to_silver.py` | Cleanse + Delta silver |
 | `notebooks/nb_03_silver_to_gold.py` | Gold aggregates |
@@ -157,10 +164,68 @@ Trainer detail: [GUIDE.md](GUIDE.md)
 |---------|-----|
 | `ImportError: ResourceManagementClient` or `azure.mgmt.resource` | `cd ..` then delete `.venv` and re-run `session-3\orchestrate.cmd` (recreates venv), or `git pull` for latest fix |
 | `Databricks workspace not found` | Repo root `orchestrate.cmd` (full deploy) |
-| `Permission denied` on `abfss://` | Storage → IAM → your user needs **Storage Blob Data Contributor** (Class-1 grants this) |
+| `Permission denied` on `abfss://` / **USER_ISOLATION** | Run `orchestrate.cmd --setup-secrets` once (§H) **or** Single-user cluster **or** `nb_00_unity_catalog_storage` — [MANUAL-LAB §E](MANUAL-LAB.md#lab-e) |
+| `'SecretsHandler' object has no attribute 'put'` | Normal on Shared clusters — use `orchestrate.cmd --setup-secrets` on your PC, not `nb_00` |
 | Cluster won't start (quota) | Use smallest node; MPN quota 0 → portal walkthrough + code review only |
 | `stYOURLEARNERHASH` in notebook | Replace with your storage account from `orchestrate.cmd` output |
 | Delta not in silver/gold | Run notebooks 02 and 03; then `orchestrate.cmd --verify-storage` |
+
+---
+
+## H. Storage access & secrets (what we built and why)
+
+### The problem
+
+Databricks notebooks on a **Shared** cluster must read FinLedger files from ADLS (`abfss://bronze@…`). Azure enforces **user isolation** — Spark cannot use a storage account key pasted in a cell the way a Single-user cluster sometimes allows.
+
+We also **cannot** save secrets from inside the notebook on many workspaces:
+
+```text
+'SecretsHandler' object has no attribute 'put'
+```
+
+So `nb_00_setup_credentials` is a fallback only. The **supported path** is the Windows orchestrator.
+
+### The solution (one command on your laptop)
+
+```text
+# Repo-root .env (never commit) — trainer or learner fills once:
+#   STORAGE_ACCOUNT_KEY = Portal → Storage → Access keys → key1
+#   DATABRICKS_TOKEN    = Databricks → User settings → Access token
+#   DATABRICKS_HOST     = optional (orchestrate auto-detects)
+
+cd session-3
+orchestrate.cmd --setup-secrets
+```
+
+**What this does (idempotent — safe to re-run):**
+
+| Step | Tool | Result |
+|------|------|--------|
+| 1 | Databricks CLI | Creates secret scope `finledger` |
+| 2 | Databricks CLI | Grants READ to workspace group `users` |
+| 3 | Databricks CLI | Stores `storage-account` and `storage-key` |
+| 4 | Notebooks | `%run ./_storage_auth` loads secrets when `auth_mode=auto` |
+
+**Analogy:** The orchestrator is the **HR department** filing your building pass once. Every notebook (`nb_01`–`nb_04`) just swipes the pass at the door — you do not re-type the key each time.
+
+### In the notebook
+
+Each lab notebook starts with:
+
+```python
+%run ./_storage_auth
+account = finledger_configure_storage(auth_mode="auto")
+```
+
+- `auto` — try reading bronze with existing auth; if that fails, load `finledger` secrets and configure Spark.
+- `none` — Single-user cluster only; skip secrets (trainer demo).
+
+**Student widgets:** leave `storage_account` **empty** after `--setup-secrets`; leave `auth_mode` at `auto`.
+
+### Detailed walkthrough
+
+[SECRET-SCOPE-SETUP.md](SECRET-SCOPE-SETUP.md) — screenshots-level steps, trainer vs learner roles, key rotation.
 
 ---
 

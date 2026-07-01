@@ -1,58 +1,53 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 04 — End-to-end Bronze → Silver → Gold
-# MAGIC
-# MAGIC Single notebook for ADF **Databricks Notebook** activity (Session 3 capstone).
-# MAGIC Pass all paths as widgets from ADF or `orchestrate.cmd` output.
+# MAGIC # 04 — End-to-end Bronze → Silver → Gold (ADF notebook activity)
+
+# COMMAND ----------
+
+# MAGIC %run ./_storage_auth
 
 # COMMAND ----------
 
 from pyspark.sql import functions as F
 from pyspark.sql.types import DoubleType
 
-dbutils.widgets.text("bronze_path", "", "Bronze CSV abfss path")
+dbutils.widgets.dropdown("auth_mode", "auto", ["auto", "none", "access_connector"], "Auth")
+dbutils.widgets.text("storage_account", "", "Optional if nb_00_setup done")
+dbutils.widgets.text("bronze_path", "", "Bronze CSV path")
 dbutils.widgets.text("silver_path", "", "Silver Delta folder")
 dbutils.widgets.text("gold_path", "", "Gold Delta folder")
 dbutils.widgets.text("quarantine_path", "", "Quarantine folder")
 dbutils.widgets.text("run_id", "session3-lab", "Run id")
 
-bronze_path = dbutils.widgets.get("bronze_path")
-silver_path = dbutils.widgets.get("silver_path")
-gold_path = dbutils.widgets.get("gold_path")
-quarantine_path = dbutils.widgets.get("quarantine_path")
-run_id = dbutils.widgets.get("run_id")
+storage_account = finledger_configure_storage(
+    storage_account=dbutils.widgets.get("storage_account").strip(),
+    auth_mode=dbutils.widgets.get("auth_mode").strip(),
+)
 
-storage_account = "stYOURLEARNERHASH"  # <-- change once per learner
+run_id = dbutils.widgets.get("run_id").strip()
+bronze_path = dbutils.widgets.get("bronze_path").strip()
+silver_path = dbutils.widgets.get("silver_path").strip()
+gold_path = dbutils.widgets.get("gold_path").strip()
+quarantine_path = dbutils.widgets.get("quarantine_path").strip()
 
 if not bronze_path:
-    bronze_path = (
-        f"abfss://bronze@{storage_account}.dfs.core.windows.net/"
-        f"loaded/run={run_id}/sample_transactions.csv"
+    bronze_path = finledger_abfss(
+        storage_account, "bronze", f"loaded/run={run_id}/sample_transactions.csv"
     )
 if not silver_path:
-    silver_path = f"abfss://silver@{storage_account}.dfs.core.windows.net/transactions"
+    silver_path = finledger_abfss(storage_account, "silver", "transactions")
 if not gold_path:
-    gold_path = f"abfss://gold@{storage_account}.dfs.core.windows.net/daily_channel_summary"
+    gold_path = finledger_abfss(storage_account, "gold", "daily_channel_summary")
 if not quarantine_path:
-    quarantine_path = (
-        f"abfss://silver@{storage_account}.dfs.core.windows.net/quarantine/run={run_id}"
+    quarantine_path = finledger_abfss(
+        storage_account, "silver", f"quarantine/run={run_id}"
     )
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## 1. Read Bronze
 
 # COMMAND ----------
 
 bronze_df = spark.read.option("header", True).csv(bronze_path)
 bronze_count = bronze_df.count()
 print(f"Bronze rows: {bronze_count}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## 2. Silver cleanse + Delta write
 
 # COMMAND ----------
 
@@ -84,11 +79,6 @@ print(f"Silver rows: {silver_count}")
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## 3. Gold aggregate + Delta write
-
-# COMMAND ----------
-
 silver_df = spark.read.format("delta").load(silver_path)
 
 gold_df = (
@@ -108,12 +98,7 @@ gold_df = (
 )
 
 gold_count = gold_df.count()
-print(f"Gold summary rows: {gold_count}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## 4. Return metrics (ADF can read notebook output)
+print(f"Gold rows: {gold_count}")
 
 # COMMAND ----------
 

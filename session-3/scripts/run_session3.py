@@ -34,6 +34,11 @@ def _parse_args() -> argparse.Namespace:
         help="Check silver/gold Delta tables exist (run after Databricks notebooks)",
     )
     parser.add_argument("--skip-upload", action="store_true", help="Skip bronze CSV upload")
+    parser.add_argument(
+        "--setup-secrets",
+        action="store_true",
+        help="Create finledger secret scope + store storage key from .env (Databricks CLI)",
+    )
     parser.add_argument("--verbose", action="store_true")
     return parser.parse_args()
 
@@ -88,6 +93,10 @@ def main() -> int:
     from discover import abfss_path, databricks_workspace_url, discover_estate  # noqa: E402
     from databricks_rbac import ensure_databricks_storage_rbac  # noqa: E402
     from bronze_prep import ensure_bronze_for_databricks  # noqa: E402
+    from storage_access import (  # noqa: E402
+        print_storage_access_instructions,
+        workspace_access_connector_id,
+    )
 
     logger.info("Discovering Class-1 resources in %s...", cfg.resource_group)
     estate = discover_estate(cfg)
@@ -98,8 +107,24 @@ def main() -> int:
         estate.data_factory or "(none)",
     )
 
+    if args.setup_secrets:
+        from databricks_secrets import setup_finledger_secrets  # noqa: E402
+
+        logger.info("==> Databricks secret scope setup (from .env — not notebook)")
+        setup_finledger_secrets(cfg, estate.storage_account, estate.databricks_workspace)
+        logger.info("Re-run without --setup-secrets for normal bronze prep.")
+        return 0
+
     logger.info("==> Phase 1: Databricks storage RBAC (SDK — fast, skips if no access connector)")
     ensure_databricks_storage_rbac(cfg, estate.storage_account, estate.databricks_workspace)
+
+    connector_id = workspace_access_connector_id(cfg, estate.databricks_workspace)
+    if connector_id:
+        logger.info("Access connector: %s", connector_id)
+    else:
+        logger.info(
+            "Access connector: (none) — use Single-user cluster OR redeploy after git pull"
+        )
 
     paths: dict[str, str] = {}
     if not args.skip_upload:
@@ -128,8 +153,15 @@ def main() -> int:
     logger.info("  Bronze read: %s", bronze_loaded)
     logger.info("  Silver sink: %s", silver_delta)
     logger.info("  Gold sink  : %s", gold_delta)
-    logger.info("  Notebooks  : session-3/notebooks/ (import or copy into workspace)")
+    logger.info("  Notebooks  : session-3/notebooks/ (import nb_00 first if Shared cluster)")
     logger.info("  Student UI : UI-OVERVIEW.md → SESSION3-STUDENT-GUIDE.md → MANUAL-LAB.md")
+    logger.info("")
+
+    print_storage_access_instructions(
+        storage_account=estate.storage_account,
+        access_connector_id=connector_id,
+        bronze_abfss=bronze_loaded,
+    )
     logger.info("")
 
     if args.verify_storage:

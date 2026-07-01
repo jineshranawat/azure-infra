@@ -99,9 +99,9 @@ ADF **moves** files. Databricks **transforms** them with Spark. Every FinLedger 
 
 > ⚠️ **Cost:** Clusters charge DBUs while running. Use the **smallest** node and **auto-terminate**.
 
-### Do
+> **Important:** If you use a **Shared** cluster (Unity Catalog user isolation), you must run **`nb_00_unity_catalog_storage`** before `nb_01`. **Single-user** cluster is the recommended lab default.
 
-1. Left nav → **Compute**.
+### Do
 2. Click **Create compute** (or **Create cluster**).
 3. Settings:
 
@@ -109,7 +109,7 @@ ADF **moves** files. Databricks **transforms** them with Spark. Every FinLedger 
 |---------|-----------|-----|
 | **Cluster name** | `finledger-lab` | Easy to find |
 | **Policy** | Smallest / Personal Compute if available | Cost guardrail |
-| **Access mode** | **Single user** (or Shared if policy requires) | Your Azure AD creds reach ADLS |
+| **Access mode** | **Single user** — assign to **your** email | Your Azure AD identity reads ADLS; avoids USER_ISOLATION errors |
 | **Databricks runtime** | Latest LTS (e.g. 15.4.x) | Delta built-in |
 | **Node type** | Smallest (e.g. `Standard_DS3_v2` or policy minimum) | Cheapest viable |
 | **Terminate after** | **30** minutes idle | Mandatory cost control |
@@ -130,31 +130,55 @@ ADF **moves** files. Databricks **transforms** them with Spark. Every FinLedger 
 
 ## D. Import notebooks (10 min)
 
-### D1. Copy notebook files into Databricks
+### D1. Import notebooks (same folder)
 
-**Option A — Import file (recommended)**
+Import into **one folder** in Workspace:
 
-1. **Workspace** → your folder → **Create** → **Import**.
-2. Browse to your repo clone: `session-3\notebooks\nb_01_read_bronze.py`.
-3. Import type: **Databricks notebook** → **Import**.
-4. Repeat for `nb_02_bronze_to_silver.py`, `nb_03_silver_to_gold.py`, `nb_04_end_to_end.py`.
+| File | Required |
+|------|----------|
+| `_storage_auth.py` | **Yes** — shared by `%run` |
+| `nb_00_setup_credentials.py` | **Yes** — run **once** |
+| `nb_01_read_bronze.py` … `nb_04_end_to_end.py` | Yes |
+| `nb_00_unity_catalog_storage.py` | Only if access connector exists |
 
-**Option B — New notebook + paste**
+### D2. One-time credential setup (5 min) — **do this once**
 
-1. **Create** → **Notebook** → name `nb_01_read_bronze`.
-2. Open `nb_01_read_bronze.py` in VS Code → copy all → paste into Databricks.
+**Full step-by-step:** [SECRET-SCOPE-SETUP.md](SECRET-SCOPE-SETUP.md)
 
-### D2. Set your storage account (once per notebook)
+**Recommended (Windows)** — many workspaces block `dbutils.secrets.put` in notebooks:
 
-Each notebook has this line — **change it**:
+1. Add to repo-root `.env` (never commit):
+   - `STORAGE_ACCOUNT_KEY` = Portal → Storage → Access keys → key1
+   - `DATABRICKS_TOKEN` = Databricks → User settings → Developer → Access token
+   - `DATABRICKS_HOST` = optional (orchestrate auto-detects)
+2. On your PC:
+   ```text
+   cd session-3
+   orchestrate.cmd --setup-secrets
+   ```
+3. Expected log: `Databricks secrets ready — notebooks can use auth_mode=auto`
 
-```python
-storage_account = "stYOURLEARNERHASH"  # <-- change once per learner
-```
+**Alternative (notebook)** — only if `dbutils.secrets.put` works in your workspace:
 
-Replace with your storage account from [Section A](#lab-a) (e.g. `stsantosh1a2b3c`).
+1. Trainer creates secret scope (once per workspace):
+   ```text
+   databricks secrets create-scope finledger
+   ```
+2. Open **`nb_00_setup_credentials`**.
+3. Widgets: `storage_account` = your `st…` name, `storage_account_key` = Portal key1.
+4. **Run all** → see `SETUP COMPLETE`.
 
-**Better:** run `orchestrate.cmd` in `session-3` — it prints the full `abfss://` paths. Paste into the **bronze_path** widget instead.
+After this, **nb_01–nb_04** use `auth_mode=auto` and load credentials from secrets — **no key to paste again** (even after cluster restart).
+
+### D3. Daily widgets (nb_01–nb_04)
+
+| Widget | Value |
+|--------|--------|
+| `auth_mode` | `auto` (default) |
+| `storage_account` | leave **empty** if setup saved it |
+| `run_id` | `session3-lab` |
+
+**Single-user cluster only:** set `auth_mode` = `none` — skip setup notebook.
 
 ### D3. Attach cluster
 
@@ -164,7 +188,7 @@ Replace with your storage account from [Section A](#lab-a) (e.g. `stsantosh1a2b3
 
 ### Verify
 
-- [ ] Four notebooks visible in Workspace
+- [ ] Four notebooks visible in Workspace (five if you imported `nb_00`)
 - [ ] `storage_account` updated OR widgets filled from `orchestrate.cmd` output
 - [ ] Notebook attached to running cluster
 
@@ -173,6 +197,8 @@ Replace with your storage account from [Section A](#lab-a) (e.g. `stsantosh1a2b3
 <a id="lab-e"></a>
 
 ## E. Run notebook 01 — Read bronze (15 min)
+
+> Each notebook configures storage in **cell 2** (`%run ./_storage_auth`). You do **not** need to run nb_00 first unless testing Unity Catalog.
 
 ### Concepts before you click Run
 
@@ -208,6 +234,7 @@ Replace with your storage account from [Section A](#lab-a) (e.g. `stsantosh1a2b3
 
 | Error | Fix |
 |-------|-----|
+| **USER_ISOLATION** / external location / storage credential | **A)** **Single user** cluster. **B)** Run `nb_00` with `auth_mode=storage_key` + storage key in secret or widget. **C)** `auth_mode=access_connector` only if orchestrate prints connector ID |
 | `java.io.IOException` / auth | Portal → Storage → **Access control** → confirm you have **Storage Blob Data Contributor** |
 | Path not found | Re-run `session-3\orchestrate.cmd`; check `bronze/loaded/run=session3-lab/` in Storage |
 | Cluster not attached | Select `finledger-lab` from cluster dropdown |

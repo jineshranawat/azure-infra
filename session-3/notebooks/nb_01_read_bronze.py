@@ -2,51 +2,48 @@
 # MAGIC %md
 # MAGIC # 01 — Read Bronze from ADLS Gen2
 # MAGIC
-# MAGIC **FinLedger Session 3** — read the CSV `orchestrate.cmd` landed in bronze.
+# MAGIC **Prerequisite:** run **`nb_00_setup_credentials`** once (or Single-user cluster + `auth_mode=none`).
 # MAGIC
-# MAGIC | Concept | Why |
-# MAGIC |---|---|
-# MAGIC | `abfss://` | Secure path to ADLS Gen2 from Spark (no mount needed) |
-# MAGIC | Lazy read | `spark.read` builds a plan; nothing moves until an **action** (`count`, `show`) |
-# MAGIC | Widgets | Paste path from `orchestrate.cmd` — no code edit needed |
+# MAGIC After setup, you only set **`run_id`** (and optional `bronze_path`) — credentials load from secrets automatically.
 
 # COMMAND ----------
 
-dbutils.widgets.text("storage_account", "", "Storage account name (e.g. stjineshfqdcgg)")
-dbutils.widgets.text("bronze_path", "", "Full abfss path OR leave empty to build from widgets")
+# MAGIC %run ./_storage_auth
+
+# COMMAND ----------
+
+dbutils.widgets.dropdown(
+    "auth_mode",
+    "auto",
+    ["auto", "none", "access_connector"],
+    "auto = use saved secrets | none = Single-user cluster",
+)
+dbutils.widgets.text(
+    "storage_account",
+    "",
+    "Optional if saved by nb_00_setup_credentials",
+)
+dbutils.widgets.text("bronze_path", "", "Full abfss path OR leave empty")
 dbutils.widgets.text("run_id", "session3-lab", "Run folder id")
 
-storage_account = dbutils.widgets.get("storage_account").strip()
+storage_account = finledger_configure_storage(
+    storage_account=dbutils.widgets.get("storage_account").strip(),
+    auth_mode=dbutils.widgets.get("auth_mode").strip(),
+)
+
 bronze_path = dbutils.widgets.get("bronze_path").strip()
 run_id = dbutils.widgets.get("run_id").strip()
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Resolve storage path
-# MAGIC
-# MAGIC **Preferred:** run `session-3\orchestrate.cmd` and paste the printed **Bronze read** line into the `bronze_path` widget.
-# MAGIC
-# MAGIC **Or** fill `storage_account` widget only (e.g. `stjineshfqdcgg`).
-
-# COMMAND ----------
-
 if not bronze_path:
-    if not storage_account:
-        raise ValueError(
-            "Set bronze_path widget (from orchestrate.cmd) OR storage_account widget"
-        )
-    bronze_path = (
-        f"abfss://bronze@{storage_account}.dfs.core.windows.net/"
-        f"loaded/run={run_id}/sample_transactions.csv"
+    bronze_path = finledger_abfss(
+        storage_account,
+        "bronze",
+        f"loaded/run={run_id}/sample_transactions.csv",
     )
 
 print(f"Reading: {bronze_path}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Read CSV (transformation = lazy until action)
 
 # COMMAND ----------
 
@@ -64,11 +61,6 @@ display(bronze_df)
 # COMMAND ----------
 
 bronze_df.printSchema()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Verify FinLedger fraud row — TXN-10003 (£50k pending wire)
 
 # COMMAND ----------
 

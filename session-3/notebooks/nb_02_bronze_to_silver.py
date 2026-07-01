@@ -1,80 +1,61 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # 02 — Bronze → Silver (cleanse, cast, quarantine)
-# MAGIC
-# MAGIC **Why Databricks here?** ADF copied raw files; Spark can **filter bad rows**, **cast types**,
-# MAGIC and **write Delta** with ACID guarantees — too heavy for a copy activity alone.
-# MAGIC
-# MAGIC | Step | What | Why |
-# MAGIC |---|---|---|
-# MAGIC | Read bronze | Raw CSV | Immutable landing zone |
-# MAGIC | Clean | Trim, cast `amount_gbp` to double | Reporting needs numeric types |
-# MAGIC | Quarantine | Rows where amount is not numeric | Data quality gate before silver |
-# MAGIC | Write Delta | `silver/transactions` | ACID + schema enforcement |
+
+# COMMAND ----------
+
+# MAGIC %run ./_storage_auth
 
 # COMMAND ----------
 
 from pyspark.sql import functions as F
-from pyspark.sql.types import DoubleType, DateType
+from pyspark.sql.types import DoubleType
 
+dbutils.widgets.dropdown("auth_mode", "auto", ["auto", "none", "access_connector"], "Auth")
+dbutils.widgets.text("storage_account", "", "Optional if nb_00_setup done")
 dbutils.widgets.text("bronze_path", "", "Bronze CSV abfss path")
 dbutils.widgets.text("silver_path", "", "Silver Delta abfss folder")
-dbutils.widgets.text("quarantine_path", "", "Quarantine CSV abfss folder")
+dbutils.widgets.text("quarantine_path", "", "Quarantine folder")
 dbutils.widgets.text("run_id", "session3-lab", "Run id")
 
-bronze_path = dbutils.widgets.get("bronze_path")
-silver_path = dbutils.widgets.get("silver_path")
-quarantine_path = dbutils.widgets.get("quarantine_path")
-run_id = dbutils.widgets.get("run_id")
+storage_account = finledger_configure_storage(
+    storage_account=dbutils.widgets.get("storage_account").strip(),
+    auth_mode=dbutils.widgets.get("auth_mode").strip(),
+)
 
-# COMMAND ----------
-
-storage_account = "stYOURLEARNERHASH"  # <-- change once per learner
+run_id = dbutils.widgets.get("run_id").strip()
+bronze_path = dbutils.widgets.get("bronze_path").strip()
+silver_path = dbutils.widgets.get("silver_path").strip()
+quarantine_path = dbutils.widgets.get("quarantine_path").strip()
 
 if not bronze_path:
-    bronze_path = (
-        f"abfss://bronze@{storage_account}.dfs.core.windows.net/"
-        f"loaded/run={run_id}/sample_transactions.csv"
+    bronze_path = finledger_abfss(
+        storage_account, "bronze", f"loaded/run={run_id}/sample_transactions.csv"
     )
 if not silver_path:
-    silver_path = f"abfss://silver@{storage_account}.dfs.core.windows.net/transactions"
+    silver_path = finledger_abfss(storage_account, "silver", "transactions")
 if not quarantine_path:
-    quarantine_path = (
-        f"abfss://silver@{storage_account}.dfs.core.windows.net/"
-        f"quarantine/run={run_id}"
+    quarantine_path = finledger_abfss(
+        storage_account, "silver", f"quarantine/run={run_id}"
     )
 
 print("Bronze:", bronze_path)
 print("Silver:", silver_path)
-print("Quarantine:", quarantine_path)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Read bronze (messy feed optional — use transactions_messy for extra rows)
 
 # COMMAND ----------
 
 raw = spark.read.option("header", True).csv(bronze_path)
 
-# Also read messy file for cleanse demo (invalid amount on TXN-20003)
-messy_path = bronze_path.replace("sample_transactions.csv", "../incoming/transactions/")
-messy_path = (
-    f"abfss://bronze@{storage_account}.dfs.core.windows.net/"
-    f"incoming/transactions/{run_id}/transactions_messy.csv"
+messy_path = finledger_abfss(
+    storage_account, "bronze", f"incoming/transactions/{run_id}/transactions_messy.csv"
 )
 
 try:
     messy = spark.read.option("header", True).csv(messy_path)
     raw = raw.unionByName(messy, allowMissingColumns=True)
-    print("Joined messy feed for cleanse demo")
+    print("Joined messy feed")
 except Exception as exc:
-    print(f"Messy feed not found (OK for minimal lab): {exc}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Transformations (lazy until write)
+    print(f"Messy feed not found (OK): {exc}")
 
 # COMMAND ----------
 
@@ -90,20 +71,14 @@ cleaned = (
     .withColumn("ingested_run_id", F.lit(run_id))
 )
 
-# Quarantine: cast failed (NULL amount after cast from non-numeric)
 valid = cleaned.filter(F.col("amount_gbp").isNotNull())
 quarantine = cleaned.filter(F.col("amount_gbp").isNull())
 
-print(f"Valid rows: {valid.count()}, Quarantined: {quarantine.count()}")
+print(f"Valid: {valid.count()}, Quarantined: {quarantine.count()}")
 
 # COMMAND ----------
 
 display(valid.orderBy("value_date", "transaction_id"))
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Write Silver as Delta (overwrite for lab idempotency)
 
 # COMMAND ----------
 
@@ -121,12 +96,6 @@ print("Silver Delta written.")
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Read back Silver Delta (proof)
-
-# COMMAND ----------
-
 silver_df = spark.read.format("delta").load(silver_path)
 display(silver_df)
-
 silver_df.groupBy("channel").count().show()

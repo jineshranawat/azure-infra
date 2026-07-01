@@ -1,36 +1,36 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # 03 — Silver → Gold (business aggregates)
-# MAGIC
-# MAGIC **Gold** = business-ready tables for dashboards and regulators.
-# MAGIC
-# MAGIC FinLedger need: *daily totals and counts by payment channel*, plus high-value flags.
+
+# COMMAND ----------
+
+# MAGIC %run ./_storage_auth
 
 # COMMAND ----------
 
 from pyspark.sql import functions as F
 
-dbutils.widgets.text("silver_path", "", "Silver Delta abfss folder")
-dbutils.widgets.text("gold_path", "", "Gold Delta abfss folder")
+dbutils.widgets.dropdown("auth_mode", "auto", ["auto", "none", "access_connector"], "Auth")
+dbutils.widgets.text("storage_account", "", "Optional if nb_00_setup done")
+dbutils.widgets.text("silver_path", "", "Silver Delta folder")
+dbutils.widgets.text("gold_path", "", "Gold Delta folder")
 
-silver_path = dbutils.widgets.get("silver_path")
-gold_path = dbutils.widgets.get("gold_path")
+storage_account = finledger_configure_storage(
+    storage_account=dbutils.widgets.get("storage_account").strip(),
+    auth_mode=dbutils.widgets.get("auth_mode").strip(),
+)
 
-storage_account = "stYOURLEARNERHASH"  # <-- change once per learner
+silver_path = dbutils.widgets.get("silver_path").strip()
+gold_path = dbutils.widgets.get("gold_path").strip()
 
 if not silver_path:
-    silver_path = f"abfss://silver@{storage_account}.dfs.core.windows.net/transactions"
+    silver_path = finledger_abfss(storage_account, "silver", "transactions")
 if not gold_path:
-    gold_path = f"abfss://gold@{storage_account}.dfs.core.windows.net/daily_channel_summary"
+    gold_path = finledger_abfss(storage_account, "gold", "daily_channel_summary")
 
 # COMMAND ----------
 
 silver_df = spark.read.format("delta").load(silver_path)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Gold aggregation — one row per (date, channel)
 
 # COMMAND ----------
 
@@ -56,12 +56,7 @@ display(gold_df)
     .save(gold_path)
 )
 
-print(f"Gold Delta written to {gold_path}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Business check — pending high-value wires (fraud queue)
+print(f"Gold written: {gold_path}")
 
 # COMMAND ----------
 

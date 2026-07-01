@@ -67,6 +67,7 @@ var adfName = 'adf-${learner}-${nameHash}'
 var synapseName = 'syn-${learner}-${nameHash}'
 var purviewName = 'pview${learner}${nameHash}'
 var databricksName = 'dbw-${learner}-${nameHash}'
+var accessConnectorName = 'ac-${learner}-${nameHash}'
 var managedRgName = 'rg-${learner}-dbw-${nameHash}'
 var fabricCapacityName = 'fc${learner}${nameHash}'
 
@@ -170,7 +171,27 @@ resource fabricCapacity 'Microsoft.Fabric/capacities@2023-11-01' = if (deployFab
   }
 }
 
-// ── 4. Azure Databricks workspace (no cluster — DBU only when clusters run) ─────
+// ── 4. Access connector (Unity Catalog storage credential for ADLS) ─────────────
+resource accessConnector 'Microsoft.Databricks/accessConnectors@2024-05-01' = if (deployDatabricks) {
+  name: accessConnectorName
+  location: databricksLocation
+  tags: tags
+  identity: {
+    type: 'SystemAssigned'
+  }
+}
+
+resource accessConnectorStorageRbac 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployDatabricks) {
+  name: guid(accessConnector.id, storageAccount.id, storageBlobContributorRoleId)
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobContributorRoleId)
+    principalId: accessConnector.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ── 5. Azure Databricks workspace (no cluster — DBU only when clusters run) ─────
 resource databricksWorkspace 'Microsoft.Databricks/workspaces@2024-05-01' = if (deployDatabricks) {
   name: databricksName
   location: databricksLocation
@@ -180,6 +201,10 @@ resource databricksWorkspace 'Microsoft.Databricks/workspaces@2024-05-01' = if (
   }
   properties: {
     managedResourceGroupId: subscriptionResourceId('Microsoft.Resources/resourceGroups', managedRgName)
+    accessConnector: {
+      id: accessConnector.id
+      identityType: 'SystemAssigned'
+    }
     parameters: {
       enableNoPublicIp: {
         value: false
@@ -198,3 +223,4 @@ output fabricCapacityName string = deployFabric ? fabricCapacity.name : 'skipped
 output fabricCapacityId string = deployFabric ? fabricCapacity.id : ''
 output databricksWorkspaceName string = deployDatabricks ? databricksWorkspace.name : 'skipped-async-eastus2-migration'
 output databricksManagedResourceGroup string = deployDatabricks ? managedRgName : 'skipped'
+output databricksAccessConnectorId string = deployDatabricks ? accessConnector.id : 'skipped'
