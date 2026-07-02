@@ -2,9 +2,9 @@
 
 **Duration:** 2 hours | **Course:** [docs/data-engineering-course.html](../docs/data-engineering-course.html) Session 6
 
-**Prerequisite:** Sessions 1–5 complete (infra, storage, ADF tour, Databricks overview, bronze→silver→gold notebooks).
+**Prerequisite:** Sessions 1–5 complete — especially **Session 3** (`session-3\orchestrate.cmd --setup-secrets` for scope `finledger`).
 
-**Navigation:** [SESSION6-STUDENT-GUIDE.md](SESSION6-STUDENT-GUIDE.md) (classroom) · [MANUAL-LAB.md](MANUAL-LAB.md) (step-by-step) · [GUIDE.md](GUIDE.md) (trainer)
+**Navigation:** [SESSION6-STUDENT-GUIDE.md](SESSION6-STUDENT-GUIDE.md) (classroom) · [MANUAL-LAB.md](MANUAL-LAB.md) (step-by-step) · [GUIDE.md](GUIDE.md) (trainer) · Session 3 secrets: [../session-3/SECRET-SCOPE-SETUP.md](../session-3/SECRET-SCOPE-SETUP.md)
 
 ---
 
@@ -68,6 +68,15 @@ orchestrate.cmd
 
 **Databricks UI:** Import `notebooks/nb_01_python_basics.py` and `nb_02_pandas_vs_spark.py` — see [MANUAL-LAB.md](MANUAL-LAB.md).
 
+**Before Databricks notebooks (once):**
+
+```text
+cd session-3
+orchestrate.cmd --setup-secrets
+```
+
+Each Day 6 notebook cell 1 matches Session 3: `STORAGE_ACCOUNT` constant + `dbutils.secrets.get(scope="finledger", key="storage-key")`.
+
 ---
 
 ## C. Two-hour schedule
@@ -85,6 +94,7 @@ orchestrate.cmd
 ## D. Deliverables checklist
 
 - [ ] `orchestrate.cmd` exits 0; unit tests pass
+- [ ] Session 3 secrets loaded (`finledger` scope — same as Session 3 notebooks)
 - [ ] `clean_amount("oops")` returns `0.0` with a warning in logs
 - [ ] `RunConfig` prints a valid `abfss://` bronze path
 - [ ] Notebook 02: pandas row count == Spark row count
@@ -128,7 +138,7 @@ orchestrate.cmd
 | `.env` missing keys | Copy from `.env.example` at repo root |
 | Unit tests fail | Check `transforms.py` — `clean_amount` must return `0.0` for garbage |
 | `Permission denied` on `abfss://` in notebook | Storage Blob Data Contributor on your user (Class-1) |
-| pandas cannot read abfss | Fill `storage_account` widget; cluster needs storage access |
+| pandas cannot read abfss | Run `session-3\orchestrate.cmd --setup-secrets`; check `STORAGE_ACCOUNT` in notebook cell 1 |
 | `stYOURLEARNERHASH` | Use storage account from repo root `orchestrate.cmd` output |
 
 ---

@@ -51,7 +51,13 @@
 
 **What:** Parquet files plus a transaction log (`_delta_log/`) for ACID writes.  
 **Why:** Re-run the same notebook without corrupting tables; auditors can time-travel.  
-**Code:** `.write.format("delta").mode("overwrite").save(silver_path)`.
+**Code:** `.write.format("delta").mode("overwrite").save(silver_path)` then `CREATE TABLE … USING DELTA LOCATION` for Unity Catalog.
+
+### Unity Catalog tables (Session 3 lab)
+
+**What:** Governed three-part names (`finledger.silver.transactions`) pointing at Delta files on ADLS.  
+**Why:** Analysts browse **Catalog** in the workspace — same tables Session 15–17 build on.  
+**Code:** `CREATE TABLE IF NOT EXISTS finledger.silver.transactions USING DELTA LOCATION 'abfss://…'`
 
 ### Medallion architecture
 
@@ -113,6 +119,7 @@ Trainer detail: [GUIDE.md](GUIDE.md)
 - [ ] Bronze CSV readable in notebook (`count` = 5+ rows)
 - [ ] `silver/transactions/_delta_log/` exists in Storage
 - [ ] `gold/daily_channel_summary/_delta_log/` exists
+- [ ] **Catalog** shows `finledger.silver.transactions` and `finledger.gold.daily_channel_summary`
 - [ ] TXN-10003 visible as pending high-value in notebook output
 - [ ] Cluster terminated after lab (cost)
 
@@ -129,9 +136,8 @@ Trainer detail: [GUIDE.md](GUIDE.md)
 | `scripts/bronze_prep.py` | Upload bronze CSV for Databricks |
 | `scripts/databricks_rbac.py` | Storage RBAC for access connector |
 | `scripts/storage_verify.py` | Verify Delta outputs |
-| `notebooks/_storage_auth.py` | Shared auth (`%run` — auto loads secrets) |
-| `notebooks/nb_00_setup_credentials.py` | **One-time** save account + key to secrets |
-| [SECRET-SCOPE-SETUP.md](SECRET-SCOPE-SETUP.md) | **Detailed** secret scope + CLI + notebook steps |
+| `notebooks/nb_00_setup_credentials.py` | Optional fallback — save secrets from notebook |
+| [SECRET-SCOPE-SETUP.md](SECRET-SCOPE-SETUP.md) | **Detailed** secret scope + CLI steps |
 | `notebooks/nb_00_unity_catalog_storage.py` | Optional Unity Catalog (access connector) |
 | `notebooks/nb_01_read_bronze.py` | Read from ADLS |
 | `notebooks/nb_02_bronze_to_silver.py` | Cleanse + Delta silver |
@@ -205,23 +211,19 @@ orchestrate.cmd --setup-secrets
 | 1 | Databricks CLI | Creates secret scope `finledger` |
 | 2 | Databricks CLI | Grants READ to workspace group `users` |
 | 3 | Databricks CLI | Stores `storage-account` and `storage-key` |
-| 4 | Notebooks | `%run ./_storage_auth` loads secrets when `auth_mode=auto` |
+| 4 | Notebooks | Cell 1: `STORAGE_ACCOUNT` + `dbutils.secrets.get` for `storage-key` |
 
-**Analogy:** The orchestrator is the **HR department** filing your building pass once. Every notebook (`nb_01`–`nb_04`) just swipes the pass at the door — you do not re-type the key each time.
+**Analogy:** The orchestrator is the **HR department** filing your building pass once. Every notebook swipes the pass at the door — duplicate auth code in each file, no imports.
 
-### In the notebook
-
-Each lab notebook starts with:
+### In the notebook (every lab file)
 
 ```python
-%run ./_storage_auth
-account = finledger_configure_storage(auth_mode="auto")
+STORAGE_ACCOUNT = dbutils.secrets.get(scope="finledger", key="storage-account")
+_storage_key = dbutils.secrets.get(scope="finledger", key="storage-key")
+spark.conf.set(f"fs.azure.account.key.{STORAGE_ACCOUNT}.dfs.core.windows.net", _storage_key)
 ```
 
-- `auto` — try reading bronze with existing auth; if that fails, load `finledger` secrets and configure Spark.
-- `none` — Single-user cluster only; skip secrets (trainer demo).
-
-**Student widgets:** leave `storage_account` **empty** after `--setup-secrets`; leave `auth_mode` at `auto`.
+**Student widgets:** only `run_id` and optional paths — no storage key in widgets.
 
 ### Detailed walkthrough
 

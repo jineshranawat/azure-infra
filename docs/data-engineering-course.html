@@ -111,7 +111,7 @@
     <div class="stat-row">
       <div class="stat"><div class="n">60</div><div class="l">contact hours</div></div>
       <div class="stat"><div class="n">30</div><div class="l">×2-hour sessions</div></div>
-      <div class="stat"><div class="n">5</div><div class="l">already done</div></div>
+      <div class="stat"><div class="n">8</div><div class="l">labs ready</div></div>
       <div class="stat"><div class="n">£0</div><div class="l">target lab spend</div></div>
     </div>
   </div>
@@ -132,7 +132,7 @@
         <li><b>Databricks + Python are the backbone</b> — PySpark is the workhorse and Delta is the storage format; the other services connect around them.</li>
         <li><b>Batch &amp; snapshot</b> — full loads and <code>MERGE</code> upserts, plus Delta time-travel snapshots. Streaming is a short awareness note at the end, so the labs stay reliable.</li>
         <li><b>SQL kept practical</b> — read/write Azure SQL from Python; concepts covered, without a deep T-SQL detour.</li>
-        <li><b>Advanced topics flagged for awareness</b> — change-data-capture, private endpoints, Atlas API automation and multi-stage CI/CD are introduced conceptually so you know they exist, with hands-on left for a follow-on course.</li>
+        <li><b>Python learning path</b> — venv first, then pandas/Polars on your laptop, then PySpark on Databricks. Full reference: <a href="../day8/PYSPARK-REFERENCE.md">day8/PYSPARK-REFERENCE.md</a>. Lost? Start at <a href="../COVERAGE-MAP.md">COVERAGE-MAP.md</a>.</li>
       </ul>
     </div>
     <div class="legend">
@@ -147,7 +147,7 @@
   </section>
 
   <div class="jump">
-    <a href="#a">Done (1–5)</a>
+    <a href="#a">Done (1–8)</a>
     <a href="#b">Python + Databricks core (6–14)</a>
     <a href="#c">Serve, SQL &amp; Data Factory (15–19)</a>
     <a href="#d">Reusable, tested, tuned (20–23)</a>
@@ -167,9 +167,9 @@
       <tr><td class="n">3</td><td>ADF UI overview</td><td>ADF (tour)</td><td class="done-b">done</td></tr>
       <tr><td class="n">4</td><td>Databricks workspace overview</td><td>Databricks</td><td class="done-b">done</td></tr>
       <tr><td class="n">5</td><td>PySpark notebooks bronze→silver→gold</td><td>Databricks</td><td class="done-b">done</td></tr>
-      <tr><td class="n">6</td><td>Python for data engineers</td><td>Python</td><td>—</td></tr>
-      <tr><td class="n">7</td><td>Storage concepts + read the lake with PySpark</td><td>Storage + Databricks</td><td>—</td></tr>
-      <tr><td class="n">8</td><td>PySpark transformations you'll actually use</td><td>Databricks</td><td>—</td></tr>
+      <tr><td class="n">6</td><td>Python for data engineers</td><td>Python</td><td class="done-b">done</td></tr>
+      <tr><td class="n">7</td><td>Storage concepts + read the lake with PySpark</td><td>Storage + Databricks</td><td class="done-b">done</td></tr>
+      <tr><td class="n">8</td><td>PySpark transformations you'll actually use</td><td>Databricks</td><td class="done-b">done</td></tr>
       <tr><td class="n">9</td><td>Clean &amp; validate (batch): cast, dedupe, quarantine</td><td>Databricks</td><td>—</td></tr>
       <tr><td class="n">10</td><td>Delta Lake basics: write, ACID, schema</td><td>Databricks</td><td>—</td></tr>
       <tr><td class="n">11</td><td>Snapshots &amp; time travel (the safe re-run)</td><td>Databricks</td><td>—</td></tr>
@@ -221,22 +221,37 @@
   </div></div>
   <div class="card"><div class="g"><div class="n">5</div><div class="done">✓</div></div><div class="b">
     <h4>PySpark notebooks bronze→silver→gold</h4>
-    <p class="obj">First taste of reading, transforming and writing across the medallion layers.</p>
-    <div class="tags"><span class="tag t-easy">done</span></div>
+    <p class="obj">First taste of reading, transforming and writing across the medallion layers — <b>registered in Unity Catalog</b> so tables appear in the Catalog UI.</p>
+    <div class="tags"><span class="tag t-easy">done</span><span class="tag t-dbx">Unity Catalog</span></div>
+<pre><span class="cap">notebook — write silver + register table</span>silver = <span class="s">"abfss://silver@stfinledger.dfs.core.windows.net/transactions"</span>
+
+(good.write.format(<span class="s">"delta"</span>).mode(<span class="s">"overwrite"</span>).save(silver))
+
+<span class="c"># Unity Catalog — same pattern as Session 15, introduced early in the lab</span>
+spark.sql(<span class="s">"""</span>
+<span class="s">CREATE TABLE IF NOT EXISTS finledger.silver.transactions</span>
+<span class="s">USING DELTA LOCATION '</span><span class="s">"""</span> + silver + <span class="s">"""'</span><span class="s">"""</span>)
+
+spark.table(<span class="s">"finledger.silver.transactions"</span>).display()</pre>
   </div></div>
 
   <!-- ============ PHASE B ============ -->
   <section id="b" class="phase"><div class="k">Phase B · sessions 6–14</div><h2>Python + Databricks core (batch &amp; snapshot)</h2></section>
 
-  <div class="card"><div class="g"><div class="n">6</div></div><div class="b">
+  <div class="card"><div class="g"><div class="n">6</div><div class="done">✓</div></div><div class="b">
     <h4>Python for data engineers</h4>
     <p class="obj">The small amount of Python that everything else in the course uses.</p>
-    <div class="tags"><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <div class="tags"><span class="tag t-py">Python</span><span class="tag t-easy">done</span></div>
     <div class="rowlist"><b>You'll learn</b><ul>
       <li>Variables, functions, lists/dicts; f-strings; <code>pathlib</code>; reading a CSV two ways (pandas vs Spark).</li>
       <li>Logging instead of <code>print</code>; simple config with a dictionary/dataclass.</li>
     </ul></div>
-    <div class="rowlist"><b>You'll run</b></div>
+    <div class="rowlist"><b>Lab folder</b><ul>
+      <li><a href="../day6/README.md">day6/README.md</a> — theory first, then code</li>
+      <li><a href="../day6/SESSION6-STUDENT-GUIDE.md">SESSION6-STUDENT-GUIDE.md</a> — classroom handout</li>
+      <li><a href="../day6/MANUAL-LAB.md">MANUAL-LAB.md</a> — step-by-step UI lab</li>
+      <li>Run: <code>cd day6</code> → <code>orchestrate.cmd</code></li>
+    </ul></div>
 <pre><span class="cap">notebook — python basics</span><span class="c"># a tiny, readable transform function you can test later</span>
 <span class="k">from</span> dataclasses <span class="k">import</span> dataclass
 <span class="k">import</span> logging
@@ -258,19 +273,27 @@ log = logging.getLogger(<span class="s">"finledger"</span>)
 print(clean_amount(<span class="s">"50000"</span>), clean_amount(<span class="s">"oops"</span>))</pre>
   </div></div>
 
-  <div class="card"><div class="g"><div class="n">7</div></div><div class="b">
+  <div class="card"><div class="g"><div class="n">7</div><div class="done">✓</div></div><div class="b">
     <h4>Storage concepts + read the lake with PySpark</h4>
-    <p class="obj">Understand how ADLS Gen2 stores our data, then point Databricks at it and load a DataFrame.</p>
-    <div class="tags"><span class="tag t-store">Storage</span><span class="tag t-dbx">Databricks</span><span class="tag t-theory">theory + practical</span></div>
-    <div class="rowlist"><b>Theory (we explain first)</b><ul>
-      <li>What ADLS Gen2 is and why <b>hierarchical namespace (HNS)</b> matters for a data lake (real folders, not flat blobs).</li>
-      <li>Containers &amp; the <b>medallion layout</b> (bronze/silver/gold/audit); the <code>abfss://</code> path anatomy.</li>
-      <li>Access <b>tiers</b> (hot/cool) and <b>redundancy</b> (LRS) in one line each — how they map to cost and durability.</li>
-      <li>How Databricks authenticates to storage (managed identity / credential) — no keys in code.</li>
+    <p class="obj">venv → pandas/Polars → full PySpark foundation → read bronze from ADLS with <code>abfss://</code>.</p>
+    <div class="tags"><span class="tag t-store">Storage</span><span class="tag t-dbx">Databricks</span><span class="tag t-theory">theory + practical</span><span class="tag t-easy">done</span></div>
+    <div class="rowlist"><b>Learning order (do not skip)</b><ul>
+      <li><b>Step 1 — venv:</b> <code>python -m venv .venv</code> then <code>pip install -r day7\requirements.txt</code> (pandas, polars, pyspark).</li>
+      <li><b>Step 2 — pandas + Polars:</b> local DataFrame on <code>sample_transactions.csv</code> (nb_01).</li>
+      <li><b>Step 3 — PySpark foundation:</b> SparkSession, lazy vs action, schema, <code>F.col</code> (nb_03 — 12 sections).</li>
+      <li><b>Step 4 — Read bronze:</b> <code>abfss://bronze@…/loaded/run=session3-lab/…</code> (nb_04).</li>
     </ul></div>
-    <div class="rowlist"><b>Practical — you'll learn &amp; run</b><ul>
-      <li>What a DataFrame is; lazy vs action (<code>.show()</code>, <code>.count()</code>); reading CSV/Parquet/Delta from each container.</li>
-      <li>Inspecting schema with <code>.printSchema()</code> and <code>.display()</code>.</li>
+    <div class="rowlist"><b>Theory (we explain first)</b><ul>
+      <li>ADLS Gen2 + hierarchical namespace; medallion bronze/silver/gold; <code>abfss://</code> path anatomy.</li>
+      <li>Secrets from scope <code>finledger</code> — no keys in notebook cells (Session 3 pattern).</li>
+      <li>Lazy transformations vs actions; <code>printSchema()</code>, <code>show()</code>, <code>display()</code>.</li>
+    </ul></div>
+    <div class="rowlist"><b>Lab folder</b><ul>
+      <li><a href="../day7/README.md">day7/README.md</a></li>
+      <li><a href="../day7/SESSION7-STUDENT-GUIDE.md">SESSION7-STUDENT-GUIDE.md</a></li>
+      <li><a href="../day7/MANUAL-LAB.md">MANUAL-LAB.md</a></li>
+      <li>Notebooks: <code>nb_01</code> … <code>nb_04</code> (import one file each)</li>
+      <li>Run: <code>cd day7</code> → <code>orchestrate.cmd</code></li>
     </ul></div>
 <pre><span class="cap">notebook — read bronze</span>bronze = <span class="s">"abfss://bronze@stfinledger.dfs.core.windows.net"</span>
 
@@ -283,12 +306,24 @@ df.display()        <span class="c"># interactive grid in Databricks</span>
 print(<span class="s">"rows:"</span>, df.count())</pre>
   </div></div>
 
-  <div class="card"><div class="g"><div class="n">8</div></div><div class="b">
+  <div class="card"><div class="g"><div class="n">8</div><div class="done">✓</div></div><div class="b">
     <h4>PySpark transformations you'll actually use</h4>
-    <p class="obj">The 8 operations that cover 90% of batch data work.</p>
-    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <p class="obj">After the foundation notebook, practise the 8 operations that cover 90% of batch data work.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-py">Python</span><span class="tag t-easy">done</span></div>
+    <div class="rowlist"><b>Read first</b><ul>
+      <li><a href="../day8/PYSPARK-REFERENCE.md"><b>PYSPARK-REFERENCE.md</b></a> — complete PySpark theory (14 sections).</li>
+      <li>Notebook <code>nb_00_pyspark_foundation.py</code> — venv recap, module map, lazy/actions, SQL API.</li>
+      <li>Then <code>nb_01</code> … <code>nb_04</code> — one transform family per notebook, 3–4 line cells.</li>
+    </ul></div>
     <div class="rowlist"><b>You'll learn</b><ul>
-      <li><code>select</code>, <code>withColumn</code>, <code>filter</code>, <code>drop_duplicates</code>, <code>join</code>, <code>groupBy</code>, <code>orderBy</code>, and a window.</li>
+      <li><code>select</code>, <code>filter</code>, <code>withColumn</code>, <code>cast</code>, <code>dropDuplicates</code>, <code>join</code>, <code>groupBy</code>, <code>orderBy</code>, window.</li>
+    </ul></div>
+    <div class="rowlist"><b>Lab folder</b><ul>
+      <li><a href="../day8/README.md">day8/README.md</a></li>
+      <li><a href="../day8/PYSPARK-REFERENCE.md">PYSPARK-REFERENCE.md</a> — full theory</li>
+      <li><a href="../day8/SESSION8-STUDENT-GUIDE.md">SESSION8-STUDENT-GUIDE.md</a></li>
+      <li><a href="../day8/MANUAL-LAB.md">MANUAL-LAB.md</a></li>
+      <li>Run: <code>cd day8</code> → <code>orchestrate.cmd</code> (pandas/Polars demo → PySpark theory → transforms)</li>
     </ul></div>
 <pre><span class="cap">notebook — core transforms</span><span class="k">from</span> pyspark.sql <span class="k">import</span> functions <span class="k">as</span> F
 <span class="k">from</span> pyspark.sql.window <span class="k">import</span> Window

@@ -136,9 +136,8 @@ Import into **one folder** in Workspace:
 
 | File | Required |
 |------|----------|
-| `_storage_auth.py` | **Yes** — shared by `%run` |
-| `nb_00_setup_credentials.py` | **Yes** — run **once** |
-| `nb_01_read_bronze.py` … `nb_04_end_to_end.py` | Yes |
+| `nb_01_read_bronze.py` … `nb_04_end_to_end.py` | **Yes** — each file is self-contained |
+| `nb_00_setup_credentials.py` | Optional fallback if CLI setup unavailable |
 | `nb_00_unity_catalog_storage.py` | Only if access connector exists |
 
 ### D2. One-time credential setup (5 min) — **do this once**
@@ -158,6 +157,8 @@ Import into **one folder** in Workspace:
    ```
 3. Expected log: `Databricks secrets ready — notebooks can use auth_mode=auto`
 
+**In each notebook:** cell 1 sets `STORAGE_ACCOUNT` and loads `storage-key` from scope `finledger`.
+
 **Alternative (notebook)** — only if `dbutils.secrets.put` works in your workspace:
 
 1. Trainer creates secret scope (once per workspace):
@@ -165,20 +166,19 @@ Import into **one folder** in Workspace:
    databricks secrets create-scope finledger
    ```
 2. Open **`nb_00_setup_credentials`**.
-3. Widgets: `storage_account` = your `st…` name, `storage_account_key` = Portal key1.
+3. Paste `storage_account_key` widget only (account name is hardcoded in notebook).
 4. **Run all** → see `SETUP COMPLETE`.
 
-After this, **nb_01–nb_04** use `auth_mode=auto` and load credentials from secrets — **no key to paste again** (even after cluster restart).
+After `--setup-secrets`, **nb_01–nb_04** read the key from scope `finledger` — edit `STORAGE_ACCOUNT` at the top of each notebook if your name differs.
 
 ### D3. Daily widgets (nb_01–nb_04)
 
 | Widget | Value |
 |--------|--------|
-| `auth_mode` | `auto` (default) |
-| `storage_account` | leave **empty** if setup saved it |
 | `run_id` | `session3-lab` |
+| `bronze_path` / `silver_path` / `gold_path` | leave **empty** for defaults |
 
-**Single-user cluster only:** set `auth_mode` = `none` — skip setup notebook.
+**Before first run:** run `orchestrate.cmd --setup-secrets` — cell 1 loads `storage-account` + `storage-key` from scope `finledger`.
 
 ### D3. Attach cluster
 
@@ -189,7 +189,7 @@ After this, **nb_01–nb_04** use `auth_mode=auto` and load credentials from sec
 ### Verify
 
 - [ ] Four notebooks visible in Workspace (five if you imported `nb_00`)
-- [ ] `storage_account` updated OR widgets filled from `orchestrate.cmd` output
+- [ ] `STORAGE_ACCOUNT` correct in notebook cell 1
 - [ ] Notebook attached to running cluster
 
 ---
@@ -198,7 +198,7 @@ After this, **nb_01–nb_04** use `auth_mode=auto` and load credentials from sec
 
 ## E. Run notebook 01 — Read bronze (15 min)
 
-> Each notebook configures storage in **cell 2** (`%run ./_storage_auth`). You do **not** need to run nb_00 first unless testing Unity Catalog.
+> Each notebook is **self-contained** — cell 1 loads the storage key from secrets. Run `orchestrate.cmd --setup-secrets` once before class.
 
 ### Concepts before you click Run
 
@@ -234,7 +234,7 @@ After this, **nb_01–nb_04** use `auth_mode=auto` and load credentials from sec
 
 | Error | Fix |
 |-------|-----|
-| **USER_ISOLATION** / external location / storage credential | **A)** **Single user** cluster. **B)** Run `nb_00` with `auth_mode=storage_key` + storage key in secret or widget. **C)** `auth_mode=access_connector` only if orchestrate prints connector ID |
+| **USER_ISOLATION** / permission denied on abfss | Run `orchestrate.cmd --setup-secrets` once. Edit `STORAGE_ACCOUNT` in notebook cell 1. Or use Single-user cluster. |
 | `java.io.IOException` / auth | Portal → Storage → **Access control** → confirm you have **Storage Blob Data Contributor** |
 | Path not found | Re-run `session-3\orchestrate.cmd`; check `bronze/loaded/run=session3-lab/` in Storage |
 | Cluster not attached | Select `finledger-lab` from cluster dropdown |
@@ -266,13 +266,15 @@ After this, **nb_01–nb_04** use `auth_mode=auto` and load credentials from sec
 |-------|----------|
 | Valid rows | 5+ (includes messy feed if uploaded) |
 | Quarantined | **1** if messy feed present (TXN-20003 `INVALID` amount) |
-| Silver write | `Silver Delta written.` |
+| Silver write | `Silver Delta written to storage.` |
+| Unity Catalog | `Unity Catalog table: finledger.silver.transactions` |
 | Channel counts | wire, card, fps groups |
 
 ### Verify in notebook
 
 - [ ] `silver_df.groupBy("channel").count()` shows channels
 - [ ] `is_high_value` column = true for amounts ≥ 1000
+- [ ] **Catalog** → `finledger.silver.transactions`
 
 ---
 
@@ -299,24 +301,38 @@ After this, **nb_01–nb_04** use `auth_mode=auto` and load credentials from sec
 |-------|----------|
 | Gold rows | Multiple (one per date × channel) |
 | Fraud filter cell | TXN-10003 in pending high-value list |
-| Write message | `Gold Delta written to abfss://gold@...` |
+| Write message | `Gold Delta written` + `Unity Catalog table: finledger.gold.daily_channel_summary` |
 
 ### Verify
 
 - [ ] Gold table displays daily totals
 - [ ] Pending high-value section shows TXN-10003
+- [ ] **Catalog** (left sidebar) → `finledger` → `gold` → `daily_channel_summary`
 
 ---
 
 <a id="lab-h"></a>
 
-## H. Verify in Azure Storage (10 min)
+## H. Verify in Azure Storage + Unity Catalog (10 min)
 
-### Do
+### Do — Storage (portal)
 
 1. Portal → storage account → **Containers**.
 2. Open **silver** → folder `transactions` → confirm **`_delta_log`** folder exists.
 3. Open **gold** → folder `daily_channel_summary` → confirm **`_delta_log`** exists.
+
+### Do — Unity Catalog (Databricks)
+
+1. Databricks → **Catalog** (or **Data** → **Catalog**).
+2. Expand **`finledger`** → **`silver`** → open **`transactions`** → **Sample data**.
+3. Expand **`finledger`** → **`gold`** → open **`daily_channel_summary`**.
+4. Optional: after nb_01, check **`finledger.bronze.sample_transactions`**.
+
+| Table | Layer | Proof |
+|-------|-------|-------|
+| `finledger.bronze.sample_transactions` | Bronze CSV | nb_01 |
+| `finledger.silver.transactions` | Cleansed Delta | nb_02 |
+| `finledger.gold.daily_channel_summary` | Aggregates | nb_03 |
 
 ### Optional — script verify
 
@@ -360,6 +376,7 @@ flowchart LR
 - [ ] Notebook 02 wrote silver Delta
 - [ ] Notebook 03 wrote gold Delta
 - [ ] Storage shows `_delta_log` in silver and gold
+- [ ] **Catalog** shows `finledger.silver.transactions` and `finledger.gold.daily_channel_summary`
 - [ ] TXN-10003 identified as pending high-value
 - [ ] Cluster **terminated** (Compute → terminate — do not leave running)
 

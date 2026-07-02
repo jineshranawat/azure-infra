@@ -76,15 +76,16 @@ flowchart LR
 
 | Secret key | Contains | Used by |
 |---|---|---|
-| `storage-account` | e.g. `stjineshfqdcgg` | `_storage_auth.py` |
+| `storage-account` | Your `st…` name | Loaded in notebook cell 1 via `dbutils.secrets.get` |
 | `storage-key` | Storage key1 (hidden) | Spark `fs.azure.account.key.*` |
 
 ### What you do in Databricks after setup
 
 | Widget | Value |
 |---|---|
-| `auth_mode` | `auto` (default) |
-| `storage_account` | **leave empty** — loaded from secrets |
+| `auth_mode` | *(removed — each notebook loads secrets in cell 1)* |
+| `storage_account` | *(removed — edit `STORAGE_ACCOUNT` constant in notebook)* |
+| `run_id` | `session3-lab` |
 
 You **do not** paste the storage key into notebook widgets in class.
 
@@ -119,8 +120,8 @@ flowchart LR
 | # | Artefact | Path | Proof |
 |---|---|---|---|
 | 1 | Bronze input | `bronze/loaded/run=session3-lab/sample_transactions.csv` | 5 rows |
-| 2 | Silver Delta | `silver/transactions/_delta_log/` | Notebook 02 success |
-| 3 | Gold Delta | `gold/daily_channel_summary/_delta_log/` | Notebook 03 success |
+| 2 | Silver Delta | `silver/transactions/_delta_log/` | Notebook 02 + `finledger.silver.transactions` in Catalog |
+| 3 | Gold Delta | `gold/daily_channel_summary/_delta_log/` | Notebook 03 + `finledger.gold.daily_channel_summary` in Catalog |
 | 4 | Fraud row | TXN-10003 | pending + £50,000 |
 
 ---
@@ -228,13 +229,14 @@ bronze_df.count()  # ACTION — hits storage
 
 ### Do
 
-1. [lab-d](./MANUAL-LAB.md#lab-d) — import notebooks (`_storage_auth.py` + `nb_01`…); confirm `--setup-secrets` ran (or trainer did it).
-2. [lab-e](./MANUAL-LAB.md#lab-e) — **Run all** with `auth_mode=auto`, `storage_account` empty; confirm 5 rows and TXN-10003.
+1. [lab-d](./MANUAL-LAB.md#lab-d) — import `nb_01`…`nb_04` (one file each — no shared imports); confirm `--setup-secrets` ran.
+2. [lab-e](./MANUAL-LAB.md#lab-e) — **Run all**; confirm 5 rows and TXN-10003.
 
 ### Checkpoint
 
 - [ ] `Bronze rows: 5`
 - [ ] No permission error on abfss
+- [ ] **Catalog** → `finledger` → `bronze` → `sample_transactions` visible (after nb_01)
 
 ---
 
@@ -260,6 +262,7 @@ valid.write.format("delta").mode("overwrite").save(silver_path)
 - [ ] Silver write succeeded
 - [ ] `is_high_value` column present
 - [ ] Quarantine ≥ 0 rows (1 if messy feed loaded)
+- [ ] **Catalog** → `finledger.silver.transactions` shows cleansed rows
 
 ---
 
@@ -288,6 +291,7 @@ gold_df.write.format("delta").mode("overwrite").save(gold_path)
 
 - [ ] Gold table shows per-channel daily totals
 - [ ] TXN-10003 in pending high-value section
+- [ ] **Catalog** → `finledger.gold.daily_channel_summary` visible
 
 ---
 
@@ -315,8 +319,7 @@ orchestrate.cmd --verify-storage
 | Notebook | File | Purpose |
 |---|---|---|
 | 00 Setup (fallback) | `notebooks/nb_00_setup_credentials.py` | Only if CLI setup unavailable |
-| — Shared auth | `notebooks/_storage_auth.py` | Loaded by `%run` in every lab notebook |
-| 01 Read bronze | `notebooks/nb_01_read_bronze.py` | `spark.read.csv(abfss://...)` |
+| 01 Read bronze | `notebooks/nb_01_read_bronze.py` | Self-contained — secrets in cell 1 |
 | 02 Silver | `notebooks/nb_02_bronze_to_silver.py` | Cleanse + Delta write |
 | 03 Gold | `notebooks/nb_03_silver_to_gold.py` | Aggregations |
 | 04 End-to-end | `notebooks/nb_04_end_to_end.py` | ADF capstone (optional) |

@@ -1,53 +1,45 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 00 — One-time credential setup
+# MAGIC # 00 — One-time credential setup (fallback)
 # MAGIC
-# MAGIC **Preferred (Windows):** secrets are saved from your laptop — notebook `put` is blocked on many workspaces.
+# MAGIC **Preferred:** run on your Windows PC:
 # MAGIC
 # MAGIC ```text
 # MAGIC cd session-3
 # MAGIC orchestrate.cmd --setup-secrets
 # MAGIC ```
 # MAGIC
-# MAGIC Add to repo-root `.env` first (never commit):
-# MAGIC - `STORAGE_ACCOUNT_KEY` = Portal → Storage → Access keys → key1
-# MAGIC - `DATABRICKS_TOKEN` = Databricks → User settings → Developer → Access token
-# MAGIC - `DATABRICKS_HOST` = optional (orchestrate auto-detects)
-# MAGIC
-# MAGIC See **SECRET-SCOPE-SETUP.md** in the repo.
+# MAGIC Use this notebook only if `dbutils.secrets.put` works in your workspace.
 
 # COMMAND ----------
-
-dbutils.widgets.text("storage_account", "", "Storage account (e.g. stjineshfqdcgg)")
-dbutils.widgets.text(
-    "storage_account_key",
-    "",
-    "Only if CLI setup failed — paste key1 once",
-)
-
-storage_account = dbutils.widgets.get("storage_account").strip()
-storage_account_key = dbutils.widgets.get("storage_account_key").strip()
-
-if not storage_account:
-    raise ValueError("Set storage_account widget")
 
 SCOPE = "finledger"
 ACCOUNT_KEY = "storage-account"
 SECRET_KEY = "storage-key"
 
+dbutils.widgets.text("storage_account", "", "Storage account name")
+dbutils.widgets.text(
+    "storage_account_key",
+    "",
+    "Paste key1 only if CLI setup failed",
+)
+
+storage_account = dbutils.widgets.get("storage_account").strip()
+storage_account_key = dbutils.widgets.get("storage_account_key").strip()
+
 # COMMAND ----------
 
-# dbutils.secrets.put is disabled on many Shared / serverless runtimes
 if not hasattr(dbutils.secrets, "put"):
     raise RuntimeError(
-        "dbutils.secrets.put is not available in this workspace. "
-        "Use orchestrate.cmd --setup-secrets on your Windows PC instead (see notebook header)."
+        "dbutils.secrets.put is not available. "
+        "Run orchestrate.cmd --setup-secrets on your Windows PC instead."
     )
 
+if not storage_account:
+    raise ValueError("Set storage_account widget")
+
 if not storage_account_key:
-    raise ValueError(
-        "Paste storage key OR use orchestrate.cmd --setup-secrets on your laptop"
-    )
+    raise ValueError("Paste storage key OR use orchestrate.cmd --setup-secrets")
 
 try:
     dbutils.secrets.put(scope=SCOPE, key=ACCOUNT_KEY, string_value=storage_account)
@@ -55,17 +47,20 @@ try:
     print(f"Saved {SCOPE}/{ACCOUNT_KEY} and {SECRET_KEY}")
 except Exception as exc:
     raise RuntimeError(
-        f"Could not write secrets. Run on your PC: session-3\\orchestrate.cmd --setup-secrets\n{exc}"
+        f"Could not write secrets. Run orchestrate.cmd --setup-secrets on your PC.\n{exc}"
     ) from exc
 
 # COMMAND ----------
 
-# MAGIC %run ./_storage_auth
+STORAGE_ACCOUNT = dbutils.secrets.get(scope=SCOPE, key=ACCOUNT_KEY).strip()
+_storage_key = dbutils.secrets.get(scope=SCOPE, key=SECRET_KEY).strip()
+for _host in (
+    f"{STORAGE_ACCOUNT}.dfs.core.windows.net",
+    f"{STORAGE_ACCOUNT}.blob.core.windows.net",
+):
+    spark.conf.set(f"fs.azure.account.key.{_host}", _storage_key)
 
-# COMMAND ----------
-
-account = finledger_configure_storage(auth_mode="auto")
-bronze_root = finledger_abfss(account, "bronze") + "/"
+bronze_root = f"abfss://bronze@{STORAGE_ACCOUNT}.dfs.core.windows.net/"
 for item in dbutils.fs.ls(bronze_root):
     print(f"  {item.name}")
 print("SETUP COMPLETE")

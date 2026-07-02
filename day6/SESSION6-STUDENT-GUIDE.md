@@ -6,7 +6,7 @@
 |---|---|
 | **Duration** | 2 hours |
 | **Course page** | [docs/data-engineering-course.html](../docs/data-engineering-course.html) |
-| **Prerequisite** | Sessions 1–5 (especially Session 3 Databricks + bronze data) |
+| **Prerequisite** | Sessions 1–5 + **Session 3** `orchestrate.cmd --setup-secrets` (scope `finledger`) |
 | **Replace** | `<learner>` = your id from `.env` |
 
 ---
@@ -38,6 +38,15 @@ Listen + note these four ideas (trainer explains):
 ---
 
 ## Block 2 — Local run on your laptop (20 min)
+
+### Step 0 — Session 3 secrets (if not done yet)
+
+```text
+cd d:\azure\session-3
+orchestrate.cmd --setup-secrets
+```
+
+This creates scope `finledger` with `storage-account` and `storage-key` — **Day 6 notebooks use the same secrets as Session 3**.
 
 ### Step 1 — Open Command Prompt
 
@@ -73,8 +82,9 @@ Follow [MANUAL-LAB.md § Lab B](MANUAL-LAB.md#lab-b).
 
 | Step | Action |
 |------|--------|
+| 0 | Confirm `session-3\orchestrate.cmd --setup-secrets` ran |
 | 1 | Import `notebooks/nb_01_python_basics.py` |
-| 2 | Set `storage_account` widget (from Class-1 deploy output) |
+| 2 | Cell 1 prints `Secrets OK — scope=finledger account=st…` |
 | 3 | Run all cells |
 | 4 | Confirm `clean_amount("oops")` prints `0.0` |
 | 5 | Confirm `RunConfig` prints your `abfss://` bronze path |
@@ -88,7 +98,7 @@ Follow [MANUAL-LAB.md § Lab C](MANUAL-LAB.md#lab-c).
 | Step | Action |
 |------|--------|
 | 1 | Import `notebooks/nb_02_pandas_vs_spark.py` |
-| 2 | Set `storage_account` or paste full `bronze_path` |
+| 2 | Leave `bronze_path` empty (path built from secret `storage-account`) |
 | 3 | Run all cells |
 | 4 | Confirm `pandas rows == Spark rows` |
 | 5 | Filter TXN-10003 — £50,000 pending |

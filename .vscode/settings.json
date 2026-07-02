@@ -1,0 +1,9 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+  "jupyter.jupyterServerType": "local",
+  "notebook.lineNumbers": "on",
+  "jupyter.kernels.excludePythonVersions": [],
+  "notebook.kernelProviderAssociations": {
+    "*.ipynb": "ms-toolsai.jupyter"
+  }
+}

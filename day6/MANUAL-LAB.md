@@ -2,7 +2,7 @@
 
 **Session 6:** Python for data engineers · 2 hours · FinLedger UK
 
-**Prerequisites:** `.env` at repo root · Sessions 1–5 · Databricks workspace deployed
+**Prerequisites:** `.env` at repo root · Sessions 1–5 · **Session 3** `orchestrate.cmd --setup-secrets` · Databricks workspace deployed
 
 ---
 
@@ -64,19 +64,21 @@ Open in your editor:
 2. Open **Azure Databricks** workspace → **Launch workspace**
 3. **Compute** → start or attach cluster (smallest SKU, auto-terminate 30 min)
 
-### B2. Import notebook
+### B2. Import notebooks
 
-1. **Workspace** → your folder (e.g. `/Users/<you>/finledger/day6`)
-2. **⋮** → **Import**
-3. Select `day6/notebooks/nb_01_python_basics.py` from your cloned repo
-4. Repeat is not needed — one file per import
+Import **each file separately** (no shared helper file):
 
-### B3. Set widgets
+1. `day6/notebooks/nb_01_python_basics.py`
+2. `day6/notebooks/nb_02_pandas_vs_spark.py`
+
+### B3. Before run
+
+1. Run `session-3\orchestrate.cmd --setup-secrets` once (scope `finledger`).
+2. Re-import notebooks if you still have an old version — cell 1 must call `dbutils.secrets.get`.
 
 | Widget | Value |
 |--------|-------|
-| `storage_account` | `st<learner><hash>` from repo root `orchestrate.cmd` output |
-| `run_date` | `session3-lab` (or your bronze run folder) |
+| `run_date` | `session3-lab` |
 
 ### B4. Run all cells
 
@@ -101,11 +103,10 @@ Not yet — continue to Lab C on same cluster.
 
 Import `day6/notebooks/nb_02_pandas_vs_spark.py` into the same folder.
 
-### C2. Set widgets
+### C2. Widgets
 
 | Widget | Value |
 |--------|-------|
-| `storage_account` | Same as Lab B |
 | `bronze_path` | Leave empty OR paste full path from `session-3\orchestrate.cmd` |
 | `run_id` | `session3-lab` |
 

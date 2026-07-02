@@ -2,14 +2,35 @@
 # MAGIC %md
 # MAGIC # Day 6 — Python for data engineers
 # MAGIC
-# MAGIC **FinLedger Session 6** — the small amount of Python every later notebook reuses.
+# MAGIC **Prerequisite:** `session-3\orchestrate.cmd --setup-secrets` once (scope `finledger`).
 # MAGIC
-# MAGIC | Concept | Why |
-# MAGIC |---|---|
-# MAGIC | Functions | One place to fix business rules (e.g. `clean_amount`) |
-# MAGIC | `dataclass` | Readable config object (`RunConfig`) passed to jobs |
-# MAGIC | `logging` | Warnings in production logs — not lost `print` output |
-# MAGIC | f-strings | Clear messages with variable values |
+# MAGIC Cell 1 loads **`storage-account`** and **`storage-key`** from scope `finledger` (same as Session 3).
+
+# COMMAND ----------
+
+SECRET_SCOPE = "finledger"
+STORAGE_ACCOUNT_SECRET = "storage-account"
+STORAGE_KEY_SECRET = "storage-key"
+CATALOG = "finledger"
+
+try:
+    STORAGE_ACCOUNT = dbutils.secrets.get(scope=SECRET_SCOPE, key=STORAGE_ACCOUNT_SECRET).strip()
+    _storage_key = dbutils.secrets.get(scope=SECRET_SCOPE, key=STORAGE_KEY_SECRET).strip()
+except Exception as exc:
+    raise RuntimeError(
+        "Secrets missing. On your PC run: cd session-3 && orchestrate.cmd --setup-secrets"
+    ) from exc
+
+if not STORAGE_ACCOUNT or not _storage_key:
+    raise ValueError("Empty secret — re-run session-3\\orchestrate.cmd --setup-secrets")
+
+for _host in (
+    f"{STORAGE_ACCOUNT}.dfs.core.windows.net",
+    f"{STORAGE_ACCOUNT}.blob.core.windows.net",
+):
+    spark.conf.set(f"fs.azure.account.key.{_host}", _storage_key)
+
+print(f"Secrets OK — scope={SECRET_SCOPE} account={STORAGE_ACCOUNT}")
 
 # COMMAND ----------
 
@@ -34,8 +55,6 @@ print(f"Fraud watch: {txn['transaction_id']} £{txn['amount_gbp']} ({txn['status
 
 # MAGIC %md
 # MAGIC ## 2. Functions — `clean_amount`
-# MAGIC
-# MAGIC Same function as `day6/scripts/transforms.py` — testable on your laptop **and** in Spark later.
 
 # COMMAND ----------
 
@@ -85,16 +104,14 @@ class RunConfig:
         )
 
 
-dbutils.widgets.text("storage_account", "", "Storage account (from orchestrate.cmd)")
 dbutils.widgets.text("run_date", "session3-lab", "Run folder id")
 
 cfg = RunConfig(
     run_date=dbutils.widgets.get("run_date").strip(),
-    storage_account=dbutils.widgets.get("storage_account").strip(),
+    storage_account=STORAGE_ACCOUNT,
 )
 print(cfg)
-if cfg.storage_account:
-    print(f"Bronze path: {cfg.bronze_csv_abfss()}")
+print(f"Bronze path: {cfg.bronze_csv_abfss()}")
 
 # COMMAND ----------
 
@@ -130,8 +147,24 @@ for row in sample_rows:
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## 6. Peek at Session 3 Unity Catalog bronze (if nb_01 ran)
+
+# COMMAND ----------
+
+BRONZE_TABLE = f"{CATALOG}.bronze.sample_transactions"
+
+try:
+  row_count = spark.table(BRONZE_TABLE).count()
+  print(f"Unity Catalog {BRONZE_TABLE}: {row_count} rows (from Session 3 nb_01)")
+except Exception as exc:
+  print(f"{BRONZE_TABLE} not registered yet — run session-3 nb_01 first ({exc})")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ### Checkpoint
 # MAGIC
+# MAGIC - [ ] `orchestrate.cmd --setup-secrets` ran (scope `finledger`)
 # MAGIC - [ ] You can explain why `clean_amount` returns `0.0` for `INVALID`
-# MAGIC - [ ] You built a `RunConfig` with your storage account
-# MAGIC - [ ] Next: **nb_02** — read the same CSV with pandas vs Spark
+# MAGIC - [ ] `RunConfig` prints your `abfss://` bronze path
+# MAGIC - [ ] Next notebook — read the same CSV with pandas vs Spark

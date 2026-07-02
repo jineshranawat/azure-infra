@@ -88,7 +88,7 @@ def print_storage_access_instructions(
     logger.info("")
     logger.info("OPTION C: Shared cluster + storage account key in notebook widget")
     logger.info("  1. Import notebooks/nb_00_unity_catalog_storage.py")
-    logger.info("  2. Widgets: auth_mode=storage_key, storage_account=%s", storage_account)
+    logger.info("  2. Each notebook cell 1: dbutils.secrets.get finledger/storage-account + storage-key")
     logger.info("  3. Portal -> Storage -> Access keys -> copy key1")
     logger.info("     Store: databricks secrets put --scope finledger --key storage-key")
     logger.info("     OR paste key1 into storage_account_key widget (lab only)")
@@ -97,7 +97,7 @@ def print_storage_access_instructions(
     logger.info("OPTION C: Shared cluster + Unity Catalog (only if connector exists)")
     if access_connector_id:
         logger.info("  Access connector: %s", access_connector_id)
-        logger.info("  nb_00: auth_mode=access_connector, paste connector ID above")
+        logger.info("  nb_00_unity_catalog: paste access_connector_id widget")
     else:
         logger.info("  Skipped — no access connector on this workspace")
     logger.info("")

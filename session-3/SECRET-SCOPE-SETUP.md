@@ -11,7 +11,7 @@ This uses the **Databricks CLI** on your laptop. Many workspaces **block** `dbut
 
 ---
 
-**Purpose:** store storage account name + key **once** in Databricks. All Session 3 notebooks (`nb_01`–`nb_04`) load them automatically via `auth_mode=auto`.
+**Purpose:** store storage account key **once** in Databricks scope `finledger`. Each notebook hardcodes `STORAGE_ACCOUNT` and reads `storage-key` from secrets in cell 1.
 
 **Scope name:** `finledger`  
 **Secrets stored:**
@@ -60,7 +60,7 @@ INFO — Databricks secrets ready — notebooks can use auth_mode=auto
 
 ### 0.4 Run notebooks
 
-Open `nb_01_read_bronze` → `auth_mode=auto`, `storage_account` empty → **Run all**.
+Open `nb_01_read_bronze` → edit `STORAGE_ACCOUNT` in cell 1 if needed → **Run all**.
 
 ---
 
@@ -158,10 +158,9 @@ Pick **one** method: notebook (easiest) or CLI.
 
 ### Method 1 — Notebook (recommended)
 
-**Prerequisites:** Part A complete; notebooks imported in the **same folder**:
+**Prerequisites:** Part A complete; import any lab notebook (each file is self-contained).
 
-- `_storage_auth.py`
-- `nb_00_setup_credentials.py`
+Optional fallback notebook: `nb_00_setup_credentials.py`
 
 #### B1. Get storage account key from Azure
 
@@ -229,26 +228,16 @@ Expected keys: `storage-account`, `storage-key`.
 
 ## Part C — Use secrets in lab notebooks (every session)
 
-Open **`nb_01_read_bronze`** (or nb_02–nb_04):
+Open **`nb_01_read_bronze`** (or nb_02–nb_04, or day6 notebooks):
 
-| Widget | Value |
-|--------|--------|
-| `auth_mode` | `auto` (default) |
-| `storage_account` | **leave empty** (loaded from secret) |
-| `run_id` | `session3-lab` |
+1. Cell 1 contains `STORAGE_ACCOUNT = "st…"` — change if yours differs.
+2. Cell 1 loads `dbutils.secrets.get(scope="finledger", key="storage-key")`.
+3. Set widget `run_id` = `session3-lab` (optional paths can stay empty).
 
 **Run all.** You should see:
 
 ```text
-Using storage account from secret finledger/storage-account
-Loaded key from secret finledger/storage-key
-Storage auth OK for stjineshfqdcgg
-```
-
-On a **second run** on the same cluster:
-
-```text
-Storage already accessible for stjineshfqdcgg — no re-auth needed
+Storage auth configured for stjineshfqdcgg
 ```
 
 No key to paste again — even after you **restart the cluster** (secrets persist in Databricks).
@@ -257,11 +246,12 @@ No key to paste again — even after you **restart the cluster** (secrets persis
 
 ## Part D — Verify secrets from a notebook
 
-Quick test cell (any notebook after `%run ./_storage_auth`):
+Quick test cell (paste into any notebook):
 
 ```python
-print(dbutils.secrets.get(scope="finledger", key="storage-account"))
-# storage-key value is never printed — that is correct
+STORAGE_ACCOUNT = "stjineshfqdcgg"
+print(dbutils.secrets.get(scope="finledger", key="storage-key")[:4] + "…")
+# Full key is never printed — that is correct
 ```
 
 If this fails with *Secret does not exist*, run Part B again or ask trainer to check Part A5 (READ ACL).
@@ -276,7 +266,7 @@ If this fails with *Secret does not exist*, run Part B again or ask trainer to c
 | `Permission denied` on `dbutils.secrets.get` | Trainer runs `put-acl` for `users` READ (Part A5) |
 | `Could not write secrets to scope finledger` | Scope missing or you lack WRITE — use notebook after trainer creates scope |
 | `Cannot access ADLS` after secrets saved | Rotate key in portal; re-run `nb_00_setup_credentials` |
-| Prefer no secrets at all | **Single-user** cluster + `auth_mode=none` on notebooks |
+| Prefer no secrets at all | **Single-user** cluster (managed identity) — still edit `STORAGE_ACCOUNT` in notebook |
 
 ---
 
@@ -302,7 +292,7 @@ databricks secrets put --scope finledger --key storage-account --string-value st
 databricks secrets put --scope finledger --key storage-key
 
 # Daily lab
-nb_01 → auth_mode=auto, storage_account=empty, run_id=session3-lab
+nb_01 → run_id=session3-lab, STORAGE_ACCOUNT correct in cell 1
 ```
 
-**Related:** [MANUAL-LAB.md](MANUAL-LAB.md) §D · [nb_00_setup_credentials.py](notebooks/nb_00_setup_credentials.py) · [_storage_auth.py](notebooks/_storage_auth.py)
+**Related:** [MANUAL-LAB.md](MANUAL-LAB.md) §D · [nb_00_setup_credentials.py](notebooks/nb_00_setup_credentials.py)

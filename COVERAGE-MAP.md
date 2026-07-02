@@ -20,6 +20,8 @@
 | **Session 2** — ADF ingestion | `session-2/` | Day 2 (Hours 17–24) | 2 h | `session-2\orchestrate.cmd` | [session-2/MANUAL-LAB.md](session-2/MANUAL-LAB.md) |
 | **Session 3** — Databricks lakehouse | `session-3/` | Day 3 (Hours 25–32) | 2 h | `session-3\orchestrate.cmd` | [session-3/MANUAL-LAB.md](session-3/MANUAL-LAB.md) |
 | **Day 6** — Python for data engineers | `day6/` | [data-engineering-course.html](docs/data-engineering-course.html) S6 | 2 h | `day6\orchestrate.cmd` | [day6/MANUAL-LAB.md](day6/MANUAL-LAB.md) |
+| **Day 7** — Storage + read lake (PySpark) | `day7/` | [data-engineering-course.html](docs/data-engineering-course.html) S7 | 2 h | `day7\orchestrate.cmd` | [day7/MANUAL-LAB.md](day7/MANUAL-LAB.md) |
+| **Day 8** — PySpark transformations | `day8/` | [data-engineering-course.html](docs/data-engineering-course.html) S8 | 2 h | `day8\orchestrate.cmd` | [day8/MANUAL-LAB.md](day8/MANUAL-LAB.md) |
 | Session 4 — Purview | *planned* | Day 4 | — | — | — |
 | Session 5+ — Operate / Engineering | *planned* | Day 5–7 | — | — | — |
 
@@ -46,7 +48,10 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 | **13** | **Session 3** start | [session-3/README](session-3/README.md) §A theory | `cd session-3` | — | Class-1 + Databricks workspace exist |
 | **14** | Session 3 prep | [session-3/README](session-3/README.md) §B | `orchestrate.cmd` | — | Prints `abfss://` paths |
 | **15** | Session 3 UI lab | [session-3/MANUAL-LAB](session-3/MANUAL-LAB.md) §A→I | `orchestrate.cmd --verify-storage` (after notebooks) | Databricks workspace + Storage silver/gold | [MANUAL-LAB §I](session-3/MANUAL-LAB.md#lab-i) |
-| **16** | Teardown | [README §1 teardown](README.md#other-commands) | `orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes` | RG deleted | RG gone in portal |
+| **16** | **Day 6** Python | [day6/README](day6/README.md) §A | `cd day6` → `orchestrate.cmd` | — | Unit tests OK + notebook list |
+| **17** | **Day 7** venv + lake read | [day7/README](day7/README.md) + [SESSION7-STUDENT-GUIDE](day7/SESSION7-STUDENT-GUIDE.md) | `python -m venv .venv` then `cd day7` → `orchestrate.cmd` | Databricks: nb_01→nb_04 | Bronze row count matches Session 3 |
+| **18** | **Day 8** PySpark transforms | [day8/PYSPARK-REFERENCE](day8/PYSPARK-REFERENCE.md) then [SESSION8-STUDENT-GUIDE](day8/SESSION8-STUDENT-GUIDE.md) | `cd day8` → `orchestrate.cmd` | Databricks: nb_00→nb_04 | All 8 transforms + lazy vs action |
+| **19** | Teardown | [README §1 teardown](README.md#other-commands) | `orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes` | RG deleted | RG gone in portal |
 
 **Re-run anytime (Session 1):** `orchestrate.cmd` — [README §C](README.md#c-the-re-run-command)  
 **Re-run anytime (Session 2):** `cd session-2` → `orchestrate.cmd`
@@ -72,6 +77,15 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 | **[session-3/UI-OVERVIEW.md](session-3/UI-OVERVIEW.md)** | Learners | **Theory + UI graphs** |
 | **[session-3/SESSION3-STUDENT-GUIDE.md](session-3/SESSION3-STUDENT-GUIDE.md)** | Learners | **Session 3 classroom handout** |
 | **[session-3/GUIDE.md](session-3/GUIDE.md)** | Trainers | Session 3 timed blocks |
+| **[day6/README.md](day6/README.md)** | Learners | Day 6 Python theory + run |
+| **[day6/MANUAL-LAB.md](day6/MANUAL-LAB.md)** | Learners | Day 6 step-by-step |
+| **[day7/README.md](day7/README.md)** | Learners | Day 7 venv → pandas/Polars → PySpark read |
+| **[day7/SESSION7-STUDENT-GUIDE.md](day7/SESSION7-STUDENT-GUIDE.md)** | Learners | Day 7 classroom handout |
+| **[day7/MANUAL-LAB.md](day7/MANUAL-LAB.md)** | Learners | Day 7 step-by-step |
+| **[day8/README.md](day8/README.md)** | Learners | Day 8 transforms + run |
+| **[day8/PYSPARK-REFERENCE.md](day8/PYSPARK-REFERENCE.md)** | Learners | **Complete PySpark theory (14 sections)** |
+| **[day8/SESSION8-STUDENT-GUIDE.md](day8/SESSION8-STUDENT-GUIDE.md)** | Learners | Day 8 classroom handout |
+| **[day8/MANUAL-LAB.md](day8/MANUAL-LAB.md)** | Learners | Day 8 step-by-step |
 
 ---
 
@@ -134,6 +148,47 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 
 ---
 
+## 6. Day 6 — Python: read / run / map
+
+**Prerequisite:** Session 3 secrets recommended.  
+**Command:** `day6\orchestrate.cmd`
+
+| Block | Read | Run | Verify |
+|-------|------|-----|--------|
+| Local Python | README §A | `orchestrate.cmd` | `clean_amount` demo + tests OK |
+| Databricks | SESSION6-STUDENT-GUIDE | Import `nb_01`, `nb_02` | Secrets scope `finledger` OK |
+
+---
+
+## 6b. Day 7 — Storage + PySpark read: read / run / map
+
+**Prerequisite:** Day 6 + Session 3 bronze landed + `--setup-secrets`.  
+**Command:** `day7\orchestrate.cmd`
+
+| Block | Read | Run | Verify |
+|-------|------|-----|--------|
+| venv first | README §B Step 1 | `python -m venv .venv` + `pip install -r day7\requirements.txt` | pandas, polars, pyspark installed |
+| Local script | MANUAL-LAB §A–B | `cd day7` → `orchestrate.cmd` | pandas/Polars rows printed |
+| PySpark foundation | `nb_03_spark_concepts.py` | Databricks Run All | lazy vs action explained |
+| Read bronze | `nb_04_read_bronze.py` | Databricks Run All | row count matches Session 3 |
+| Full PySpark theory | [day8/PYSPARK-REFERENCE.md](day8/PYSPARK-REFERENCE.md) | Read sections 1–6 | Ready for Day 8 |
+
+---
+
+## 6c. Day 8 — PySpark transforms: read / run / map
+
+**Prerequisite:** Day 7 complete.  
+**Command:** `day8\orchestrate.cmd`
+
+| Block | Read | Run | Verify |
+|-------|------|-----|--------|
+| Full theory | [PYSPARK-REFERENCE.md](day8/PYSPARK-REFERENCE.md) | Read §1–12 | Can explain lazy vs action |
+| Local script | MANUAL-LAB §A–B | `orchestrate.cmd` | pandas/Polars + foundation + transforms |
+| Foundation nb | `nb_00_pyspark_foundation.py` | Databricks | SQL groupBy works |
+| Transforms | `nb_01` → `nb_04` | Databricks | 8 ops + window rank |
+
+---
+
 ## 7. Commands quick reference
 
 | Goal | Where | Command |
@@ -146,6 +201,12 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 | Session 2 + pipeline run | `session-2\` | `orchestrate.cmd --run-pipeline` |
 | Session 3 lab | `session-3\` | `orchestrate.cmd` |
 | Session 3 verify Delta | `session-3\` | `orchestrate.cmd --verify-storage` |
+| Session 3 secrets | `session-3\` | `orchestrate.cmd --setup-secrets` |
+| Day 6 lab | `day6\` | `orchestrate.cmd` |
+| Day 7 lab (venv + read lake) | `day7\` | `orchestrate.cmd` |
+| Day 7 skip Spark (no Java) | `day7\` | `orchestrate.cmd --skip-spark` |
+| Day 8 lab (transforms) | `day8\` | `orchestrate.cmd` |
+| Day 8 PySpark theory only | — | Read `day8/PYSPARK-REFERENCE.md` |
 | Teardown | repo root | `orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes` |
 
 ---
@@ -173,6 +234,9 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 | Session 2 portal errors | [session-2/MANUAL-LAB §K](session-2/MANUAL-LAB.md#k-troubleshooting-portal) |
 | Session 3 Databricks errors | [session-3/MANUAL-LAB §K](session-3/MANUAL-LAB.md#lab-k) |
 | Session 3 script errors | [session-3/README §G](session-3/README.md#g-failures--workarounds) |
+| Day 7 JAVA not found | Install Java 11+ (adoptium.net) or `orchestrate.cmd --skip-spark` |
+| Day 7/8 secrets error | `session-3\orchestrate.cmd --setup-secrets` |
+| Day 8 PySpark concepts | [day8/PYSPARK-REFERENCE.md](day8/PYSPARK-REFERENCE.md) |
 | MPN Synapse / Fabric blocked | [docs/GOVERNANCE-DEPLOY.md](docs/GOVERNANCE-DEPLOY.md) |
 | Explain an error with AI | [README — Cursor / VS Code AI](README.md#when-to-use-cursor--vs-code-ai-chat) |
 
@@ -184,9 +248,12 @@ Do these in order. **Read** the doc → **Run** the command → **Open** the por
 Day A (Session 1):  README §1 → orchestrate.cmd → README §10 + WORKFLOW + CLASS-GUIDE
 Day B (Session 2):  session-2/README → orchestrate.cmd → MANUAL-LAB (learners tick §I)
 Day C (Session 3):  session-3/README → orchestrate.cmd → Databricks notebooks + MANUAL-LAB §I
-Wrap-up:            teardown demo → COVERAGE-MAP step 16
+Day D (Day 6):      day6/README → orchestrate.cmd → nb_01 + nb_02
+Day E (Day 7):      day7/README → venv + orchestrate.cmd → nb_01→nb_04 (nb_03 = PySpark foundation)
+Day F (Day 8):      day8/PYSPARK-REFERENCE → orchestrate.cmd → nb_00→nb_04
+Wrap-up:            teardown demo → COVERAGE-MAP step 19
 ```
 
 ---
 
-*Last aligned with: Session 1 (root) + Session 2 (ADF) + Session 3 (Databricks).*
+*Last aligned with: Session 1–3 + Day 6 + Day 7 + Day 8.*

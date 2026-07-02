@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -109,9 +110,23 @@ def main() -> int:
 
     if args.setup_secrets:
         from databricks_secrets import setup_finledger_secrets  # noqa: E402
+        from unity_catalog_bootstrap import bootstrap_finledger_catalog  # noqa: E402
+        from unity_catalog_prep import ensure_unity_catalog_storage  # noqa: E402
 
         logger.info("==> Databricks secret scope setup (from .env — not notebook)")
-        setup_finledger_secrets(cfg, estate.storage_account, estate.databricks_workspace)
+        host = setup_finledger_secrets(cfg, estate.storage_account, estate.databricks_workspace)
+        connector_id = workspace_access_connector_id(cfg, estate.databricks_workspace)
+        logger.info("==> Unity Catalog ADLS roots (bronze | silver | gold)")
+        uc_roots = ensure_unity_catalog_storage(estate.storage_account)
+        logger.info("==> Unity Catalog API — finledger catalog + medallion schemas")
+        bootstrap_finledger_catalog(
+            host,
+            estate.storage_account,
+            access_connector_id=connector_id,
+        )
+        logger.info("  Catalog : finledger")
+        for layer, path in uc_roots.items():
+            logger.info("  %-6s: %s", layer, path)
         logger.info("Re-run without --setup-secrets for normal bronze prep.")
         return 0
 
@@ -133,6 +148,28 @@ def main() -> int:
     else:
         logger.info("==> Phase 2: Skipped upload (--skip-upload)")
 
+    from unity_catalog_bootstrap import bootstrap_finledger_catalog  # noqa: E402
+    from unity_catalog_prep import ensure_unity_catalog_storage  # noqa: E402
+
+    logger.info("==> Phase 2b: Unity Catalog ADLS roots (bronze | silver | gold)")
+    uc_roots = ensure_unity_catalog_storage(estate.storage_account)
+
+    file_env = {**os.environ}
+    from _config import ENV_FILE, _load_dotenv  # noqa: E402
+
+    file_env.update(_load_dotenv(ENV_FILE))
+    if file_env.get("DATABRICKS_TOKEN", "").strip():
+        logger.info("==> Phase 2c: Unity Catalog API — finledger catalog + schemas")
+        bootstrap_finledger_catalog(
+            databricks_workspace_url(cfg, estate.databricks_workspace),
+            estate.storage_account,
+            access_connector_id=connector_id,
+        )
+    else:
+        logger.info(
+            "==> Phase 2c: Skipped UC API (add DATABRICKS_TOKEN to .env or run --setup-secrets)"
+        )
+
     run_id = paths.get("run_id", "session3-lab")
     bronze_loaded = paths.get(
         "loaded_abfss",
@@ -153,6 +190,9 @@ def main() -> int:
     logger.info("  Bronze read: %s", bronze_loaded)
     logger.info("  Silver sink: %s", silver_delta)
     logger.info("  Gold sink  : %s", gold_delta)
+    logger.info("  UC roots : finledger catalog — bronze | silver | gold (_unity_catalog)")
+    for layer, path in uc_roots.items():
+        logger.info("    %-6s %s", layer, path)
     logger.info("  Notebooks  : session-3/notebooks/ (import nb_00 first if Shared cluster)")
     logger.info("  Student UI : UI-OVERVIEW.md → SESSION3-STUDENT-GUIDE.md → MANUAL-LAB.md")
     logger.info("")

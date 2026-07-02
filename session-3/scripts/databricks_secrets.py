@@ -241,9 +241,18 @@ def setup_finledger_secrets(cfg: SessionConfig, storage_account: str, workspace_
     _verify_secrets_list(host)
 
     logger.info("")
-    logger.info("Databricks secrets ready — notebooks can use auth_mode=auto")
+    logger.info("Databricks secrets ready — notebooks load storage-account + storage-key from scope finledger")
     logger.info("  Scope : %s", SCOPE)
     logger.info("  Keys  : %s, %s", ACCOUNT_SECRET, KEY_SECRET)
+    logger.info("  UC ADLS roots (bronze | silver | gold):")
+    for layer in ("bronze", "silver", "gold"):
+        logger.info(
+            "    %s: abfss://%s@%s.dfs.core.windows.net/_unity_catalog",
+            layer,
+            layer,
+            storage_account,
+        )
+    logger.info("  Open Catalog in Databricks → finledger → bronze | silver | gold")
     logger.info("  Open  : %s", host)
     return host
 
