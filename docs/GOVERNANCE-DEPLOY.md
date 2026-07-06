@@ -1,81 +1,74 @@
 # Purview, Synapse & Fabric — deploy status and manual steps
 
-## What was deployed on `TrainerJinesh -MPN`
+## Shared class estate (`AzureSponsorship-DataTraining`)
 
 | Service | Status | Resource |
 |---------|--------|----------|
-| **Microsoft Purview** | **Created** | `pviewjineshwgepcx` (eastus) |
-| **Azure Data Factory** | Created earlier | `adf-jinesh-wgepcx` |
-| **Azure Databricks** | Created earlier | `dbw-jinesh-wgepcx` |
-| **Synapse (serverless SQL)** | **Blocked** | MPN subscription: `SqlServerRegionDoesNotAllowProvisioning` |
-| **Microsoft Fabric capacity** | **Blocked** | Fabric quota = 0; capacity not allowed in tested regions |
+| **Resource group** | Deployed | `rg-shared-class1` (eastus) |
+| **ADLS Gen2 storage** | Deployed | `stsharedqgr7mj` |
+| **Azure Data Factory** | Deployed | `adf-shared-qgr7mj` |
+| **Azure Databricks** | Deployed | `dbw-shared-qgr7mj` |
+| **Synapse (serverless SQL)** | Skipped | MPN/Sponsorship often blocks SQL provisioning |
+| **Microsoft Fabric capacity** | Skipped | Use Fabric trial in portal if needed |
+
+Deploy / re-run: `provision-shared.cmd`
 
 ---
 
 ## Portal links
 
-**Purview (governance catalog):**  
-https://web.purview.azure.com/resource/subscriptions/a802ddef-155b-481f-9796-fac7318a749f/resourceGroups/rg-jinesh-class1/providers/Microsoft.Purview/accounts/pviewjineshwgepcx/overview
-
 **Resource group:**  
-https://portal.azure.com/#@/resource/subscriptions/a802ddef-155b-481f-9796-fac7318a749f/resourceGroups/rg-jinesh-class1/overview
+https://portal.azure.com/#@/resource/subscriptions/a64c0dd2-3a31-4604-bde3-3d40c7d5e8be/resourceGroups/rg-shared-class1/overview
+
+**Databricks workspace:**  
+https://adb-7405613791235979.19.azuredatabricks.net
 
 **Cost Explorer (RG):**  
-https://portal.azure.com/#view/Microsoft_Azure_CostManagement/Menu/~/costanalysis/open/scope/%2Fsubscriptions%2Fa802ddef-155b-481f-9796-fac7318a749f%2FresourceGroups%2Frg-jinesh-class1
+https://portal.azure.com/#view/Microsoft_Azure_CostManagement/Menu/~/costanalysis/open/scope/%2Fsubscriptions%2Fa64c0dd2-3a31-4604-bde3-3d40c7d5e8be%2FresourceGroups%2Frg-shared-class1
 
 ---
 
 ## Synapse — why blocked and what to do
 
-Azure returned:
+Azure may return:
 
 ```text
 SqlServerRegionDoesNotAllowProvisioning
-Location 'uksouth' / 'ukwest' / 'eastus' is not accepting creation of new SQL servers
-for subscription a802ddef-155b-481f-9796-fac7318a749f
 ```
 
-This is common on **MSDN/MPN** dev subscriptions.
+This is common on **MSDN/MPN/Sponsorship** dev subscriptions.
 
 **Options:**
 
 1. Request SQL/Synapse quota on a production or CSP subscription.
 2. Ask your Azure admin to enable SQL provisioning on this subscription.
-3. Use **serverless SQL in Microsoft Fabric** (after Fabric trial — see below) instead of standalone Synapse.
+3. Use **serverless SQL in Microsoft Fabric** (after Fabric trial) instead of standalone Synapse.
 
 Re-deploy when unblocked:
 
 ```powershell
-az deployment group create -g rg-jinesh-class1 -n synapse-only `
+az deployment group create -g rg-shared-class1 -n synapse-only `
   --template-file infra/platform-services.bicep `
-  --parameters location=uksouth learner=jinesh ownerEmail=<email> `
-               storageAccountName=stjineshfqdcgg synapseSqlPassword=<pwd> `
+  --parameters location=eastus learner=shared ownerEmail=<email> `
+               storageAccountName=stsharedqgr7mj synapseSqlPassword=<pwd> `
                deployPurview=false deploySynapse=true deployFabric=false
 ```
 
 ---
 
-## Microsoft Fabric — why blocked and manual workspace setup
+## Microsoft Fabric — manual workspace setup
 
-Azure returned:
-
-```text
-RegionalQuota: 0 for Fabric capacities
-Capacity provisioning is not currently allowed in this region
-```
-
-**Manual Fabric trial (recommended for MPN):**
+**Manual Fabric trial (recommended for training subscriptions):**
 
 1. Open https://app.fabric.microsoft.com/
-2. Sign in as `v-jinesh@mastekus.onmicrosoft.com`
-3. Click **Start trial** (creates trial Fabric capacity in your tenant — no Azure F-SKU quota needed)
+2. Sign in with your training account
+3. Click **Start trial** (creates trial Fabric capacity in your tenant)
 4. **Workspaces** → **New workspace** → assign to trial capacity
 5. Optional: run workspace API after trial capacity exists:
 
 ```powershell
-# Get capacity ID from Fabric Admin portal URL: .../capacities/<guid>
 .\.venv\Scripts\python.exe scripts\fabric_workspace.py `
-  --workspace-name ws-jinesh-class1 `
+  --workspace-name ws-shared-class1 `
   --capacity-id <fabric-capacity-guid-from-admin-portal>
 ```
 
@@ -87,13 +80,11 @@ https://learn.microsoft.com/fabric/enterprise/fabric-quotas
 ## Re-run automation
 
 ```powershell
-.\orchestrate.cmd --platforms-only --skip-setup
+provision-shared.cmd
 ```
 
-Code paths:
+Or full per-learner lab (UK regions only):
 
-| File | Purpose |
-|------|---------|
-| `infra/platform-services.bicep` | ADF, Synapse, Purview, Fabric, Databricks |
-| `scripts/fabric_workspace.py` | Creates Fabric workspace via REST API |
-| `scripts/orchestrate.py` | Full lab orchestrator (default) or `--platforms-only` |
+```powershell
+.\orchestrate.cmd --platforms-only --skip-setup
+```

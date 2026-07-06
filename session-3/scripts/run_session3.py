@@ -113,20 +113,46 @@ def main() -> int:
         from unity_catalog_bootstrap import bootstrap_finledger_catalog  # noqa: E402
         from unity_catalog_prep import ensure_unity_catalog_storage  # noqa: E402
 
-        logger.info("==> Databricks secret scope setup (from .env — not notebook)")
-        host = setup_finledger_secrets(cfg, estate.storage_account, estate.databricks_workspace)
+        logger.info("")
+        logger.info("=" * 64)
+        logger.info("SETUP-SECRETS — FinLedger scope on shared Databricks workspace")
+        logger.info("  Reads .env from repo root (DATABRICKS_TOKEN, STORAGE_ACCOUNT_KEY)")
+        logger.info("  Runs Databricks CLI: list-scopes → create-scope → put → list")
+        logger.info("  Re-run anytime — idempotent (updates secrets in place)")
+        logger.info("=" * 64)
+        host = setup_finledger_secrets(
+            cfg,
+            estate.storage_account,
+            estate.databricks_workspace,
+            verbose=True,
+            key_vault=estate.key_vault,
+        )
         connector_id = workspace_access_connector_id(cfg, estate.databricks_workspace)
         logger.info("==> Unity Catalog ADLS roots (bronze | silver | gold)")
         uc_roots = ensure_unity_catalog_storage(estate.storage_account)
         logger.info("==> Unity Catalog API — finledger catalog + medallion schemas")
-        bootstrap_finledger_catalog(
-            host,
-            estate.storage_account,
-            access_connector_id=connector_id,
-        )
+        try:
+            bootstrap_finledger_catalog(
+                host,
+                estate.storage_account,
+                access_connector_id=connector_id,
+            )
+        except SystemExit as exc:
+            logger.warning(
+                "Unity Catalog API bootstrap skipped — secrets scope finledger is still ready for notebooks."
+            )
+            logger.warning("  Detail: %s", exc)
+            logger.warning(
+                "  Notebooks: dbutils.secrets.get('finledger', 'storage-key') works; "
+                "create UC catalog in notebook cell 2 if Catalog UI is empty."
+            )
         logger.info("  Catalog : finledger")
         for layer, path in uc_roots.items():
             logger.info("  %-6s: %s", layer, path)
+        logger.info("")
+        logger.info("Secret setup complete — re-run is safe (idempotent).")
+        logger.info("  Notebook test cell:")
+        logger.info('    dbutils.secrets.get("finledger", "storage-key")')
         logger.info("Re-run without --setup-secrets for normal bronze prep.")
         return 0
 

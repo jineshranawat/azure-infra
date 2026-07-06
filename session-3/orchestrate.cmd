@@ -3,7 +3,7 @@ REM Session 3 — Databricks lakehouse transformation (2-hour lab)
 REM Prerequisite: repo root orchestrate.cmd (Class-1 + Databricks workspace deployed)
 REM
 REM   orchestrate.cmd                  prep bronze + RBAC + print Databricks paths
-REM   orchestrate.cmd --setup-secrets  create finledger scope + secrets from .env
+REM   orchestrate.cmd --setup-secrets  create finledger scope + secrets from .env (verbose step trace)
 REM   orchestrate.cmd --verify-storage check silver/gold outputs after notebook run
 setlocal
 cd /d "%~dp0"

@@ -55,6 +55,31 @@ orchestrate.cmd teardown --resource-group rg-<learner>-class1 --yes
 | `--use-device-code` | Headless VDI / no browser — avoids WAM and MDM enrollment entirely |
 | `--install-cli` | First run — install Azure CLI via winget |
 
+### Shared class estate (all students, one subscription)
+
+When every learner uses the **same** resources (no per-learner RG), deploy once as trainer:
+
+```text
+provision-shared.cmd --owner-email trainer@example.com
+```
+
+| Setting | Value |
+|---------|--------|
+| Subscription | `a64c0dd2-3a31-4604-bde3-3d40c7d5e8be` (AzureSponsorship-DataTraining) |
+| Region | `eastus` (documented exception — shared training subscription) |
+| Resource group | `rg-shared-class1` |
+| `LEARNER` in `.env` | `shared` |
+
+Re-run: `provision-shared.cmd` (idempotent incremental deploy). Budget is skipped on Sponsorship subscriptions.
+
+After provision, deploy lab assets (bronze CSV, secrets, master notebook):
+
+```text
+deploy-shared-lab.cmd
+```
+
+Master PySpark notebook (385 cells, Day 7 + Day 8): `/Shared/day7-day8/master_pyspark_complete`
+
 ---
 
 ## 2. Four re-run scenarios (prove in class)
@@ -235,9 +260,10 @@ Also delete Databricks managed RG `rg-<learner>-dbw-<hash>` if orphaned.
 ## 12. Example `.env`
 
 ```env
-AZURE_SUBSCRIPTION_ID=a802ddef-155b-481f-9796-fac7318a749f
-LEARNER=jinesh
-OWNER_EMAIL=v-jinesh@mastekus.onmicrosoft.com
+AZURE_SUBSCRIPTION_ID=a64c0dd2-3a31-4604-bde3-3d40c7d5e8be
+LEARNER=shared
+LOCATION=eastus
+OWNER_EMAIL=trainer@example.com
 LOCATION=uksouth
 ```
 

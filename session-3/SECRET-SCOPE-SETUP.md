@@ -14,11 +14,15 @@ This uses the **Databricks CLI** on your laptop. Many workspaces **block** `dbut
 **Purpose:** store storage account key **once** in Databricks scope `finledger`. Each notebook hardcodes `STORAGE_ACCOUNT` and reads `storage-key` from secrets in cell 1.
 
 **Scope name:** `finledger`  
+**Backend:** `DATABRICKS` — secrets live in the Databricks workspace control plane. **Not** Azure Key Vault for this lab.
+
+> **Key Vault?** Your RG also deploys Azure Key Vault (`kv-shared-…`) for Class-1 / ADF demos. Scope `finledger` does **not** use it. Production can use `create-scope --scope-backend-type AZURE_KEYVAULT` — we skip that in training for simplicity.
+
 **Secrets stored:**
 
 | Secret key | Contents | Example |
 |------------|----------|---------|
-| `storage-account` | ADLS storage account name | `stjineshfqdcgg` |
+| `storage-account` | ADLS storage account name | `stsharedqgr7mj` |
 | `storage-key` | Storage account **key1** | *(hidden — from Azure Portal)* |
 
 ---
@@ -28,7 +32,7 @@ This uses the **Databricks CLI** on your laptop. Many workspaces **block** `dbut
 ### 0.1 Edit repo-root `.env` (never commit)
 
 ```ini
-DATABRICKS_HOST=https://adb-7405614287120472.12.azuredatabricks.net
+DATABRICKS_HOST=https://adb-7405613791235979.19.azuredatabricks.net
 STORAGE_ACCOUNT_KEY=<paste key1 from portal>
 DATABRICKS_TOKEN=<paste PAT from Databricks User settings -> Developer -> Access tokens>
 ```
@@ -37,7 +41,7 @@ DATABRICKS_TOKEN=<paste PAT from Databricks User settings -> Developer -> Access
 
 ### 0.2 Create a Databricks personal access token (one time)
 
-1. Open your workspace: [Databricks workspace](https://adb-7405614287120472.12.azuredatabricks.net/)
+1. Open your workspace: [Databricks workspace](https://adb-7405613791235979.19.azuredatabricks.net/)
 2. Top-right → your name → **User settings**
 3. **Developer** → **Access tokens** → **Generate new token**
 4. Copy token into `.env` as `DATABRICKS_TOKEN`
@@ -49,13 +53,46 @@ cd d:\azure\session-3
 orchestrate.cmd --setup-secrets
 ```
 
-**Expected:**
+**What you see (verbose trace — every CLI command and its output):**
 
 ```text
-INFO — Created secret scope 'finledger'   (or already present)
-INFO — Stored secret finledger/storage-account
-INFO — Stored secret finledger/storage-key
-INFO — Databricks secrets ready — notebooks can use auth_mode=auto
+SETUP-SECRETS — FinLedger scope on shared Databricks workspace
+  Reads .env from repo root (DATABRICKS_TOKEN, STORAGE_ACCOUNT_KEY)
+  Runs Databricks CLI: list-scopes → create-scope → put → list
+
+STEP 1/9 — Check .env prerequisites
+  DATABRICKS_HOST  : set
+  DATABRICKS_TOKEN : set
+  STORAGE_ACCOUNT_KEY : set
+  Databricks CLI   : D:\azure\.venv\Scripts\databricks.exe
+
+STEP 3/9 — Auth test — list all secret scopes
+Command : databricks.exe secrets list-scopes
+Output  :
+Scope      Backend
+finledger  DATABRICKS
+
+STEP 4/9 — List existing secrets in scope finledger (before changes)
+Command : databricks.exe secrets list --scope finledger
+Output  :
+Key name           Last updated
+storage-account   ...
+storage-key       ...
+
+STEP 7/9 — Store secret storage-account
+Command : databricks secrets put --scope finledger --key storage-account --string-value stsharedqgr7mj
+
+STEP 8/9 — Store secret storage-key
+Command : databricks secrets put --scope finledger --key storage-key --string-value <hidden>
+
+STEP 9/9 — List secrets in scope finledger (after changes)
+  Verified: storage-account, storage-key
+```
+
+**Expected final line:**
+
+```text
+INFO — Databricks secrets ready — notebooks load storage-account + storage-key from scope finledger
 ```
 
 ### 0.4 Run notebooks
@@ -164,7 +201,7 @@ Optional fallback notebook: `nb_00_setup_credentials.py`
 
 #### B1. Get storage account key from Azure
 
-1. Portal → storage account `st<learner><hash>` (e.g. `stjineshfqdcgg`).
+1. Portal → storage account `stsharedqgr7mj` (shared class) or `st<learner><hash>` (per-learner).
 2. Left menu → **Security + networking** → **Access keys**.
 3. Click **Show** next to **key1**.
 4. Click **Copy** (do not email or commit this value).
@@ -176,7 +213,7 @@ Optional fallback notebook: `nb_00_setup_credentials.py`
 
 | Widget | Value |
 |--------|--------|
-| `storage_account` | Your storage name, e.g. `stjineshfqdcgg` |
+| `storage_account` | Your storage name, e.g. `stsharedqgr7mj` |
 | `storage_account_key` | Paste **key1** from portal |
 
 3. Attach a cluster (Shared or Single-user).
@@ -185,10 +222,10 @@ Optional fallback notebook: `nb_00_setup_credentials.py`
 #### B3. Expected output
 
 ```text
-Saved finledger/storage-account = stjineshfqdcgg
+Saved finledger/storage-account = stsharedqgr7mj
 Saved finledger/storage-key = **** (hidden)
 Loaded key from secret finledger/storage-key
-Storage auth OK for stjineshfqdcgg
+Storage auth OK for stsharedqgr7mj
   loaded/
   incoming/
   ...
@@ -207,7 +244,7 @@ SETUP COMPLETE — open nb_01_read_bronze and run
 After Part A, on your PC:
 
 ```text
-databricks secrets put --scope finledger --key storage-account --string-value stjineshfqdcgg
+databricks secrets put --scope finledger --key storage-account --string-value stsharedqgr7mj
 ```
 
 ```text
@@ -237,7 +274,7 @@ Open **`nb_01_read_bronze`** (or nb_02–nb_04, or day6 notebooks):
 **Run all.** You should see:
 
 ```text
-Storage auth configured for stjineshfqdcgg
+Storage auth configured for stsharedqgr7mj
 ```
 
 No key to paste again — even after you **restart the cluster** (secrets persist in Databricks).
@@ -249,7 +286,7 @@ No key to paste again — even after you **restart the cluster** (secrets persis
 Quick test cell (paste into any notebook):
 
 ```python
-STORAGE_ACCOUNT = "stjineshfqdcgg"
+STORAGE_ACCOUNT = "stsharedqgr7mj"
 print(dbutils.secrets.get(scope="finledger", key="storage-key")[:4] + "…")
 # Full key is never printed — that is correct
 ```

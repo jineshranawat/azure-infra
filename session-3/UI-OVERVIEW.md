@@ -211,14 +211,14 @@ flowchart LR
 
 ## 7. Your paths (fill after `orchestrate.cmd`)
 
-| Item | Example for jinesh |
-|------|-------------------|
-| Resource group | `rg-jinesh-class1` |
-| Storage account | `stjineshfqdcgg` |
-| Databricks workspace | `dbw-jinesh-wgepcx` |
-| Bronze read | `abfss://bronze@stjineshfqdcgg.dfs.core.windows.net/loaded/run=session3-lab/sample_transactions.csv` |
-| Silver Delta | `abfss://silver@stjineshfqdcgg.dfs.core.windows.net/transactions` |
-| Gold Delta | `abfss://gold@stjineshfqdcgg.dfs.core.windows.net/daily_channel_summary` |
+| Item | Shared class (`LEARNER=shared`) |
+|------|-------------------------------|
+| Resource group | `rg-shared-class1` |
+| Storage account | `stsharedqgr7mj` |
+| Databricks workspace | `dbw-shared-qgr7mj` |
+| Bronze read | `abfss://bronze@stsharedqgr7mj.dfs.core.windows.net/loaded/run=session3-lab/sample_transactions.csv` |
+| Silver Delta | `abfss://silver@stsharedqgr7mj.dfs.core.windows.net/transactions` |
+| Gold Delta | `abfss://gold@stsharedqgr7mj.dfs.core.windows.net/daily_channel_summary` |
 
 Paste **Bronze read** into the `bronze_path` widget in notebook 01 — no code edit needed.
 

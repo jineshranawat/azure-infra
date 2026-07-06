@@ -13,7 +13,10 @@ SESSION_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SESSION_ROOT.parent
 ENV_FILE = REPO_ROOT / ".env"
 
-ALLOWED_LOCATIONS = frozenset({"uksouth", "ukwest"})
+UK_LOCATIONS = frozenset({"uksouth", "ukwest"})
+# Shared class estate (provision-shared.cmd) — documented region exception in .env.example
+SHARED_CLASS_LEARNER = "shared"
+SHARED_CLASS_LOCATION = "eastus"
 LEARNER_RE = re.compile(r"^[a-z0-9]{2,10}$")
 
 
@@ -103,8 +106,14 @@ def load_config() -> SessionConfig:
         raise SystemExit(f"AZURE_SUBSCRIPTION_ID required in {ENV_FILE}")
     if not owner_email:
         raise SystemExit(f"OWNER_EMAIL required in {ENV_FILE}")
-    if location not in ALLOWED_LOCATIONS:
-        raise SystemExit(f"LOCATION must be one of {sorted(ALLOWED_LOCATIONS)}")
+    if learner == SHARED_CLASS_LEARNER:
+        if location != SHARED_CLASS_LOCATION:
+            raise SystemExit(
+                f"Shared class (LEARNER={SHARED_CLASS_LEARNER}) requires "
+                f"LOCATION={SHARED_CLASS_LOCATION} — see provision-shared.cmd"
+            )
+    elif location not in UK_LOCATIONS:
+        raise SystemExit(f"LOCATION must be one of {sorted(UK_LOCATIONS)}")
     if not LEARNER_RE.match(learner):
         raise SystemExit("LEARNER must be 2–10 lowercase alphanumeric characters.")
 

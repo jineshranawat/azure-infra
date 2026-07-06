@@ -99,17 +99,17 @@ Use this table during class. **Open the IDE file first**, run the command, **the
 **Learner `.env` (per-learner browser login):**
 
 ```env
-AZURE_SUBSCRIPTION_ID=a802ddef-155b-481f-9796-fac7318a749f
-LEARNER=jinesh
-OWNER_EMAIL=v-jinesh@mastekus.onmicrosoft.com
-LOCATION=uksouth
+AZURE_SUBSCRIPTION_ID=a64c0dd2-3a31-4604-bde3-3d40c7d5e8be
+LEARNER=shared
+OWNER_EMAIL=trainer@example.com
+LOCATION=eastus
 ```
 
 **Class image `.env` (service principal — learner only sets subscription + LEARNER):**
 
 ```env
 AZURE_SUBSCRIPTION_ID=<learner-subscription-guid>
-LEARNER=jinesh
+LEARNER=shared
 LOCATION=uksouth
 CLASS_OWNER_EMAIL=training@example.com
 AZURE_TENANT_ID=<tenant-guid>
