@@ -80,6 +80,14 @@ deploy-shared-lab.cmd
 
 Master PySpark notebook (385 cells, Day 7 + Day 8): `/Shared/day7-day8/master_pyspark_complete`
 
+**Shared ADF lab (Session 19+):** 10 teaching pipelines + SQL westus + Databricks triggers:
+
+```text
+deploy-shared-adf-lab.cmd
+```
+
+Docs: `shared-adf-lab/README.md` · Pipelines as code: `shared-adf-lab/scripts/adf_pipelines.py`
+
 ---
 
 ## 2. Four re-run scenarios (prove in class)

@@ -18,6 +18,7 @@ Also builds **`file_formats_and_secrets`** — CSV/JSON/Parquet/Delta + secret s
 | **13** | `session13_medallion_e2e` | `run_medallion(run_date)` bronze → gold |
 | **14** | `session14_gold_reporting` | Daily rollup, pivot, partitioned gold |
 | **15** | `session15_sql_jobs_adf` | SQL on Delta, Unity Catalog, Jobs, ADF (watch/demo) |
+| **50** | `50_data_engineering_problems` | **All 50 problems → solutions** with UC tables in `main.demo_problems` |
 
 Each notebook uses **small cells**: WHAT → WHY → Mermaid diagram → HOW → ANALOGY → short code.
 

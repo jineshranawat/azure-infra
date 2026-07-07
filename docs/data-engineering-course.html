@@ -131,6 +131,7 @@
         <li><b>Theory + practical for every topic</b> — Storage, Data Factory, Databricks, SQL and Purview each get their concepts explained, then a hands-on lab. Nothing is "just a look".</li>
         <li><b>Databricks + Python are the backbone</b> — PySpark is the workhorse and Delta is the storage format; the other services connect around them.</li>
         <li><b>Batch &amp; snapshot</b> — full loads and <code>MERGE</code> upserts, plus Delta time-travel snapshots. Streaming is a short awareness note at the end, so the labs stay reliable.</li>
+        <li><b>50 Problems intensive lab (Sessions 20–21)</b> — one runnable Databricks notebook with every common data-engineering failure mode and fix; theory first (CSV → Parquet → Delta), then code. Plan <b>two full 2-hour sessions</b> to read, run, and discuss all 50.</li>
         <li><b>SQL kept practical</b> — read/write Azure SQL from Python; concepts covered, without a deep T-SQL detour.</li>
         <li><b>Python learning path</b> — venv first, then pandas/Polars on your laptop, then PySpark on Databricks. Full reference: <a href="../day8/PYSPARK-REFERENCE.md">day8/PYSPARK-REFERENCE.md</a>. Lost? Start at <a href="../COVERAGE-MAP.md">COVERAGE-MAP.md</a>.</li>
       </ul>
@@ -150,6 +151,7 @@
     <a href="#schedule">Cohort schedule</a>
     <a href="#a">Done (1–8)</a>
     <a href="#b">Python + Databricks core (6–14)</a>
+    <a href="#50problems">50 Problems lab (20–21)</a>
     <a href="#c">Serve, SQL &amp; Data Factory (15–19)</a>
     <a href="#d">Reusable, tested, tuned (20–23)</a>
     <a href="#e">Govern, cost, operate (24–29)</a>
@@ -163,7 +165,7 @@
     <h3>FinLedger UK — exact dates (June–July 2026)</h3>
     <p><b>Started:</b> Monday <b>22 June 2026</b> · <b>Planned completion:</b> Sunday <b>26 July 2026</b> (Session 30 capstone).</p>
     <p><b>Rhythm:</b> Monday–Friday <b>2 hours</b> per day · Sunday <b>4 hours</b> (two 2-hour sessions) · <b>Saturday off</b>.</p>
-    <div class="note"><b>Progress (as of 6 July 2026):</b> <b>20 of 60 hours</b> delivered (Sessions <b>1–10</b>). Next class: <b>Monday 6 July</b> — Session 11 (Delta time travel).</div>
+    <div class="note"><b>Progress (as of 7 July 2026):</b> <b>20 of 60 hours</b> delivered (Sessions <b>1–10</b>). Next class: <b>Tuesday 7 July</b> — Session 12 (MERGE upsert). The <b>50 Data Engineering Problems</b> notebook is deployed — dedicated lab in <b>Sessions 20–21</b> after core Delta/medallion is complete.</div>
     <table class="at">
       <tr><th>Session</th><th>Date</th><th>Day</th><th>Hours</th><th>Status</th><th>Topic (short)</th></tr>
       <tr><td class="n">1</td><td>22 Jun 2026</td><td>Mon</td><td>2h</td><td class="done-b">done</td><td>Azure infra &amp; landing zone</td></tr>
@@ -178,8 +180,8 @@
       <tr><td colspan="6" style="font-size:12px;color:#a9c0bb;padding:6px 10px"><i>Break: 4 Jul (Sat) — no class</i></td></tr>
       <tr><td class="n">9</td><td>5 Jul 2026</td><td>Sun</td><td>2h</td><td class="done-b">done</td><td>Silver write + quarantine (Day 9)</td></tr>
       <tr><td class="n">10</td><td>5 Jul 2026</td><td>Sun</td><td>2h</td><td class="done-b">done</td><td>Delta Lake basics (Day 10)</td></tr>
-      <tr><td class="n">11</td><td>6 Jul 2026</td><td>Mon</td><td>2h</td><td>next</td><td>Snapshots &amp; time travel</td></tr>
-      <tr><td class="n">12</td><td>7 Jul 2026</td><td>Tue</td><td>2h</td><td>planned</td><td>MERGE upsert</td></tr>
+      <tr><td class="n">11</td><td>6 Jul 2026</td><td>Mon</td><td>2h</td><td class="done-b">done</td><td>Snapshots &amp; time travel</td></tr>
+      <tr><td class="n">12</td><td>7 Jul 2026</td><td>Tue</td><td>2h</td><td>next</td><td>MERGE upsert</td></tr>
       <tr><td class="n">13</td><td>8 Jul 2026</td><td>Wed</td><td>2h</td><td>planned</td><td>Medallion end-to-end</td></tr>
       <tr><td class="n">14</td><td>9 Jul 2026</td><td>Thu</td><td>2h</td><td>planned</td><td>Gold reporting tables</td></tr>
       <tr><td class="n">15</td><td>10 Jul 2026</td><td>Fri</td><td>2h</td><td>planned</td><td>Databricks SQL</td></tr>
@@ -187,10 +189,10 @@
       <tr><td class="n">17</td><td>12 Jul 2026</td><td>Sun</td><td>2h</td><td>planned</td><td>Unity Catalog basics</td></tr>
       <tr><td class="n">18</td><td>13 Jul 2026</td><td>Mon</td><td>2h</td><td>planned</td><td>Databricks Jobs</td></tr>
       <tr><td class="n">19</td><td>14 Jul 2026</td><td>Tue</td><td>2h</td><td>planned</td><td>Data Factory orchestration</td></tr>
-      <tr><td class="n">20</td><td>15 Jul 2026</td><td>Wed</td><td>2h</td><td>planned</td><td>Reusable notebooks (widgets)</td></tr>
-      <tr><td class="n">21</td><td>16 Jul 2026</td><td>Thu</td><td>2h</td><td>planned</td><td>Testing PySpark (pytest)</td></tr>
-      <tr><td class="n">22</td><td>17 Jul 2026</td><td>Fri</td><td>2h</td><td>planned</td><td>Performance (OPTIMIZE)</td></tr>
-      <tr><td class="n">23</td><td>19 Jul 2026</td><td>Sun</td><td>2h</td><td>planned</td><td>Databricks cost control</td></tr>
+      <tr><td class="n">20</td><td>15 Jul 2026</td><td>Wed</td><td>2h</td><td>planned</td><td><b>50 Problems Lab — Part 1</b> (1–25 + foundations)</td></tr>
+      <tr><td class="n">21</td><td>16 Jul 2026</td><td>Thu</td><td>2h</td><td>planned</td><td><b>50 Problems Lab — Part 2</b> (26–50 + verify)</td></tr>
+      <tr><td class="n">22</td><td>17 Jul 2026</td><td>Fri</td><td>2h</td><td>planned</td><td>Performance + pytest (reinforce Probs 5, 11, 45)</td></tr>
+      <tr><td class="n">23</td><td>19 Jul 2026</td><td>Sun</td><td>2h</td><td>planned</td><td>Databricks cost control (Probs 26–28)</td></tr>
       <tr><td class="n">24</td><td>19 Jul 2026</td><td>Sun</td><td>2h</td><td>planned</td><td>Purview register &amp; scan</td></tr>
       <tr><td class="n">25</td><td>20 Jul 2026</td><td>Mon</td><td>2h</td><td>planned</td><td>Lineage &amp; classification</td></tr>
       <tr><td class="n">26</td><td>21 Jul 2026</td><td>Tue</td><td>2h</td><td>planned</td><td>Cost report (FinOps-lite)</td></tr>
@@ -219,8 +221,8 @@
       <tr><td class="n">8</td><td>PySpark transformations you'll actually use</td><td>Databricks</td><td>3 Jul 2026</td><td class="done-b">done</td></tr>
       <tr><td class="n">9</td><td>Clean &amp; validate (batch): cast, dedupe, quarantine</td><td>Databricks</td><td>5 Jul 2026</td><td class="done-b">done</td></tr>
       <tr><td class="n">10</td><td>Delta Lake basics: write, ACID, schema</td><td>Databricks</td><td>5 Jul 2026</td><td class="done-b">done</td></tr>
-      <tr><td class="n">11</td><td>Snapshots &amp; time travel (the safe re-run)</td><td>Databricks</td><td>6 Jul 2026</td><td>next</td></tr>
-      <tr><td class="n">12</td><td>Batch incremental the easy way: MERGE upsert</td><td>Databricks</td><td>7 Jul 2026</td><td>—</td></tr>
+      <tr><td class="n">11</td><td>Snapshots &amp; time travel (the safe re-run)</td><td>Databricks</td><td>6 Jul 2026</td><td class="done-b">done</td></tr>
+      <tr><td class="n">12</td><td>Batch incremental the easy way: MERGE upsert</td><td>Databricks</td><td>7 Jul 2026</td><td>next</td></tr>
       <tr><td class="n">13</td><td>Medallion end-to-end in one batch run</td><td>Databricks</td><td>8 Jul 2026</td><td>—</td></tr>
       <tr><td class="n">14</td><td>Gold: aggregations &amp; reporting tables</td><td>Databricks</td><td>9 Jul 2026</td><td>—</td></tr>
       <tr><td class="n">15</td><td>Databricks SQL: query Delta with SQL</td><td>SQL</td><td>10 Jul 2026</td><td>—</td></tr>
@@ -228,10 +230,10 @@
       <tr><td class="n">17</td><td>Unity Catalog basics: tables &amp; grants</td><td>Databricks</td><td>12 Jul 2026</td><td>—</td></tr>
       <tr><td class="n">18</td><td>Databricks Jobs: schedule the batch</td><td>Databricks</td><td>13 Jul 2026</td><td>—</td></tr>
       <tr><td class="n">19</td><td>Data Factory: orchestrate the batch (concepts + run)</td><td>Data Factory</td><td>14 Jul 2026</td><td>—</td></tr>
-      <tr><td class="n">20</td><td>Reusable notebooks: widgets &amp; functions</td><td>Python</td><td>15 Jul 2026</td><td>—</td></tr>
-      <tr><td class="n">21</td><td>Testing PySpark with pytest + chispa</td><td>Python</td><td>16 Jul 2026</td><td>—</td></tr>
-      <tr><td class="n">22</td><td>Performance made simple (OPTIMIZE, partition)</td><td>Databricks</td><td>17 Jul 2026</td><td>—</td></tr>
-      <tr><td class="n">23</td><td>Databricks cost control (DBU, auto-terminate)</td><td>Cost</td><td>19 Jul 2026</td><td>—</td></tr>
+      <tr><td class="n">20</td><td><b>50 Problems Lab — Part 1</b> (foundations + problems 1–25)</td><td>Databricks</td><td>15 Jul 2026</td><td>—</td></tr>
+      <tr><td class="n">21</td><td><b>50 Problems Lab — Part 2</b> (problems 26–50 + e2e verify)</td><td>Databricks</td><td>16 Jul 2026</td><td>—</td></tr>
+      <tr><td class="n">22</td><td>Performance + pytest (reinforce OPTIMIZE, partition, tests)</td><td>Databricks + Python</td><td>17 Jul 2026</td><td>—</td></tr>
+      <tr><td class="n">23</td><td>Databricks cost control (DBU, auto-terminate, pools)</td><td>Cost</td><td>19 Jul 2026</td><td>—</td></tr>
       <tr><td class="n">24</td><td>Purview concepts + register &amp; scan the estate</td><td>Governance</td><td>19 Jul 2026</td><td>—</td></tr>
       <tr><td class="n">25</td><td>Lineage &amp; classification (concepts + hands-on)</td><td>Governance</td><td>20 Jul 2026</td><td>—</td></tr>
       <tr><td class="n">26</td><td>Cost report with Python (FinOps-lite)</td><td>Cost + Python</td><td>21 Jul 2026</td><td>—</td></tr>
@@ -578,8 +580,10 @@ print(<span class="s">"started run:"</span>, run.run_id)</pre>
       <li>When to reach for ADF vs a Databricks Job, and how <b>parameters</b> (like <code>run_date</code>) flow from pipeline to notebook.</li>
     </ul></div>
     <div class="rowlist"><b>Practical — you'll do</b><ul>
-      <li>Open the prebuilt <code>pl_databricks_finledger</code> pipeline, read its Notebook activity, and hit <b>Trigger now</b>; watch it run in the monitor.</li>
-      <li>Then <b>add a Databricks Notebook activity yourself</b>, set its <code>run_date</code> parameter, and re-run — your first hands-on pipeline edit.</li>
+      <li>Deploy the shared ADF lab: <code>deploy-shared-adf-lab.cmd</code> — <b>10 pipelines</b> as code (see <a href="../shared-adf-lab/README.md">shared-adf-lab/README.md</a>).</li>
+      <li>Open ADF Studio → trigger <code>pl_01_bronze_copy</code> then <code>pl_07_databricks_notebook</code> → Monitor.</li>
+      <li>See <code>pl_08_sql_to_lake</code> — Azure SQL in <b>westus</b> → ADLS eastus (cross-region copy).</li>
+      <li>Chain: <code>pl_10_parent_chain</code> — Execute Pipeline → Databricks notebook.</li>
     </ul></div>
 <pre><span class="cap">adf — the notebook activity you'll configure</span>{
   <span class="s">"name"</span>: <span class="s">"Transform_bronze_to_gold"</span>,
@@ -593,29 +597,118 @@ print(<span class="s">"started run:"</span>, run.run_id)</pre>
     <div class="note"><b>ADF orchestrates, Databricks does the heavy lifting.</b> You leave this session able to read a pipeline, trigger it, and add an activity — with the deeper transformation logic living in your notebooks.</div>
   </div></div>
 
+  <!-- ============ 50 PROBLEMS LAB ============ -->
+  <section id="50problems" class="panel dark">
+    <h2 class="section">Intensive lab</h2>
+    <h3>50 Data Engineering Problems — runnable on Databricks</h3>
+    <p>After Sessions <b>11–19</b> (Delta, medallion, SQL, Jobs, ADF), we run the consolidated problem notebook in <b>two dedicated sessions</b>. Each problem has: <b>the failure</b>, <b>the standard fix</b>, <b>FinLedger use case</b>, <b>step-by-step trainer theory</b>, and <b>working PySpark code</b>.</p>
+    <p><b>Notebook:</b> <code>/Shared/day9/50_data_engineering_problems</code> · <b>Windows setup:</b> <code>session-3\orchestrate.cmd --setup-secrets</code> then <code>deploy-shared-lab.cmd</code> · <b>Automated run:</b> <code>run-50-problems.cmd</code></p>
+    <div class="rowlist"><b>Part 0 — read first (15 min, Session 20 opening)</b><ul>
+      <li><b>CSV</b> — bronze landing; human-readable; no types (Problems 1, 7, 10, 40).</li>
+      <li><b>Parquet</b> (~2013) — columnar binary files inside silver; fast analytics; no ACID (Problems 5, 11, 12, 46).</li>
+      <li><b>Delta Lake</b> (~2019) — Parquet files + <code>_delta_log</code>; ACID, MERGE, OPTIMIZE, time travel (Problems 3, 5, 6, 15, 36, 49).</li>
+      <li><b>Medallion</b> — bronze (CSV) → silver (Delta) → gold (Delta aggregates).</li>
+    </ul></div>
+    <table class="at">
+      <tr><th>Session</th><th>Problems</th><th>Groups</th><th>Pace (trainer)</th></tr>
+      <tr><td class="n">20 · Part 1</td><td><b>1–25</b></td><td>A Data quality (1–10) · B Scale (11–15) · C Ops (16–20) · D Spark tuning (21–25)</td><td>~5 problems / 30 min — read markdown, run code, quick debrief</td></tr>
+      <tr><td class="n">21 · Part 2</td><td><b>26–50</b></td><td>E Cost (26–28) · F Security (29–33) · G Analytics (34–37) · H Integration (38–44) · I Lifecycle (45–47) · J Governance (48–50)</td><td>~4 problems / 30 min — heavier on UC/lineage in F–J</td></tr>
+    </table>
+    <table class="at" style="margin-top:14px">
+      <tr><th>#</th><th>Problem</th><th>Solution</th><th>Group</th></tr>
+      <tr><td class="n">01</td><td>Duplicate Records</td><td>Deduplication</td><td>A</td></tr>
+      <tr><td class="n">02</td><td>Late Arriving Data</td><td>Watermarking</td><td>A</td></tr>
+      <tr><td class="n">03</td><td>CDC Processing</td><td>Change Data Feed</td><td>A</td></tr>
+      <tr><td class="n">04</td><td>Data Skew</td><td>Salting</td><td>A</td></tr>
+      <tr><td class="n">05</td><td>Small Files</td><td>OPTIMIZE</td><td>A</td></tr>
+      <tr><td class="n">06</td><td>Schema Changes</td><td>Schema Evolution</td><td>A</td></tr>
+      <tr><td class="n">07</td><td>Pipeline Failures</td><td>Dead Letter Queue</td><td>A</td></tr>
+      <tr><td class="n">08</td><td>Data Quality Issues</td><td>Validation Framework</td><td>A</td></tr>
+      <tr><td class="n">09</td><td>Missing Data / Nulls</td><td>Imputation</td><td>A</td></tr>
+      <tr><td class="n">10</td><td>Inconsistent Formats</td><td>Standardization</td><td>A</td></tr>
+      <tr><td class="n">11</td><td>Large Data Volume</td><td>Partitioning</td><td>B</td></tr>
+      <tr><td class="n">12</td><td>Slow Queries</td><td>Partition Pruning</td><td>B</td></tr>
+      <tr><td class="n">13</td><td>High Latency</td><td>Caching</td><td>B</td></tr>
+      <tr><td class="n">14</td><td>Frequent Reprocessing</td><td>Incremental Processing</td><td>B</td></tr>
+      <tr><td class="n">15</td><td>Unnecessary Full Loads</td><td>Incremental MERGE</td><td>B</td></tr>
+      <tr><td class="n">16</td><td>Manual Interventions</td><td>Automation (widgets)</td><td>C</td></tr>
+      <tr><td class="n">17</td><td>Monitoring Gaps</td><td>Logging &amp; Alerting</td><td>C</td></tr>
+      <tr><td class="n">18</td><td>Backfill Challenges</td><td>Batch Backfill</td><td>C</td></tr>
+      <tr><td class="n">19</td><td>Data Loss</td><td>Checkpointing</td><td>C</td></tr>
+      <tr><td class="n">20</td><td>Out-of-Order Events</td><td>Event Time Processing</td><td>C</td></tr>
+      <tr><td class="n">21</td><td>Streaming Backlog</td><td>Trigger Optimization</td><td>D</td></tr>
+      <tr><td class="n">22</td><td>Memory Pressure (OOM)</td><td>Right-sizing</td><td>D</td></tr>
+      <tr><td class="n">23</td><td>Shuffle Bottlenecks</td><td>AQE / reduce shuffles</td><td>D</td></tr>
+      <tr><td class="n">24</td><td>Slow Joins</td><td>Broadcast Join</td><td>D</td></tr>
+      <tr><td class="n">25</td><td>Large Joins</td><td>Bucketing / co-partition</td><td>D</td></tr>
+      <tr><td class="n">26</td><td>High Cost</td><td>Cluster Optimization</td><td>E</td></tr>
+      <tr><td class="n">27</td><td>Underutilized Clusters</td><td>Autoscale &amp; auto-terminate</td><td>E</td></tr>
+      <tr><td class="n">28</td><td>Cluster Startup Delays</td><td>Instance Pools</td><td>E</td></tr>
+      <tr><td class="n">29</td><td>Security Issues</td><td>RBAC &amp; Unity Catalog</td><td>F</td></tr>
+      <tr><td class="n">30</td><td>Access Control</td><td>Fine-Grained Permissions</td><td>F</td></tr>
+      <tr><td class="n">31</td><td>Secrets Management</td><td>Secret Scopes</td><td>F</td></tr>
+      <tr><td class="n">32</td><td>Data Lineage Gaps</td><td>Lineage Tools (UC + Purview)</td><td>F</td></tr>
+      <tr><td class="n">33</td><td>Poor Documentation</td><td>UC Comments</td><td>F</td></tr>
+      <tr><td class="n">34</td><td>Metric Naming</td><td>Standardization</td><td>G</td></tr>
+      <tr><td class="n">35</td><td>Data Drift</td><td>Drift Detection</td><td>G</td></tr>
+      <tr><td class="n">36</td><td>Changing Dimensions</td><td>SCD Type 2</td><td>G</td></tr>
+      <tr><td class="n">37</td><td>Reference Data Refresh</td><td>Lookup Refresh</td><td>G</td></tr>
+      <tr><td class="n">38</td><td>API Failures</td><td>Retry with Backoff</td><td>H</td></tr>
+      <tr><td class="n">39</td><td>Rate Limits</td><td>Throttling</td><td>H</td></tr>
+      <tr><td class="n">40</td><td>Corrupt Files</td><td>Checksum / Integrity</td><td>H</td></tr>
+      <tr><td class="n">41</td><td>Timezone Storage</td><td>UTC Timestamps</td><td>H</td></tr>
+      <tr><td class="n">42</td><td>Timezone Display</td><td>Local Conversion</td><td>H</td></tr>
+      <tr><td class="n">43</td><td>Orphan Records</td><td>Referential Integrity</td><td>H</td></tr>
+      <tr><td class="n">44</td><td>Duplicate Runs</td><td>Idempotent Processing</td><td>H</td></tr>
+      <tr><td class="n">45</td><td>Slow ETL Code</td><td>Optimize Code</td><td>I</td></tr>
+      <tr><td class="n">46</td><td>Storage I/O Cost</td><td>Compression</td><td>I</td></tr>
+      <tr><td class="n">47</td><td>Retention Policy</td><td>Lifecycle / VACUUM</td><td>I</td></tr>
+      <tr><td class="n">48</td><td>Compliance Tags</td><td>Governance Tags</td><td>J</td></tr>
+      <tr><td class="n">49</td><td>Bad MERGE / DR</td><td>Time Travel RESTORE</td><td>J</td></tr>
+      <tr><td class="n">50</td><td>No End-to-End Visibility</td><td>E2E Monitoring</td><td>J</td></tr>
+    </table>
+    <div class="note"><b>Trainer tip:</b> Do not rush all 50 in one sitting. Session 20 stops after Problem 25; Session 21 completes 26–50 and runs the final <b>SHOW TABLES</b> / ADLS verify cell. Problems already taught in Sessions 9–14 (dedupe, quarantine, Delta, MERGE, partition) become <b>revision with runnable proofs</b>.</div>
+  </section>
+
   <!-- ============ PHASE D ============ -->
-  <section id="d" class="phase"><div class="k">Phase D · sessions 20–23</div><h2>Make it reusable, tested and fast</h2></section>
+  <section id="d" class="phase"><div class="k">Phase D · sessions 20–23</div><h2>50 Problems intensive lab, then reinforce &amp; tune</h2></section>
 
   <div class="card"><div class="g"><div class="n">20</div></div><div class="b">
-    <h4>Reusable notebooks: widgets &amp; functions</h4>
-    <p class="obj">One notebook, many run dates — driven by parameters.</p>
-    <div class="tags"><span class="tag t-py">Python</span><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
-    <div class="rowlist"><b>You'll learn</b><ul>
-      <li>Databricks <code>widgets</code> for parameters; wrapping logic in functions so it's reusable and testable.</li>
+    <h4>50 Problems Lab — Part 1 (foundations + problems 1–25)</h4>
+    <p class="obj">Two-hour Databricks marathon: Part 0 (CSV → Parquet → Delta) then Groups A–D — quality, scale, ops, Spark tuning.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-theory">theory + practical</span><span class="tag t-easy">intensive</span></div>
+    <div class="rowlist"><b>You'll run</b><ul>
+      <li>Open <code>/Shared/day9/50_data_engineering_problems</code> — read <b>Part 0</b> (15 min).</li>
+      <li>Run setup cell (secrets + <code>write_demo_table</code> helpers).</li>
+      <li>Problems <b>1–25</b>: dedupe, DLQ, OPTIMIZE, partition, MERGE, widgets, broadcast join, etc.</li>
+      <li>Stop at end of Part D — bookmark Problem 26 for next session.</li>
     </ul></div>
-<pre><span class="cap">notebook — widgets</span>dbutils.widgets.text(<span class="s">"run_date"</span>, <span class="s">"session3-lab"</span>)
-run_date = dbutils.widgets.get(<span class="s">"run_date"</span>)
-
-result = run_medallion(run_date)          <span class="c"># function from Session 13</span>
-dbutils.notebook.exit(str(result))        <span class="c"># return value to the caller (ADF/Job)</span></pre>
+    <div class="rowlist"><b>Maps to earlier sessions</b><ul>
+      <li>Problems 1, 7, 8, 10 ↔ Session 9 (quarantine) · 5, 11, 12 ↔ Session 22 (performance) · 15 ↔ Session 12 (MERGE)</li>
+    </ul></div>
   </div></div>
 
   <div class="card"><div class="g"><div class="n">21</div></div><div class="b">
-    <h4>Testing PySpark with pytest + chispa</h4>
-    <p class="obj">Prove a transform is correct in seconds, before any cloud run.</p>
-    <div class="tags"><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
+    <h4>50 Problems Lab — Part 2 (problems 26–50 + verify)</h4>
+    <p class="obj">Finish the notebook: cost, security, lineage, SCD2, integrity, lifecycle, e2e monitoring.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-gov">Governance</span><span class="tag t-cost">Cost</span></div>
+    <div class="rowlist"><b>You'll run</b><ul>
+      <li>Problems <b>26–50</b>: cluster cost, UC RBAC, secret scopes, <b>lineage (Problem 32)</b>, SCD2, idempotency, VACUUM, time travel, e2e metrics.</li>
+      <li>Final cell: <code>SHOW TABLES</code> or list ADLS paths — confirm all demo tables written.</li>
+      <li>Optional homework: <code>run-50-problems.cmd</code> for full automated pass (~7 min on cluster).</li>
+    </ul></div>
+    <div class="rowlist"><b>Maps to later sessions</b><ul>
+      <li>Problems 29–33, 48 ↔ Sessions 17, 24–25 (UC + Purview) · 49 ↔ Session 29 (RESTORE) · 50 ↔ Session 28 (morning check)</li>
+    </ul></div>
+  </div></div>
+
+  <div class="card"><div class="g"><div class="n">22</div></div><div class="b">
+    <h4>Performance + pytest (reinforce Problems 5, 11, 45)</h4>
+    <p class="obj">Deep-dive the three performance levers from the 50-problems lab; add local tests for transforms.</p>
+    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-py">Python</span><span class="tag t-easy">easy</span></div>
     <div class="rowlist"><b>You'll learn</b><ul>
-      <li>Write a tiny test for a pure transform function; compare DataFrames with <code>chispa</code>; run <code>pytest</code>.</li>
+      <li>Partitioning, small-files / <code>OPTIMIZE</code>, <code>cache()</code>, Spark UI — ties back to Problems 5, 11, 13, 45.</li>
+      <li>Write a tiny <code>pytest</code> + <code>chispa</code> test for a pure transform (e.g. Problem 1 dedupe logic).</li>
     </ul></div>
 <pre><span class="cap">test_transform.py</span><span class="k">from</span> chispa <span class="k">import</span> assert_df_equality
 <span class="k">from</span> mypipe <span class="k">import</span> clean_txns
@@ -625,29 +718,16 @@ dbutils.notebook.exit(str(result))        <span class="c"># return value to the 
         [(<span class="s">"T1"</span>, <span class="s">"50"</span>), (<span class="s">"T2"</span>, <span class="s">"oops"</span>)], [<span class="s">"txn_id"</span>, <span class="s">"amount"</span>])
     out = clean_txns(src)
     <span class="k">assert</span> out.count() == 1        <span class="c"># the bad row is gone</span></pre>
-  </div></div>
-
-  <div class="card"><div class="g"><div class="n">22</div></div><div class="b">
-    <h4>Performance made simple</h4>
-    <p class="obj">Three levers that make batch jobs fast — nothing exotic.</p>
-    <div class="tags"><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
-    <div class="rowlist"><b>You'll learn</b><ul>
-      <li>Partitioning &amp; the small-files problem; <code>OPTIMIZE</code> + Z-order; <code>cache()</code>; a glance at the Spark UI.</li>
-    </ul></div>
-<pre><span class="cap">notebook — %sql optimize</span><span class="c">-- compact many small files into few big ones, sorted by a common filter key</span>
-<span class="k">OPTIMIZE</span> finledger.gold.channel_daily
-<span class="k">ZORDER BY</span> (channel);
-
-<span class="c">-- reuse a DataFrame you hit repeatedly in one run</span>
-<span class="c"># clean.cache(); clean.count()   # (PySpark)</span></pre>
+<pre><span class="cap">notebook — %sql optimize (Problem 5)</span><span class="k">OPTIMIZE</span> finledger.gold.channel_daily
+<span class="k">ZORDER BY</span> (channel);</pre>
   </div></div>
 
   <div class="card"><div class="g"><div class="n">23</div></div><div class="b">
-    <h4>Databricks cost control</h4>
-    <p class="obj">Keep spend near zero without thinking hard about it.</p>
+    <h4>Databricks cost control (reinforce Problems 26–28)</h4>
+    <p class="obj">Keep spend near zero — cluster policy, autoscale, pools (already demo'd in 50-problems notebook).</p>
     <div class="tags"><span class="tag t-cost">Cost</span><span class="tag t-dbx">Databricks</span><span class="tag t-easy">easy</span></div>
     <div class="rowlist"><b>You'll learn</b><ul>
-      <li>The DBU idea in plain words; <b>auto-termination</b>; serverless vs classic; why Free-Edition quotas are a natural guardrail.</li>
+      <li>DBU in plain words; <b>auto-termination</b>; autoscale min/max; instance pools — revisit Problems 26–28 in Compute UI.</li>
       <li>Habit: terminate clusters at the end of every session.</li>
     </ul></div>
   </div></div>
@@ -679,6 +759,7 @@ dbutils.notebook.exit(str(result))        <span class="c"># return value to the 
     </ul></div>
     <div class="rowlist"><b>Practical — you'll do</b><ul>
       <li>Trace a gold column back to bronze in the lineage view; apply a sensitivity classification to an account-number column; assign a steward.</li>
+      <li>Revisit <b>Problem 32</b> in the 50-problems notebook — UC Lineage tab on <code>prob32_lineage_demo</code>.</li>
     </ul></div>
     <div class="note"><b>Awareness only:</b> programmatic Purview via the Atlas REST API exists for automation — we name it, but keep this session point-and-click.</div>
   </div></div>
@@ -775,7 +856,7 @@ spark.sql(f<span class="s">"RESTORE TABLE delta.`{silver}` TO VERSION AS OF 2"</
 <footer>
   <div class="wrap">
     <b>Data Engineering</b> · 60 hours · 30 × 2-hour sessions · FinLedger UK / Bank of England<br>
-    Batch &amp; snapshot focus · every topic gets theory + practical · streaming is awareness-only. Confirm free-tier terms per cohort.
+    Includes <b>50 Problems</b> intensive lab (Sessions 20–21) · batch &amp; snapshot focus · theory + practical
   </div>
 </footer>
 

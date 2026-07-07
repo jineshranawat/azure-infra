@@ -684,7 +684,10 @@ def main() -> None:
     formats_script = ROOT / "build_file_formats_notebook.py"
     if formats_script.is_file():
         subprocess.run([sys.executable, str(formats_script)], cwd=REPO_ROOT, check=True)
-    print(f"\nDone — {len(NOTEBOOKS)} session notebooks + file_formats in {OUT_DIR}")
+    fifty_script = ROOT / "build_50_problems_notebook.py"
+    if fifty_script.is_file():
+        subprocess.run([sys.executable, str(fifty_script)], cwd=REPO_ROOT, check=True)
+    print(f"\nDone — {len(NOTEBOOKS)} session notebooks + file_formats + 50_problems in {OUT_DIR}")
 
 
 if __name__ == "__main__":
