@@ -1,5 +1,12 @@
 """Trainer theory — file formats foundation + step-by-step explanation for all 50 problems."""
 
+from pathlib import Path
+
+_PRIMER_PATH = Path(__file__).resolve().parent.parent / "docs" / "connectivity_and_key_classes_primer.md"
+CONNECTIVITY_PRIMER_MD = (
+    _PRIMER_PATH.read_text(encoding="utf-8") if _PRIMER_PATH.is_file() else ""
+)
+
 # Inserted after notebook index, before bronze auth cell
 FOUNDATIONS_MD = """# Part 0 — Foundations (read this first)
 

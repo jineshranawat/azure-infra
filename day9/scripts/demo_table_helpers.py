@@ -93,10 +93,14 @@ _init_storage()
 def write_demo_table(df, table_name: str, mode: str = "overwrite") -> str:
     """Save demo output — Unity Catalog if permitted, else ADLS Delta path."""
     path = f"{DEMO_BASE}/{table_name}"
+    writer = df.write.format("delta").mode(mode)
+    if mode.lower() == "overwrite":
+        # Prevent rerun failures when schema evolves between class attempts.
+        writer = writer.option("overwriteSchema", "true")
     if UC_WRITE_ENABLED:
         full_name = f"{UC_TABLE}.{table_name}"
         try:
-            df.write.format("delta").mode(mode).saveAsTable(full_name)
+            writer.saveAsTable(full_name)
             print("UC table :", full_name)
             WRITTEN_TABLES.append(full_name)
             return full_name
@@ -105,7 +109,7 @@ def write_demo_table(df, table_name: str, mode: str = "overwrite") -> str:
             if "PERMISSION_DENIED" not in err and "UNAUTHORIZED" not in err:
                 raise
             print("UC write denied — falling back to ADLS path")
-    df.write.format("delta").mode(mode).save(path)
+    writer.save(path)
     print("Delta path:", path)
     WRITTEN_TABLES.append(path)
     return path

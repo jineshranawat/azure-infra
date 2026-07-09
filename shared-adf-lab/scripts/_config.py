@@ -19,6 +19,8 @@ SHARED_LEARNER = "shared"
 SHARED_RG = "rg-shared-class1"
 ADF_LOCATION = "eastus"
 SQL_LOCATION = "westus"  # documented exception — SQL only
+# Shared all-purpose cluster in dbw-shared-* (same as run-50-problems.cmd).
+DEFAULT_DATABRICKS_CLUSTER_ID = "0703-105931-31juyffm"
 LEARNER_RE = re.compile(r"^[a-z0-9]{2,10}$")
 
 
@@ -29,6 +31,7 @@ class SharedAdfConfig:
     owner_email: str
     databricks_host: str
     databricks_token: str
+    databricks_cluster_id: str
 
     @property
     def resource_group(self) -> str:
@@ -129,6 +132,10 @@ def load_config() -> SharedAdfConfig:
     databricks_token = (
         os.environ.get("DATABRICKS_TOKEN") or file_env.get("DATABRICKS_TOKEN", "")
     ).strip()
+    databricks_cluster_id = (
+        os.environ.get("DATABRICKS_CLUSTER_ID")
+        or file_env.get("DATABRICKS_CLUSTER_ID", DEFAULT_DATABRICKS_CLUSTER_ID)
+    ).strip()
 
     if not subscription_id:
         raise SystemExit(f"AZURE_SUBSCRIPTION_ID required in {ENV_FILE}")
@@ -147,4 +154,5 @@ def load_config() -> SharedAdfConfig:
         owner_email=owner_email,
         databricks_host=databricks_host,
         databricks_token=databricks_token,
+        databricks_cluster_id=databricks_cluster_id,
     )

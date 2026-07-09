@@ -20,7 +20,12 @@ from bronze_auth_cell import BRONZE_AUTH_CELL
 from demo_table_helpers import DEMO_TABLE_HELPERS
 from notebook_helpers import code, finish, md
 from problems_50_data import ALL_PROBLEMS_50
-from problems_50_theory import DETAILED_THEORY, FORMAT_CONCEPT_MAP, FOUNDATIONS_MD
+from problems_50_theory import (
+    CONNECTIVITY_PRIMER_MD,
+    DETAILED_THEORY,
+    FORMAT_CONCEPT_MAP,
+    FOUNDATIONS_MD,
+)
 from problems_50_use_cases import PROBLEM_GROUPS, USE_CASES
 
 OUT = ROOT.parent / "notebooks" / "nb_50_data_engineering_problems.py"
@@ -226,6 +231,9 @@ def build() -> Path:
     parts.extend(["", "# COMMAND ----------", ""])
     parts.extend(BRONZE_AUTH_CELL.strip().splitlines())
     parts.extend(["", "# COMMAND ----------", ""])
+    if CONNECTIVITY_PRIMER_MD.strip():
+        md(parts, CONNECTIVITY_PRIMER_MD.strip())
+        parts.extend(["", "# COMMAND ----------", ""])
     parts.extend(DEMO_TABLE_HELPERS.strip().splitlines())
     parts.extend(["", "# COMMAND ----------", ""])
 

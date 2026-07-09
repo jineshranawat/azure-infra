@@ -6,6 +6,7 @@ import json
 import logging
 import secrets
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -160,8 +161,6 @@ def deploy_sql(cfg: SharedAdfConfig, estate: SharedEstate) -> SqlEstate:
 
 def seed_reference_table(sql: SqlEstate) -> None:
     """Create dim_channel table if missing — idempotent DDL."""
-    import pyodbc  # optional; install on first use
-
     conn_str = (
         f"DRIVER={{ODBC Driver 18 for SQL Server}};"
         f"SERVER={sql.fqdn};DATABASE={sql.database_name};"
@@ -188,6 +187,17 @@ def seed_reference_table(sql: SqlEstate) -> None:
     );
     """
     try:
+        try:
+            import pyodbc  # type: ignore
+        except ImportError:
+            logger.info("pyodbc missing — installing into current Python environment...")
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "pyodbc"],
+                check=True,
+                text=True,
+            )
+            import pyodbc  # type: ignore
+
         with pyodbc.connect(conn_str, timeout=30) as conn:
             conn.autocommit = True
             conn.cursor().execute(ddl)
@@ -196,5 +206,7 @@ def seed_reference_table(sql: SqlEstate) -> None:
         logger.warning(
             "pyodbc not installed — skip SQL seed. Run: pip install pyodbc"
         )
+    except subprocess.CalledProcessError as exc:
+        logger.warning("pyodbc install failed — skip SQL seed (%s)", exc)
     except Exception as exc:
         logger.warning("SQL seed skipped (run manually in SSMS): %s", exc)

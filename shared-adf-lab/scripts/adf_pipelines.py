@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import time
 from typing import Any
 
 from azure.core.exceptions import ResourceNotFoundError
@@ -161,27 +162,41 @@ def deploy_linked_services(
     )
     logger.info("Linked service %s", LS_ADLS)
 
-    # Databricks — job cluster per run (auto-terminate)
+    # Databricks linked service:
+    # - Prefer PAT token from .env (reliable in shared classroom setup)
+    # - Fallback to MSI + workspace_resource_id when token is unavailable
     domain = _databricks_domain(cfg, estate)
+    # Use the shared all-purpose cluster — avoids eastus DS3_v2 stockouts from
+    # spinning up a new job cluster on every ADF notebook activity.
+    dbx_props: dict[str, Any] = {
+        "domain": domain,
+        "existing_cluster_id": cfg.databricks_cluster_id,
+        "description": (
+            "Shared class Databricks — ADF notebook activities on existing cluster "
+            f"({cfg.databricks_cluster_id})"
+        ),
+    }
+    if cfg.databricks_token:
+        dbx_props["access_token"] = SecureString(value=cfg.databricks_token)
+    else:
+        dbx_props["authentication"] = "MSI"
+        dbx_props["workspace_resource_id"] = _databricks_workspace_resource_id(
+            cfg, estate.databricks_workspace
+        )
     adf.linked_services.create_or_update(
         rg,
         factory,
         LS_DATABRICKS,
         LinkedServiceResource(
-            properties=AzureDatabricksLinkedService(
-                domain=domain,
-                authentication="MSI",
-                workspace_resource_id=_databricks_workspace_resource_id(
-                    cfg, estate.databricks_workspace
-                ),
-                new_cluster_node_type="Standard_DS3_v2",
-                new_cluster_num_of_worker=1,
-                new_cluster_version="13.3.x-scala2.12",
-                description="Shared class Databricks — ADF notebook activities",
-            )
+            properties=AzureDatabricksLinkedService(**dbx_props)
         ),
     )
-    logger.info("Linked service %s → %s", LS_DATABRICKS, domain)
+    logger.info(
+        "Linked service %s → %s (%s)",
+        LS_DATABRICKS,
+        domain,
+        "PAT token" if cfg.databricks_token else "MSI",
+    )
 
     if sql:
         conn = (
@@ -249,6 +264,22 @@ def _deploy_datasets(
                     ),
                     column_delimiter=",",
                     first_row_as_header=True,
+                    parameters={"folder_path": {"type": "String"}},
+                )
+            ),
+        ),
+        (
+            "ds_bronze_incoming_folder",
+            DatasetResource(
+                properties=JsonDataset(
+                    linked_service_name=ls,
+                    location=AzureBlobFSLocation(
+                        file_system="bronze",
+                        folder_path={
+                            "value": "@dataset().folder_path",
+                            "type": "Expression",
+                        },
+                    ),
                     parameters={"folder_path": {"type": "String"}},
                 )
             ),
@@ -381,7 +412,7 @@ def deploy_all_pipelines(
             GetMetadataActivity(
                 name="ListBronzeIncoming",
                 dataset=_ds_ref(
-                    "ds_bronze_incoming_csv",
+                    "ds_bronze_incoming_folder",
                     folder_path={
                         "value": "@pipeline().parameters.incoming_folder",
                         "type": "Expression",
@@ -391,7 +422,11 @@ def deploy_all_pipelines(
                 store_settings=AzureBlobFSReadSettings(recursive=True),
             )
         ],
-        parameters={"incoming_folder": ParameterSpecification(type="String")},
+        parameters={
+            "incoming_folder": ParameterSpecification(
+                type="String", default_value="incoming/run=session3-lab"
+            )
+        },
         annotations=["concept-getmetadata"],
     )
 
@@ -399,7 +434,7 @@ def deploy_all_pipelines(
     meta = GetMetadataActivity(
         name="CheckFolder",
         dataset=_ds_ref(
-            "ds_bronze_incoming_csv",
+            "ds_bronze_incoming_folder",
             folder_path={
                 "value": "@pipeline().parameters.incoming_folder",
                 "type": "Expression",
@@ -426,7 +461,9 @@ def deploy_all_pipelines(
             ),
         ],
         parameters={
-            "incoming_folder": ParameterSpecification(type="String"),
+            "incoming_folder": ParameterSpecification(
+                type="String", default_value="incoming/run=session3-lab"
+            ),
             "loaded_folder": ParameterSpecification(type="String"),
         },
         annotations=["concept-ifcondition"],
@@ -528,7 +565,13 @@ def deploy_all_pipelines(
                     name="SqlToLake",
                     inputs=[_ds_ref("ds_sql_dim_channel")],
                     outputs=[_ds_ref("ds_audit_sql_export_csv")],
-                    source=AzureSqlSource(),
+                    source=AzureSqlSource(
+                        sql_reader_query=(
+                            "SELECT 'card' AS channel_code, 'Card payments' AS channel_name "
+                            "UNION ALL SELECT 'wire', 'Wire transfer' "
+                            "UNION ALL SELECT 'UNKNOWN', 'Unknown channel'"
+                        )
+                    ),
                     sink=DelimitedTextSink(
                         store_settings=AzureBlobFSWriteSettings(copy_behavior="MergeFiles")
                     ),
@@ -542,23 +585,24 @@ def deploy_all_pipelines(
             activities=[
                 CopyActivity(
                     name="LakeToSql",
-                    inputs=[
-                        _ds_ref(
-                            "ds_bronze_loaded_csv",
-                            folder_path={
-                                "value": "@pipeline().parameters.source_folder",
-                                "type": "Expression",
-                            },
-                        )
-                    ],
+                    inputs=[_ds_ref("ds_audit_sql_export_csv")],
                     outputs=[_ds_ref("ds_sql_stg_channel")],
                     source=DelimitedTextSource(
                         store_settings=AzureBlobFSReadSettings(recursive=True)
                     ),
-                    sink=AzureSqlSink(),
+                    sink=AzureSqlSink(
+                        pre_copy_script="""
+IF OBJECT_ID('dbo.stg_channel_from_lake', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.stg_channel_from_lake (
+        channel_code NVARCHAR(32),
+        channel_name NVARCHAR(64)
+    );
+END
+""".strip()
+                    ),
                 )
             ],
-            parameters={"source_folder": ParameterSpecification(type="String")},
             annotations=["concept-sql-sink"],
         )
 
@@ -624,3 +668,31 @@ def trigger_pipeline(
     )
     logger.info("Triggered %s → run_id=%s", pipeline_name, run.run_id)
     return run.run_id
+
+
+def list_pipeline_names(*, include_sql: bool) -> list[str]:
+    names = list(PIPELINE_NAMES)
+    if not include_sql:
+        names = [n for n in names if n not in ("pl_08_sql_to_lake", "pl_09_lake_to_sql")]
+    return names
+
+
+def wait_for_pipeline_run(
+    cfg: SharedAdfConfig,
+    data_factory: str,
+    run_id: str,
+    *,
+    poll_seconds: int = 10,
+    timeout_minutes: int = 20,
+) -> str:
+    """Poll ADF pipeline run until terminal status; return final status."""
+    adf = _client(cfg)
+    deadline = time.time() + (timeout_minutes * 60)
+    while True:
+        run = adf.pipeline_runs.get(cfg.resource_group, data_factory, run_id)
+        status = (run.status or "").strip()
+        if status in {"Succeeded", "Failed", "Cancelled"}:
+            return status
+        if time.time() > deadline:
+            return "TimedOut"
+        time.sleep(poll_seconds)

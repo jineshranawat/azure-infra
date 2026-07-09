@@ -114,6 +114,8 @@ deploy-shared-adf-lab.cmd
 
 **Code that defines them:** `scripts/adf_pipelines.py` (read top to bottom — linked services, datasets, then each pipeline).
 
+**Trainer deep-dive guide:** `docs/pipeline_code_walkthrough.md` — **full ADF Studio manual**: every linked service field, dataset property, activity setting, pipeline parameter, Trigger now JSON, and minute-by-minute class flow for all 10 pipelines.
+
 ---
 
 ## D. Quick start (one command)
@@ -129,6 +131,7 @@ AZURE_SUBSCRIPTION_ID=a64c0dd2-3a31-4604-bde3-3d40c7d5e8be
 OWNER_EMAIL=you@example.com
 DATABRICKS_HOST=https://adb-XXXX.azuredatabricks.net
 DATABRICKS_TOKEN=dapiXXXXXXXX
+DATABRICKS_CLUSTER_ID=0703-105931-31juyffm
 ```
 
 3. Shared estate deployed: `provision-shared.cmd`
@@ -189,7 +192,7 @@ Or in **ADF Studio** → Author → open pipeline → **Trigger now** → Monito
 | Name | Type | Points to |
 |------|------|-----------|
 | `ls_adls_finledger` | AzureBlobFS | `https://stshared*.dfs.core.windows.net` |
-| `ls_databricks_shared` | AzureDatabricks | Job cluster 1× DS3_v2, Spark 13.3 |
+| `ls_databricks_shared` | AzureDatabricks | Existing shared all-purpose cluster (`DATABRICKS_CLUSTER_ID`) |
 | `ls_azure_sql_westus` | AzureSqlDatabase | `sql-shared-*.database.windows.net` |
 
 ### Step 6 — Pipelines (`adf_pipelines.py` → `deploy_all_pipelines`)
@@ -258,13 +261,32 @@ Removes ADF, storage, Databricks, SQL westus, Key Vault in one RG.
 |-------|-----|
 | `LEARNER=shared` required | Set in `.env` |
 | ADF copy 403 | Re-run deploy (RBAC); wait 2 min for IAM |
-| Databricks activity failed | Set `DATABRICKS_HOST` + `DATABRICKS_TOKEN`; confirm notebook path |
+| Databricks activity failed (`Error code 3204`, identity lacks permission) | Cause: ADF managed identity can trigger ARM but cannot run notebook ACL in Databricks workspace. Fix: set `DATABRICKS_HOST` + `DATABRICKS_TOKEN` in `.env`, then re-run `deploy-shared-adf-lab.cmd` so linked service uses PAT token. |
+| Databricks `SkuNotAvailable` / `CLOUD_PROVIDER_RESOURCE_STOCKOUT` | ADF was creating a new `Standard_DS3_v2` job cluster. Fix: set `DATABRICKS_CLUSTER_ID` to the shared all-purpose cluster (`0703-105931-31juyffm`) and re-run deploy. Orchestrator auto-starts the cluster before notebook pipelines. |
 | SQL firewall | Bicep adds `AllowAllAzureIPs`; re-deploy SQL bicep |
 | `pyodbc` seed skipped | Optional: `pip install pyodbc` + ODBC Driver 18 |
 
 ---
 
-## K. Relation to course syllabus
+## K. Run all pipelines until success
+
+Use this when you want automatic pass/fail checks across all concept pipelines:
+
+```text
+cd d:\azure\shared-adf-lab
+.\orchestrate.cmd --run-all-until-success --max-rounds 3
+```
+
+What it does:
+
+1. Triggers all pipelines (or all non-SQL pipelines with `--skip-sql`)
+2. Polls ADF run status (`Succeeded` / `Failed` / `Cancelled`)
+3. Retries only failed pipelines in next round
+4. Stops when all succeed or max rounds reached
+
+---
+
+## L. Relation to course syllabus
 
 - **Session 19** — ADF orchestration overview  
 - **Sessions 20–21** — 50 Databricks problems  

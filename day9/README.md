@@ -20,6 +20,8 @@ Also builds **`file_formats_and_secrets`** — CSV/JSON/Parquet/Delta + secret s
 | **15** | `session15_sql_jobs_adf` | SQL on Delta, Unity Catalog, Jobs, ADF (watch/demo) |
 | **50** | `50_data_engineering_problems` | **All 50 problems → solutions** with UC tables in `main.demo_problems` |
 
+**Trainer primer (read before Problem 01):** [docs/connectivity_and_key_classes_primer.md](docs/connectivity_and_key_classes_primer.md) — `abfss://`, `DataLakeServiceClient`, three-method auth chain, `StringIO` → pandas → Spark. This content is also embedded in the 50-problems notebook after the bronze auth cell.
+
 Each notebook uses **small cells**: WHAT → WHY → Mermaid diagram → HOW → ANALOGY → short code.
 
 **Watch-only Sunday (4 h):** Sessions **9–12**.  
