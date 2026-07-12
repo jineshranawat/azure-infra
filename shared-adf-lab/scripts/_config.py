@@ -59,6 +59,63 @@ def _load_dotenv(path: Path) -> dict[str, str]:
     return values
 
 
+def get_storage_account_key(
+    storage_account: str = "",
+    subscription_id: str = "",
+) -> str:
+    """Resolve storage account key — .env / env var first, then az CLI."""
+    file_env = _load_dotenv(ENV_FILE)
+    key = (
+        os.environ.get("STORAGE_ACCOUNT_KEY") or file_env.get("STORAGE_ACCOUNT_KEY", "")
+    ).strip()
+    if key:
+        return key
+    if not storage_account:
+        return ""
+    sub = subscription_id or os.environ.get("AZURE_SUBSCRIPTION_ID") or file_env.get(
+        "AZURE_SUBSCRIPTION_ID", ""
+    )
+    if not sub:
+        return ""
+    import subprocess
+
+    az = find_az()
+    result = subprocess.run(
+        [
+            az,
+            "storage",
+            "account",
+            "keys",
+            "list",
+            "--account-name",
+            storage_account,
+            "--subscription",
+            sub,
+            "--query",
+            "[0].value",
+            "-o",
+            "tsv",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0:
+        return result.stdout.strip()
+    return ""
+
+
+def get_datalake_credential(
+    storage_account: str = "",
+    subscription_id: str = "",
+):
+    """ADLS uploads: account key (works without Blob RBAC); else az login."""
+    key = get_storage_account_key(storage_account, subscription_id)
+    if key:
+        return key
+    return get_credential()
+
+
 def get_credential():
     from azure.identity import (
         AzureCliCredential,

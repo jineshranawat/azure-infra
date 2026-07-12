@@ -3,8 +3,9 @@ REM Shared ADF lab — SQL (westus) + 10 teaching pipelines + Databricks trigger
 REM Prerequisite: provision-shared.cmd (shared eastus estate)
 REM
 REM   orchestrate.cmd                      deploy everything (idempotent)
-REM   orchestrate.cmd --skip-sql           pipelines only (no SQL westus)
+REM   orchestrate.cmd --setup-databricks-integration   secrets + Databricks Job + manifest
 REM   orchestrate.cmd --run-pipeline pl_07_databricks_notebook
+REM   orchestrate.cmd --warm-cluster-only --warm-cluster-minutes 140
 setlocal
 cd /d "%~dp0"
 set PYTHONUNBUFFERED=1

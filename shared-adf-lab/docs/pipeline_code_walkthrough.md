@@ -669,6 +669,100 @@ END
 
 ---
 
+### Pipeline 11 — `pl_11_filename_validate_route`
+
+**Concept:** Many files land in **incoming**; only the **expected file name** is processed. Valid → **Copy** → **Databricks**. Invalid → set `validation_status` variable (reject path).
+
+**Incoming folder after deploy (demo):**
+
+| File | Processed by pl_11? |
+|------|---------------------|
+| `sample_transactions.csv` | **Yes** (matches `expected_file_name`) |
+| `wrong_file_name.csv` | No (decoy) |
+| `readme.txt` | No (decoy) |
+
+#### Pipeline parameters
+
+| Name | Type | Default |
+|------|------|---------|
+| `incoming_folder` | String | `incoming/run=session3-lab` |
+| `loaded_folder` | String | `loaded/run=session3-lab` |
+| `expected_file_name` | String | `sample_transactions.csv` |
+| `run_id` | String | `session3-lab` |
+
+#### Pipeline variable
+
+| Name | Type | Set when |
+|------|------|----------|
+| `validation_status` | String | Reject path: `rejected: no file named ...` |
+
+#### Activity 1: `ListIncoming` (Get Metadata)
+
+Same as `pl_02` — dataset `ds_bronze_incoming_folder`, field `childItems`.
+
+#### Activity 2: `FilterValidFiles` (Filter)
+
+| Setting | Value |
+|---------|--------|
+| **Depends on** | `ListIncoming` → Succeeded |
+| **Items** | `@activity('ListIncoming').output.childItems` |
+| **Condition** | `@and(equals(item().type, 'File'), equals(item().name, pipeline().parameters.expected_file_name))` |
+
+**Output:** `activity('FilterValidFiles').output.value` — array of matching files only.
+
+#### Activity 3: `IfFileMatched` (If Condition)
+
+| Setting | Value |
+|---------|--------|
+| **Expression** | `@greater(length(activity('FilterValidFiles').output.value), 0)` |
+| **If True** | `CopyValidatedFile` → `RunDatabricksAfterValidation` |
+| **If False** | `MarkValidationFailed` (Set variable) |
+
+#### Activity (True): `CopyValidatedFile` (Copy)
+
+| Setting | Value |
+|---------|--------|
+| **Source dataset** | `ds_bronze_incoming_file` |
+| **Source params** | `folder_path` = `@pipeline().parameters.incoming_folder`, `file_name` = `@pipeline().parameters.expected_file_name` |
+| **Sink dataset** | `ds_bronze_loaded_file` |
+| **Sink params** | `folder_path` = `@pipeline().parameters.loaded_folder`, same `file_name` |
+
+#### Activity (True): `RunDatabricksAfterValidation` (Databricks notebook)
+
+| Base parameter | Value |
+|----------------|--------|
+| `run_id` | `@pipeline().parameters.run_id` |
+| `triggered_by` | `adf-pl_11-validate` |
+| `source_file` | `@pipeline().parameters.expected_file_name` |
+
+#### Activity (False): `MarkValidationFailed` (Set variable)
+
+| Setting | Value |
+|---------|--------|
+| **Variable** | `validation_status` |
+| **Value** | `@concat('rejected: no file named ', pipeline().parameters.expected_file_name)` |
+
+**Manual Trigger now (success path):**
+
+```json
+{
+  "incoming_folder": "incoming/run=session3-lab",
+  "loaded_folder": "loaded/run=session3-lab",
+  "expected_file_name": "sample_transactions.csv",
+  "run_id": "session3-lab"
+}
+```
+
+**Demo reject path:** Trigger with `"expected_file_name": "file_that_does_not_exist.csv"` — pipeline succeeds but skips copy/Databricks; check variable `validation_status` in run output.
+
+**CLI:**
+
+```text
+.\orchestrate.cmd --run-pipeline pl_11_filename_validate_route
+```
+
+---
+
 ## Part 4 — Quick reference: all Trigger now payloads
 
 | Pipeline | Trigger JSON |
@@ -683,6 +777,7 @@ END
 | `pl_08_sql_to_lake` | `{}` |
 | `pl_09_lake_to_sql` | `{}` (run after pl_08) |
 | `pl_10_parent_chain` | `{"incoming_folder":"incoming/run=session3-lab","loaded_folder":"loaded/run=session3-lab","run_id":"session3-lab"}` |
+| `pl_11_filename_validate_route` | `{"incoming_folder":"incoming/run=session3-lab","loaded_folder":"loaded/run=session3-lab","expected_file_name":"sample_transactions.csv","run_id":"session3-lab"}` |
 
 **CLI equivalent:**
 
@@ -701,6 +796,8 @@ cd shared-adf-lab
 | `@pipeline().parameters.incoming_folder` | Pipeline parameter at trigger time |
 | `@dataset().folder_path` | Dataset parameter (set from activity) |
 | `@item().incoming` | Current item inside **ForEach** |
+| `@item().name` / `@item().type` | Current item inside **Filter** or **ForEach** |
+| `@activity('FilterValidFiles').output.value` | Filtered array after file-name validation |
 | `@activity('CheckFolder').output.childItems` | Output of a named activity |
 | `@greater(length(...), 0)` | True if array has elements |
 | `@activity('ReadWatermark').output.firstRow.last_run` | JSON field from Lookup |
@@ -738,6 +835,10 @@ pl_09:  [LakeToSql]
 
 pl_10:  [ChildCopy] ──► [ChildNotebook]
            (executes pl_01)
+
+pl_11:  [ListIncoming] ──► [FilterValidFiles] ──► [IfFileMatched]
+                                                    ├─ True  ─► [CopyValidatedFile] ──► [RunDatabricksAfterValidation]
+                                                    └─ False ─► [MarkValidationFailed]
 ```
 
 ---
@@ -751,6 +852,7 @@ pl_10:  [ChildCopy] ──► [ChildNotebook]
 | `SkuNotAvailable` / DS3_v2 stockout | pl_07, pl_10 | Linked service → **existing cluster** `0703-105931-31juyffm`, not new job cluster |
 | Notebook not found / 404 | pl_07, pl_10 | Create folder `/Shared/shared-adf`, import `nb_adf_hello` |
 | `transaction_id` column error | pl_09 | Source must be `ds_audit_sql_export_csv`; run **pl_08** first |
+| Filter returns empty / reject path | pl_11 | Check `expected_file_name` matches a real file in incoming folder |
 | SQL table invalid object | pl_08 | Lab uses SQL **query** in copy source (no physical `dim_channel` required) |
 | Copy 403 to ADLS | Any copy | Re-run deploy for RBAC; wait 2 min for IAM propagation |
 
@@ -780,7 +882,7 @@ pl_10:  [ChildCopy] ──► [ChildNotebook]
 | `deploy_linked_services()` | `ls_adls_finledger`, `ls_databricks_shared`, `ls_azure_sql_westus` |
 | `_deploy_datasets()` | All `ds_*` datasets |
 | `_copy_bronze_activity()` | Reusable Copy activity for bronze paths |
-| `deploy_all_pipelines()` | All `pl_01` … `pl_10` |
+| `deploy_all_pipelines()` | All `pl_01` … `pl_12` |
 | `trigger_pipeline()` | Starts a run (same as Trigger now) |
 | `wait_for_pipeline_run()` | Polls Monitor until Succeeded/Failed |
 
@@ -798,4 +900,71 @@ pl_10:  [ChildCopy] ──► [ChildNotebook]
 | `README.md` | Lab quick start |
 | `infra/shared-sql-westus.bicep` | SQL server + database |
 
-*Last aligned with code: shared ADF lab — existing Databricks cluster, folder metadata datasets, pl_09 source = `ds_audit_sql_export_csv`.*
+*Last aligned with code: shared ADF lab — existing Databricks cluster, folder metadata datasets, pl_09 source = `ds_audit_sql_export_csv`, pl_12 SQL metadata orchestration.*
+
+---
+
+## Part 11 — `pl_12_sql_metadata_orchestrate` (SQL metadata → copy / Databricks / status write-back)
+
+**Concept:** A control table in Azure SQL tells ADF *what* to run. ADF reads the row, branches on `status`, runs lake + Databricks when `READY`, and calls a stored procedure to write `SUCCEEDED` or `SKIPPED` back to SQL.
+
+### SQL objects (seeded by `azure_sql.py` → `seed_job_metadata_table`)
+
+| Object | Purpose |
+|--------|---------|
+| `dbo.adf_job_metadata` | Control table: folders, file name, `run_databricks`, `status` |
+| `dbo.usp_adf_mark_job_status` | Updates `status`, `last_run_id`, `last_message`, `updated_utc` |
+
+**Dummy rows:**
+
+| job_id | status | run_databricks | Demo |
+|--------|--------|----------------|------|
+| `job-01` | `READY` | 1 | Success path: copy + Databricks → `SUCCEEDED` |
+| `job-02` | `HOLD` | 0 | Skip path: no copy → `SKIPPED` |
+
+### Pipeline flow
+
+```mermaid
+flowchart TD
+    A[LookupJobMetadata] --> B{IfJobReady status=READY?}
+    B -->|Yes| C[CopyPerMetadata]
+    C --> D[RunDatabricksPerMetadata]
+    D --> F[MarkJobSucceeded]
+    B -->|No| G[MarkJobSkipped]
+```
+
+### Activities (ADF Studio)
+
+0. **Script** `EnsureMarkStatusProc` — `NonQuery` + `EXEC(N'CREATE OR ALTER PROCEDURE …')` (avoids SQL error 111 in ADF batches)
+1. **Script** `BootstrapJobMetadata` — `NonQuery` idempotent DDL + seed rows
+2. **Lookup** `LookupJobMetadata` — dataset `ds_sql_job_metadata`, query filters by `@pipeline().parameters.job_id`
+3. **If Condition** `IfJobReady` — `@equals(activity('LookupJobMetadata').output.firstRow.status, 'READY')`
+4. **Copy** `CopyPerMetadata` — `incoming_folder`, `loaded_folder`, `expected_file_name` from lookup output
+5. **Databricks Notebook** `RunDatabricksPerMetadata` — `triggered_by=adf-pl_12-metadata`
+6. **Stored Procedure** `MarkJobSucceeded` / `MarkJobSkipped` — `dbo.usp_adf_mark_job_status`
+
+### Trigger now parameters
+
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| `job_id` | `job-01` | Use `job-02` in Studio to demo skip |
+| `run_id` | `session3-lab` | Passed to Databricks notebook |
+
+### Re-run command
+
+```cmd
+cd shared-adf-lab
+.\orchestrate.cmd --run-pipeline pl_12_sql_metadata_orchestrate
+```
+
+Deploy resets `job-01` to `READY` so the success path is repeatable.
+
+### Troubleshooting — SQL error 111 on `pl_12`
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `'CREATE/ALTER PROCEDURE' must be the first statement in a query batch` on **EnsureMarkStatusProc** | Script activity used **Query** type, or `CREATE PROCEDURE` was not alone in the batch | Pull latest `adf_pipelines.py`, then **re-deploy** (do not use `--run-only` first): `.\orchestrate.cmd` |
+| Same error after cloning repo | ADF Studio still has **old** published pipeline JSON | Run full `.\orchestrate.cmd` once — Python SDK overwrites `pl_12` in the factory |
+| Stored proc activity fails “could not find procedure” | Skipped `orchestrate.cmd` (no SQL seed) | Run `.\orchestrate.cmd` without `--skip-sql` so `seed_job_metadata_table()` creates the proc |
+
+**Student clone checklist:** `az login` → copy `.env` → `provision-shared.cmd` → `cd shared-adf-lab` → `.\orchestrate.cmd` → then trigger `pl_12`.

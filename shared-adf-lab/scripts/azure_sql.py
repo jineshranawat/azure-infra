@@ -20,6 +20,59 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SQL_BICEP = REPO_ROOT / "infra" / "shared-sql-westus.bicep"
 SQL_ADMIN_LOGIN = "finledgeradmin"
 
+_ODBC_DRIVERS = (
+    "ODBC Driver 18 for SQL Server",
+    "ODBC Driver 17 for SQL Server",
+    "SQL Server",
+)
+
+
+def _connect_pyodbc(sql: SqlEstate):
+    """Open pyodbc connection — tries installed SQL Server ODBC drivers."""
+    try:
+        import pyodbc  # type: ignore
+    except ImportError:
+        logger.info("pyodbc missing — installing into current Python environment...")
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "pyodbc"],
+            check=True,
+            text=True,
+        )
+        import pyodbc  # type: ignore
+
+    errors: list[str] = []
+    for driver in _ODBC_DRIVERS:
+        encrypt = "yes" if "ODBC Driver" in driver else "no"
+        trust = "yes" if driver == "SQL Server" else "no"
+        conn_str = (
+            f"DRIVER={{{driver}}};"
+            f"SERVER={sql.fqdn};DATABASE={sql.database_name};"
+            f"UID={sql.admin_login};PWD={sql.admin_password};"
+            f"Encrypt={encrypt};TrustServerCertificate={trust};"
+        )
+        try:
+            return pyodbc.connect(conn_str, timeout=30)
+        except Exception as exc:
+            errors.append(f"{driver}: {exc}")
+    raise RuntimeError("; ".join(errors))
+
+
+def _execute_sql_scripts(sql: SqlEstate, *scripts: str, label: str) -> None:
+    """Run one or more SQL batches idempotently."""
+    try:
+        with _connect_pyodbc(sql) as conn:
+            conn.autocommit = True
+            cursor = conn.cursor()
+            for script in scripts:
+                cursor.execute(script)
+        logger.info("SQL seed %s ready", label)
+    except ImportError:
+        logger.warning("pyodbc not installed — skip SQL seed (%s)", label)
+    except subprocess.CalledProcessError as exc:
+        logger.warning("pyodbc install failed — skip SQL seed %s (%s)", label, exc)
+    except Exception as exc:
+        logger.warning("SQL seed %s skipped: %s", label, exc)
+
 
 @dataclass(frozen=True)
 class SqlEstate:
@@ -161,12 +214,6 @@ def deploy_sql(cfg: SharedAdfConfig, estate: SharedEstate) -> SqlEstate:
 
 def seed_reference_table(sql: SqlEstate) -> None:
     """Create dim_channel table if missing — idempotent DDL."""
-    conn_str = (
-        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
-        f"SERVER={sql.fqdn};DATABASE={sql.database_name};"
-        f"UID={sql.admin_login};PWD={sql.admin_password};"
-        "Encrypt=yes;TrustServerCertificate=no;"
-    )
     ddl = """
     IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'dim_channel')
     CREATE TABLE dbo.dim_channel (
@@ -186,27 +233,91 @@ def seed_reference_table(sql: SqlEstate) -> None:
         channel_name NVARCHAR(64)
     );
     """
-    try:
-        try:
-            import pyodbc  # type: ignore
-        except ImportError:
-            logger.info("pyodbc missing — installing into current Python environment...")
-            subprocess.run(
-                [sys.executable, "-m", "pip", "install", "pyodbc"],
-                check=True,
-                text=True,
-            )
-            import pyodbc  # type: ignore
+    _execute_sql_scripts(sql, ddl, label="dbo.dim_channel")
 
-        with pyodbc.connect(conn_str, timeout=30) as conn:
-            conn.autocommit = True
-            conn.cursor().execute(ddl)
-        logger.info("SQL seed table dbo.dim_channel ready")
-    except ImportError:
-        logger.warning(
-            "pyodbc not installed — skip SQL seed. Run: pip install pyodbc"
-        )
-    except subprocess.CalledProcessError as exc:
-        logger.warning("pyodbc install failed — skip SQL seed (%s)", exc)
-    except Exception as exc:
-        logger.warning("SQL seed skipped (run manually in SSMS): %s", exc)
+
+def seed_change_tracking(sql: SqlEstate) -> None:
+    """Enable SQL change tracking on dim_channel — idempotent (CDC teaching path)."""
+    ddl = """
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.change_tracking_databases WHERE database_id = DB_ID()
+    )
+    BEGIN
+        ALTER DATABASE CURRENT SET CHANGE_TRACKING = ON
+            (CHANGE_RETENTION = 2, AUTO_CLEANUP = ON);
+    END;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.change_tracking_tables
+                   WHERE object_id = OBJECT_ID('dbo.dim_channel'))
+    BEGIN
+        ALTER TABLE dbo.dim_channel ENABLE CHANGE_TRACKING
+            WITH (TRACK_COLUMNS_UPDATED = OFF);
+    END;
+
+    -- Seed a row that pl_24 can mutate on each run to produce CDC output.
+    IF NOT EXISTS (SELECT 1 FROM dbo.dim_channel WHERE channel_code = 'fps')
+        INSERT INTO dbo.dim_channel (channel_code, channel_name, is_active)
+        VALUES ('fps', 'Faster Payments', 1);
+    """
+    _execute_sql_scripts(sql, ddl, label="change_tracking.dim_channel")
+
+
+def seed_job_metadata_table(sql: SqlEstate) -> None:
+    """Create adf_job_metadata control table + stored proc — idempotent DDL/DML."""
+    ddl = """
+    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'adf_job_metadata')
+    CREATE TABLE dbo.adf_job_metadata (
+        job_id NVARCHAR(32) PRIMARY KEY,
+        job_name NVARCHAR(64) NOT NULL,
+        incoming_folder NVARCHAR(256) NOT NULL,
+        loaded_folder NVARCHAR(256) NOT NULL,
+        expected_file_name NVARCHAR(128) NOT NULL,
+        run_databricks INT NOT NULL DEFAULT 1,
+        status NVARCHAR(32) NOT NULL DEFAULT 'READY',
+        last_run_id NVARCHAR(64) NULL,
+        last_message NVARCHAR(256) NULL,
+        updated_utc DATETIME2 NULL
+    );
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.adf_job_metadata WHERE job_id = 'job-01')
+    INSERT INTO dbo.adf_job_metadata (
+        job_id, job_name, incoming_folder, loaded_folder,
+        expected_file_name, run_databricks, status
+    ) VALUES (
+        'job-01', 'bronze_metadata_orchestrate',
+        'incoming/run=session3-lab', 'loaded/run=session3-lab',
+        'sample_transactions.csv', 1, 'READY'
+    );
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.adf_job_metadata WHERE job_id = 'job-02')
+    INSERT INTO dbo.adf_job_metadata (
+        job_id, job_name, incoming_folder, loaded_folder,
+        expected_file_name, run_databricks, status
+    ) VALUES (
+        'job-02', 'disabled_skip_demo',
+        'incoming/run=session3-lab', 'loaded/run=session3-lab',
+        'sample_transactions.csv', 0, 'HOLD'
+    );
+
+    -- Reset runnable job so re-runs start from READY (job-02 stays HOLD for skip demo).
+    UPDATE dbo.adf_job_metadata
+    SET status = 'READY', last_run_id = NULL, last_message = NULL, updated_utc = NULL
+    WHERE job_id = 'job-01';
+    """
+    proc = """
+    CREATE OR ALTER PROCEDURE dbo.usp_adf_mark_job_status
+        @job_id NVARCHAR(32),
+        @status NVARCHAR(32),
+        @run_id NVARCHAR(64) = NULL,
+        @message NVARCHAR(256) = NULL
+    AS
+    BEGIN
+        UPDATE dbo.adf_job_metadata
+        SET status = @status,
+            last_run_id = COALESCE(@run_id, last_run_id),
+            last_message = COALESCE(@message, last_message),
+            updated_utc = GETUTCDATE()
+        WHERE job_id = @job_id;
+    END
+    """
+    _execute_sql_scripts(sql, ddl, proc, label="dbo.adf_job_metadata + usp_adf_mark_job_status")

@@ -12,14 +12,18 @@
 
 dbutils.widgets.text("run_id", "session3-lab")
 dbutils.widgets.text("triggered_by", "manual")
+dbutils.widgets.text("source_file", "")
 
 run_id = dbutils.widgets.get("run_id")
 triggered_by = dbutils.widgets.get("triggered_by")
+source_file = dbutils.widgets.get("source_file")
 
 print("=" * 60)
 print("ADF NOTEBOOK ACTIVITY — SUCCESS PATH")
 print("  run_id       :", run_id)
 print("  triggered_by :", triggered_by)
+if source_file:
+    print("  source_file  :", source_file)
 print("=" * 60)
 
 # COMMAND ----------
@@ -35,4 +39,4 @@ except Exception as exc:
 # COMMAND ----------
 
 import json
-dbutils.notebook.exit(json.dumps({"status": "ok", "run_id": run_id, "triggered_by": triggered_by}))
+dbutils.notebook.exit(json.dumps({"status": "ok", "run_id": run_id, "triggered_by": triggered_by, "source_file": source_file or None}))
