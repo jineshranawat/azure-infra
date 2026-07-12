@@ -212,7 +212,29 @@ cd shared-adf-lab
 .\orchestrate.cmd --setup-databricks-integration
 ```
 
-Pipelines are organized in ADF folders `01-core-copy` … `12-triggers` (deployed automatically).
+Pipelines are organized in ADF folders `01-core-copy` … `13-governance-purview` (deployed automatically).
+
+### Folder `13-governance-purview` — medallion + Purview (end-to-end)
+
+**Guide:** `docs/adf_purview_medallion_governance_guide.md`
+
+| Pipeline | What it teaches |
+|----------|-----------------|
+| `pl_gov_01_medallion_bronze_land` | Bronze Copy + Purview user properties (asset, classification) |
+| `pl_gov_02_medallion_silver_cleanse` | Silver data flow + lineage tags |
+| `pl_gov_03_medallion_gold_aggregate` | Gold aggregates (logical layer) + lineage |
+| `pl_gov_04_governance_catalog_metadata` | Glossary/classifications via governance JSON |
+| `pl_gov_05_purview_discovery_lineage` | Get Metadata discovery + lineage Copy |
+| `pl_gov_06_master_medallion_governance` | **One pipeline — full medallion + governance chain** |
+
+**Run the complete flow:**
+
+```cmd
+cd shared-adf-lab
+.\orchestrate.cmd --run-pipeline pl_gov_06_master_medallion_governance
+```
+
+Optional `.env`: `PURVIEW_ACCOUNT_NAME`, `PURVIEW_RESOURCE_GROUP` — links ADF to Purview for automatic Copy/Data Flow lineage (`scripts/purview_link.py`).
 
 **Code that defines them:** `scripts/adf_pipelines.py` (read top to bottom — linked services, datasets, then each pipeline).
 
@@ -236,6 +258,9 @@ OWNER_EMAIL=you@example.com
 DATABRICKS_HOST=https://adb-XXXX.azuredatabricks.net
 DATABRICKS_TOKEN=dapiXXXXXXXX
 DATABRICKS_CLUSTER_ID=0703-105931-31juyffm
+# Optional — Purview lineage link for governance module
+# PURVIEW_ACCOUNT_NAME=pviewrohan4hnv7s
+# PURVIEW_RESOURCE_GROUP=rg-rohan-class1
 ```
 
 3. Shared estate deployed: `provision-shared.cmd`
@@ -252,8 +277,9 @@ This runs:
 2. `adf_rbac.py` — ADF managed identity → storage + Databricks
 3. `adf_pipelines.py` — linked services, datasets, core pipelines
 4. `adf_advanced.py` + `adf_databricks.py` — advanced + Databricks teaching pipelines
-5. Upload bronze samples + `audit/watermark.json`
-6. Import Databricks notebooks (`nb_adf_hello`, `nb_adf_params_echo`, `nb_adf_bronze_stats`)
+5. `adf_governance.py` — medallion + Purview folder `13-governance-purview`
+6. Upload bronze samples + `audit/watermark.json` + governance catalog JSON
+7. Import Databricks notebooks (`nb_adf_hello`, `nb_adf_params_echo`, `nb_adf_bronze_stats`)
 
 ### Trigger a pipeline manually
 

@@ -38,6 +38,11 @@ from adf_triggers import (  # noqa: E402
     list_trigger_names,
     list_trigger_pipeline_names,
 )
+from adf_governance import (  # noqa: E402
+    default_params as governance_default_params,
+    deploy_governance,
+    list_governance_pipeline_names,
+)
 from adf_pipelines import (  # noqa: E402
     _sql_pipelines_enabled,
     deploy_all_pipelines,
@@ -361,6 +366,7 @@ def _print_summary(cfg, estate, sql, *, sql_pipelines: bool) -> None:
         + list_databricks_pipeline_names()
         + list_expression_pipeline_names()
         + list_trigger_pipeline_names()
+        + list_governance_pipeline_names()
     ):
         print(f"    - {name}")
     print()
@@ -410,6 +416,9 @@ def _default_params(pipeline_name: str) -> dict:
     trig = trigger_default_params(pipeline_name)
     if trig:
         return trig
+    gov = governance_default_params(pipeline_name)
+    if gov:
+        return gov
     return {}
 
 
@@ -442,11 +451,16 @@ _DATAFLOW_PIPELINES = frozenset(
         "pl_14_df_channel_aggregate",
         "pl_25_power_query_returns",
         "pl_26_join_returns_txn",
+        "pl_gov_02_medallion_silver_cleanse",
+        "pl_gov_03_medallion_gold_aggregate",
+        "pl_gov_06_master_medallion_governance",
     }
 )
 
 
 def _pipeline_timeout_minutes(pipeline_name: str) -> int:
+    if pipeline_name == "pl_gov_06_master_medallion_governance":
+        return 60
     if pipeline_name in _DATAFLOW_PIPELINES:
         return 45
     if pipeline_name in _DATABRICKS_PIPELINES:
@@ -461,6 +475,7 @@ def _pipelines_from(start_name: str, *, include_sql: bool) -> list[str]:
         + list_databricks_pipeline_names()
         + list_expression_pipeline_names()
         + list_trigger_pipeline_names()
+        + list_governance_pipeline_names()
     )
     if start_name not in all_names:
         raise SystemExit(f"Unknown pipeline '{start_name}'. Choose one of: {', '.join(all_names)}")
@@ -509,6 +524,7 @@ def _run_all_until_success(
         + list_databricks_pipeline_names()
         + list_expression_pipeline_names()
         + list_trigger_pipeline_names()
+        + list_governance_pipeline_names()
     )
     logger.info("Run-all mode: %d pipelines", len(pending))
     for round_no in range(1, max_rounds + 1):
@@ -644,6 +660,7 @@ def main() -> int:
         deploy_databricks(cfg, estate)
         deploy_expressions(cfg, estate)
         deploy_triggers(cfg, estate)
+        deploy_governance(cfg, estate)
 
         if not args.skip_notebook:
             _deploy_notebooks(cfg)
