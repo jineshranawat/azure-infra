@@ -6,6 +6,9 @@
 .cursor/
 .cursorrules
 
+# Generated cost dashboard output (re-create with cost-dashboard.cmd)
+docs/cost-dashboard-out/
+
 # Python caches
 __pycache__/
 *.pyc
