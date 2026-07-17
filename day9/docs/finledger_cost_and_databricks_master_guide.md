@@ -13,7 +13,7 @@
 | What | How to open |
 |------|-------------|
 | **This guide** (you are here) | `day9/docs/finledger_cost_and_databricks_master_guide.md` |
-| **Databricks cost notebook** | Workspace → `/Shared/day9/cost_management_master` |
+| **Databricks cost notebook** | Workspace → `/Shared/day9/cost_management_master` (**~6–10 h**; widgets for `resource_group` / `adf_name` / `lookback_days`) |
 | **Laptop HTML cost dashboard** | From repo root: `.\cost-dashboard.cmd --open` |
 
 Companion deep-dives (only if you want more detail later):
