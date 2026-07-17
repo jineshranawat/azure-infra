@@ -687,7 +687,33 @@ def main() -> None:
     fifty_script = ROOT / "build_50_problems_notebook.py"
     if fifty_script.is_file():
         subprocess.run([sys.executable, str(fifty_script)], cwd=REPO_ROOT, check=True)
-    print(f"\nDone — {len(NOTEBOOKS)} session notebooks + file_formats + 50_problems in {OUT_DIR}")
+    teach_script = ROOT / "build_dbx_teach_all_notebook.py"
+    if teach_script.is_file():
+        subprocess.run([sys.executable, str(teach_script)], cwd=REPO_ROOT, check=True)
+    event_script = ROOT / "build_finledger_event_processors_notebook.py"
+    if event_script.is_file():
+        subprocess.run([sys.executable, str(event_script)], cwd=REPO_ROOT, check=True)
+    adv_script = ROOT / "build_advanced_pyspark_notebook.py"
+    if adv_script.is_file():
+        subprocess.run([sys.executable, str(adv_script)], cwd=REPO_ROOT, check=True)
+    eh_script = ROOT / "build_eventhub_finledger_notebook.py"
+    if eh_script.is_file():
+        subprocess.run([sys.executable, str(eh_script)], cwd=REPO_ROOT, check=True)
+    perf_script = ROOT / "build_perf_databricks_adf_notebook.py"
+    if perf_script.is_file():
+        subprocess.run([sys.executable, str(perf_script)], cwd=REPO_ROOT, check=True)
+    dag_script = ROOT / "build_spark_dag_problems_notebook.py"
+    if dag_script.is_file():
+        subprocess.run([sys.executable, str(dag_script)], cwd=REPO_ROOT, check=True)
+    sys_tables_script = ROOT / "build_system_tables_notebook.py"
+    if sys_tables_script.is_file():
+        subprocess.run([sys.executable, str(sys_tables_script)], cwd=REPO_ROOT, check=True)
+    cost_script = ROOT / "build_cost_management_notebook.py"
+    if cost_script.is_file():
+        subprocess.run([sys.executable, str(cost_script)], cwd=REPO_ROOT, check=True)
+    print(
+        f"\nDone — {len(NOTEBOOKS)} session notebooks + teach/event/advanced/eventhub/perf/dag/system_tables/cost in {OUT_DIR}"
+    )
 
 
 if __name__ == "__main__":

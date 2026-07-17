@@ -216,7 +216,9 @@ Pipelines are organized in ADF folders `01-core-copy` … `13-governance-purview
 
 ### Folder `13-governance-purview` — medallion + Purview (end-to-end)
 
-**Guide:** `docs/adf_purview_medallion_governance_guide.md`
+**Guide:** `docs/adf_purview_medallion_governance_guide.md`  
+**Purview portal search (what to type):** `docs/purview_portal_search_guide.md`  
+**Syllabus gap analysis (ADF + Databricks):** [../docs/adf-databricks-syllabus-gap-analysis.md](../docs/adf-databricks-syllabus-gap-analysis.md)
 
 | Pipeline | What it teaches |
 |----------|-----------------|
@@ -235,6 +237,8 @@ cd shared-adf-lab
 ```
 
 Optional `.env`: `PURVIEW_ACCOUNT_NAME`, `PURVIEW_RESOURCE_GROUP` — links ADF to Purview for automatic Copy/Data Flow lineage (`scripts/purview_link.py`).
+
+**Databricks medallion from ADF:** `pl_db_14_databricks_medallion_governance` (folder `14-databricks-medallion-governance`) runs `nb_medallion_governance_master` — same audit/governance paths as Day 9 capstone.
 
 **Code that defines them:** `scripts/adf_pipelines.py` (read top to bottom — linked services, datasets, then each pipeline).
 

@@ -4,6 +4,9 @@
 
 Aligned to [docs/data-engineering-course.html](../docs/data-engineering-course.html) sessions 9–15.
 
+> **Start here for Cost + Databricks (one file):**  
+> **[docs/finledger_cost_and_databricks_master_guide.md](docs/finledger_cost_and_databricks_master_guide.md)** — kitchen analogies, every NFR, system tables grants, laptop dashboard, citations to Microsoft Learn / FinOps, and the exact open/run commands.
+
 ## A. What & why (before code)
 
 Also builds **`file_formats_and_secrets`** — CSV/JSON/Parquet/Delta + secret scope steps.
@@ -34,8 +37,9 @@ Also builds **`file_formats_and_secrets`** — CSV/JSON/Parquet/Delta + secret s
 **Spark DAG problems lab:** [docs/spark_dag_problems_lab.md](docs/spark_dag_problems_lab.md) · `/Shared/day9/spark_dag_problems_lab`  
 **Perf + ADF NFR lab:** [docs/perf_databricks_adf_lab.md](docs/perf_databricks_adf_lab.md) · `/Shared/day9/perf_databricks_adf_lab`  
 **System tables master:** [docs/system_tables_master.md](docs/system_tables_master.md) · `/Shared/day9/system_tables_master` · deploy `python scripts/deploy_system_tables_lab.py`  
+**Cost + Databricks master guide (open this first):** [docs/finledger_cost_and_databricks_master_guide.md](docs/finledger_cost_and_databricks_master_guide.md)  
 **Cost management master:** [docs/cost_management_master.md](docs/cost_management_master.md) · `/Shared/day9/cost_management_master` · deploy `python scripts/deploy_cost_management_lab.py`  
-**Cost dashboard (any student PC):** [docs/cost_dashboard.md](docs/cost_dashboard.md) · run `cost-dashboard.cmd --open` from repo root → `docs/cost-dashboard-out/index.html` · **code walkthrough:** [docs/cost_dashboard_code_overview.md](docs/cost_dashboard_code_overview.md)  
+**Cost dashboard (any student PC):** [docs/cost_dashboard.md](docs/cost_dashboard.md) · run `.\cost-dashboard.cmd --open` from repo root → `docs/cost-dashboard-out/index.html` · **code walkthrough:** [docs/cost_dashboard_code_overview.md](docs/cost_dashboard_code_overview.md)  
 **Event Hub lab (step-by-step):** [docs/eventhub_finledger_lab.md](docs/eventhub_finledger_lab.md) · `/Shared/day9/eventhub_finledger_lab` · setup `python scripts/ensure_eventhub_lab.py`
 
 **Trainer primer (read before Problem 01):** [docs/connectivity_and_key_classes_primer.md](docs/connectivity_and_key_classes_primer.md) — `abfss://`, `DataLakeServiceClient`, three-method auth chain, `StringIO` → pandas → Spark. This content is also embedded in the 50-problems notebook after the bronze auth cell.

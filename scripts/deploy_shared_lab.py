@@ -21,6 +21,7 @@ STORAGE_ACCOUNT = "stsharedqgr7mj"
 WORKSPACE = "dbw-shared-qgr7mj"
 NOTEBOOK_SRC = REPO_ROOT / "day8" / "notebooks" / "nb_master_pyspark_complete.py"
 SAMPLE_CSV = REPO_ROOT / "day8" / "data" / "sample_transactions.csv"
+RETURNS_CSV = REPO_ROOT / "shared-adf-lab" / "data" / "returns_raw.csv"
 NOTEBOOK_PATH = "/Shared/day7-day8/master_pyspark_complete"
 DAY9_NOTEBOOK_DIR = REPO_ROOT / "day9" / "notebooks"
 DAY9_BUILD_SCRIPT = REPO_ROOT / "day9" / "scripts" / "build_all_notebooks.py"
@@ -156,6 +157,23 @@ def _upload_bronze(file_env: dict[str, str]) -> None:
         ],
         check=True,
     )
+    if RETURNS_CSV.is_file():
+        returns_dest = "incoming/returns/returns_raw.csv"
+        logger.info("Uploading returns CSV to %s/bronze/%s", STORAGE_ACCOUNT, returns_dest)
+        subprocess.run(
+            [
+                az, "storage", "blob", "upload",
+                "--account-name", STORAGE_ACCOUNT,
+                "--account-key", key,
+                "--container-name", "bronze",
+                "--name", returns_dest,
+                "--file", str(RETURNS_CSV),
+                "--overwrite",
+            ],
+            check=True,
+        )
+    else:
+        logger.warning("Returns CSV missing at %s — skip (finledger_event_processors returns processor will skip)", RETURNS_CSV)
 
 
 def _setup_secrets(client: DbxClient, storage_key: str) -> None:

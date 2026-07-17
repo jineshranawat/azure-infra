@@ -321,3 +321,43 @@ def seed_job_metadata_table(sql: SqlEstate) -> None:
     END
     """
     _execute_sql_scripts(sql, ddl, proc, label="dbo.adf_job_metadata + usp_adf_mark_job_status")
+
+
+def seed_de_governance_tables(sql: SqlEstate) -> None:
+    """SQL metadata model for medallion + 50-problems governance registry."""
+    ddl = """
+    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'de_table_registry')
+    CREATE TABLE dbo.de_table_registry (
+        registry_id INT IDENTITY(1,1) PRIMARY KEY,
+        run_id NVARCHAR(64) NOT NULL,
+        problem_num NVARCHAR(16) NOT NULL,
+        qualified_name NVARCHAR(512) NOT NULL,
+        medallion_layer NVARCHAR(32) NOT NULL,
+        classification NVARCHAR(64) NOT NULL,
+        glossary_term NVARCHAR(128) NOT NULL,
+        status NVARCHAR(32) NOT NULL DEFAULT 'READY',
+        updated_utc DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+    );
+
+    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'de_pipeline_run_log')
+    CREATE TABLE dbo.de_pipeline_run_log (
+        run_id NVARCHAR(64) PRIMARY KEY,
+        bronze_rows INT NULL,
+        silver_rows INT NULL,
+        gold_channels INT NULL,
+        completed_utc DATETIME2 NULL,
+        status NVARCHAR(32) NOT NULL,
+        source_notebook NVARCHAR(128) NULL
+    );
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.adf_job_metadata WHERE job_id = 'job-03')
+    INSERT INTO dbo.adf_job_metadata (
+        job_id, job_name, incoming_folder, loaded_folder,
+        expected_file_name, run_databricks, status
+    ) VALUES (
+        'job-03', 'medallion_governance_databricks',
+        'incoming/run=session3-lab', 'loaded/run=session3-lab',
+        'sample_transactions.csv', 1, 'READY'
+    );
+    """
+    _execute_sql_scripts(sql, ddl, label="dbo.de_table_registry + de_pipeline_run_log + job-03")

@@ -93,4 +93,10 @@ def link_purview_to_adf(
     )
     client.factories.create_or_update(cfg.resource_group, data_factory, updated)
     logger.info("ADF %s linked to Purview %s (lineage enabled for Copy/Data Flow)", data_factory, account_name)
+    logger.info(
+        "MANUAL STEP: In classic Purview portal, grant Data Curator on root collection to "
+        "ADF managed identity '%s'. New Purview portal does NOT show ADF lineage. "
+        "See docs/purview_portal_search_guide.md",
+        data_factory,
+    )
     return account_name

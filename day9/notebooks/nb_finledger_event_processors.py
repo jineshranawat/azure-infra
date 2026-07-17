@@ -1,0 +1,590 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # FinLedger Event processors v4 (ABFSS + classic cluster)
+# MAGIC
+# MAGIC ### STOP — read this first
+# MAGIC
+# MAGIC 1. Top-right compute must be the shared **classic** cluster (NOT **Serverless**).
+# MAGIC 2. Serverless **cannot** write `abfss://` with the lab storage key — that is the red error you saw.
+# MAGIC 3. Click compute → detach Serverless → attach classic → **Run all** from the top.
+# MAGIC
+# MAGIC Same Cell 0 secrets as `/Shared/day9/50_data_engineering_problems`.
+# MAGIC Lake outputs: `abfss://silver|gold@…` only — **no DBFS**, no demo mkdirs on ADLS.
+# MAGIC
+# MAGIC | | |
+# MAGIC |:---|:---|
+# MAGIC | **Verify** | `python scripts/run_finledger_event_processors.py` |
+# MAGIC | **Transcript** | `day9/docs/finledger_event_processors_transcript.md` |
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 0. Roadmap (Zach → FinLedger)
+# MAGIC
+# MAGIC | Step | Concept | In this notebook |
+# MAGIC |------|---------|------------------|
+# MAGIC | 1 | Metrics first | cash by day, refunds vs payments |
+# MAGIC | 2 | Data modeling | one `Event` schema |
+# MAGIC | 3 | Processors | txn + returns |
+# MAGIC | 4 | Quality | drop null/bad amounts |
+# MAGIC | 5 | Distributed compute | PySpark + **abfss Delta** |
+# MAGIC | 6 | Orchestration | widget `run_id` |
+# MAGIC | 7 | Tools last | Delta / SQL pivot |
+# MAGIC
+# MAGIC **Analogy:** Event = shipping label. Processors = factories. Runner = warehouse truck → CFO pivot.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Cell 0 — Bronze (identical to 50-problems)
+# MAGIC
+# MAGIC `finledger` secret scope. Next cells refuse Serverless for lake writes.
+
+# COMMAND ----------
+
+# =============================================================================
+# CELL 0 — Bronze ingest (FinLedger shared estate)
+# =============================================================================
+# WHAT: Load sample_transactions.csv from abfss://bronze/...
+# WHY:  Session 9+ writes silver/gold — we always start from the same bronze.
+# HOW:  (1) RBAC  (2) account key on classic only  (3) driver SDK
+# TIP:  Serverless rejects fs.azure.account.key — do NOT set it first.
+# =============================================================================
+
+SECRET_SCOPE = "finledger"  # Key Vault–backed scope created by deploy-shared-lab.cmd
+
+# Storage account name — shared class estate (stsharedqgr7mj)
+STORAGE_ACCOUNT = dbutils.secrets.get(scope=SECRET_SCOPE, key="storage-account").strip()
+
+# Storage key — classic clusters / driver SDK only (never first on Serverless)
+_storage_key = dbutils.secrets.get(scope=SECRET_SCOPE, key="storage-key").strip()
+
+# Pipeline run folder — matches bronze/loaded/run=session3-lab/
+RUN_ID = "session3-lab"
+
+
+def _unset_account_key(account: str) -> None:
+    """Clear poisoned Hadoop key config so later RBAC/DBFS paths can work."""
+    conf_key = f"fs.azure.account.key.{account}.dfs.core.windows.net"
+    try:
+        spark.conf.unset(conf_key)
+    except Exception:
+        pass
+
+
+def _read_bronze_transactions(spark, account: str, key: str, run_id: str):
+    """Read bronze CSV; Serverless-safe order (RBAC → key → SDK)."""
+    path = (
+        f"abfss://bronze@{account}.dfs.core.windows.net"
+        f"/loaded/run={run_id}/sample_transactions.csv"
+    )
+
+    # --- 1) RBAC / credential passthrough (do NOT set account key) ---
+    try:
+        frame = spark.read.option("header", True).option("inferSchema", True).csv(path)
+        frame.limit(1).count()
+        return frame, path, "azure_rbac_passthrough"
+    except Exception as exc1:
+        print("  RBAC bronze read failed:", str(exc1)[:140])
+
+    # --- 2) Classic cluster — storage account key (poisons Serverless — unset on fail) ---
+    try:
+        spark.conf.set(f"fs.azure.account.key.{account}.dfs.core.windows.net", key)
+        frame = spark.read.option("header", True).option("inferSchema", True).csv(path)
+        frame.limit(1).count()
+        return frame, path, "storage_key_spark_conf"
+    except Exception as exc2:
+        print("  Account-key bronze read failed:", str(exc2)[:140])
+        _unset_account_key(account)
+
+    # --- 3) Driver SDK (small training CSV — OK for lab; no Spark ADLS conf) ---
+    from io import StringIO
+    import pandas as pd
+    try:
+        from azure.storage.filedatalake import DataLakeServiceClient
+    except ImportError:
+        import subprocess, sys
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "azure-storage-file-datalake", "-q"]
+        )
+        from azure.storage.filedatalake import DataLakeServiceClient
+
+    rel = f"loaded/run={run_id}/sample_transactions.csv"
+    client = DataLakeServiceClient(
+        account_url=f"https://{account}.dfs.core.windows.net", credential=key
+    )
+    raw = (
+        client.get_file_system_client("bronze")
+        .get_file_client(rel)
+        .download_file()
+        .readall()
+        .decode("utf-8")
+    )
+    return spark.createDataFrame(pd.read_csv(StringIO(raw))), path, "driver_sdk"
+
+
+# Load bronze — result is a lazy DataFrame until you call an action (count, show, write)
+bronze, BRONZE_PATH, BRONZE_AUTH_MODE = _read_bronze_transactions(
+    spark, STORAGE_ACCOUNT, _storage_key, RUN_ID
+)
+df = bronze  # alias used in later cells
+
+print("Storage     :", STORAGE_ACCOUNT)
+print("Bronze path :", BRONZE_PATH)
+print("Auth mode   :", BRONZE_AUTH_MODE)
+print("Bronze rows :", bronze.count())  # ACTION — in-memory if driver_sdk
+
+# COMMAND ----------
+
+# Widget + light setup (NO abfss mkdirs — those fail on Serverless)
+dbutils.widgets.text("run_id", "session3-lab", "Pipeline run id")
+_w = dbutils.widgets.get("run_id").strip() or "session3-lab"
+if _w != RUN_ID:
+    print("Reloading bronze for widget run_id=", _w)
+    RUN_ID = _w
+    bronze, BRONZE_PATH, BRONZE_AUTH_MODE = _read_bronze_transactions(
+        spark, STORAGE_ACCOUNT, _storage_key, RUN_ID
+    )
+    df = bronze
+
+WRITTEN_TABLES = []
+UC_WRITE_ENABLED = False
+UC_TABLE = ""
+CATALOG = "none"
+
+# Optional UC / hive mirrors — never create catalogs on ADLS managed locations
+try:
+    names = [r.catalog for r in spark.sql("SHOW CATALOGS").collect()]
+except Exception:
+    names = []
+print("Catalogs visible:", names)
+
+for catalog in ("main", "hive_metastore"):
+    if catalog not in names and catalog != "hive_metastore":
+        continue
+    full_schema = f"{catalog}.demo_problems" if catalog != "hive_metastore" else "demo_problems"
+    try:
+        if catalog == "hive_metastore":
+            spark.sql("CREATE DATABASE IF NOT EXISTS demo_problems")
+            probe = "demo_problems._zach_uc_probe"
+        else:
+            spark.sql(f"CREATE SCHEMA IF NOT EXISTS {full_schema}")
+            probe = f"{full_schema}._zach_uc_probe"
+        spark.createDataFrame([("ok",)], ["ping"]).write.format("delta").mode("overwrite").option(
+            "overwriteSchema", "true"
+        ).saveAsTable(probe)
+        spark.sql(f"DROP TABLE IF EXISTS {probe}")
+        UC_WRITE_ENABLED = True
+        CATALOG = catalog
+        UC_TABLE = full_schema if catalog != "hive_metastore" else "demo_problems"
+        print("UC/hive mirror ENABLED →", UC_TABLE)
+        break
+    except Exception as exc:
+        print(f"  mirror skip {catalog}:", str(exc)[:120])
+
+print("Active RUN_ID =", RUN_ID, "| Auth =", BRONZE_AUTH_MODE)
+print("Lake mode     = ABFSS-only (classic cluster required)")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Lake paths — ABFSS only
+# MAGIC
+# MAGIC ```text
+# MAGIC abfss://silver@{account}/zach_events/run={run_id}/
+# MAGIC abfss://gold@{account}/zach_daily_aggregates/run={run_id}/
+# MAGIC abfss://gold@{account}/zach_pivoted/run={run_id}/
+# MAGIC ```
+# MAGIC
+# MAGIC If the next cell raises **SERVERLESS / ABFSS blocked**: change compute to classic, then Run all.
+
+# COMMAND ----------
+
+# =============================================================================
+# ABFSS-only lake helpers (v4)
+# =============================================================================
+from io import StringIO
+
+import pandas as pd
+from pyspark.sql import functions as F
+
+BRONZE_TXN_REL = f"loaded/run={RUN_ID}/sample_transactions.csv"
+BRONZE_RETURNS_REL = "incoming/returns/returns_raw.csv"
+
+SILVER_EVENTS_ABFSS = (
+    f"abfss://silver@{STORAGE_ACCOUNT}.dfs.core.windows.net/zach_events/run={RUN_ID}"
+)
+GOLD_DAILY_ABFSS = (
+    f"abfss://gold@{STORAGE_ACCOUNT}.dfs.core.windows.net/zach_daily_aggregates/run={RUN_ID}"
+)
+GOLD_PIVOT_ABFSS = (
+    f"abfss://gold@{STORAGE_ACCOUNT}.dfs.core.windows.net/zach_pivoted/run={RUN_ID}"
+)
+
+for _junk in (
+    "dbfs:/FileStore/demo_50_problems/zach_events",
+    "dbfs:/FileStore/demo_50_problems/zach_daily",
+    "dbfs:/FileStore/demo_50_problems/zach_pivoted",
+    f"dbfs:/FileStore/finledger_event_processors/{RUN_ID}",
+):
+    try:
+        dbutils.fs.rm(_junk, True)
+    except Exception:
+        pass
+
+
+def _abfss(container: str, rel: str) -> str:
+    return f"abfss://{container}@{STORAGE_ACCOUNT}.dfs.core.windows.net/{rel}"
+
+
+def _read_abfss_csv(container: str, rel: str):
+    """Same order as 50-problems Cell 0: RBAC → key (unset on fail) → driver SDK."""
+    path = _abfss(container, rel)
+
+    try:
+        frame = spark.read.option("header", True).option("inferSchema", True).csv(path)
+        frame.limit(1).count()
+        return frame, path, "azure_rbac_passthrough"
+    except Exception as exc1:
+        print(f"  RBAC read failed ({container}/{rel}): {str(exc1)[:120]}")
+
+    try:
+        spark.conf.set(
+            f"fs.azure.account.key.{STORAGE_ACCOUNT}.dfs.core.windows.net",
+            _storage_key,
+        )
+        frame = spark.read.option("header", True).option("inferSchema", True).csv(path)
+        frame.limit(1).count()
+        return frame, path, "storage_key_spark_conf"
+    except Exception as exc2:
+        print(f"  Account-key read failed: {str(exc2)[:120]}")
+        _unset_account_key(STORAGE_ACCOUNT)
+
+    try:
+        from azure.storage.filedatalake import DataLakeServiceClient
+    except ImportError:
+        import subprocess
+        import sys
+
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "azure-storage-file-datalake", "-q"]
+        )
+        from azure.storage.filedatalake import DataLakeServiceClient
+
+    client = DataLakeServiceClient(
+        account_url=f"https://{STORAGE_ACCOUNT}.dfs.core.windows.net",
+        credential=_storage_key,
+    )
+    raw = (
+        client.get_file_system_client(container)
+        .get_file_client(rel)
+        .download_file()
+        .readall()
+        .decode("utf-8")
+    )
+    frame = spark.createDataFrame(pd.read_csv(StringIO(raw)))
+    return frame, path, "driver_sdk"
+
+
+def _try_set_account_key_for_writes() -> bool:
+    """Enable ABFSS Delta writes (RBAC or classic storage key)."""
+    probe = f"abfss://silver@{STORAGE_ACCOUNT}.dfs.core.windows.net/_zach_write_probe"
+    try:
+        spark.createDataFrame([("ok",)], ["ping"]).write.format("delta").mode("overwrite").option(
+            "overwriteSchema", "true"
+        ).save(probe)
+        print("ABFSS write probe: OK (RBAC or existing conf)")
+        return True
+    except Exception as exc1:
+        print("ABFSS write probe without key:", str(exc1)[:120])
+    try:
+        spark.conf.set(
+            f"fs.azure.account.key.{STORAGE_ACCOUNT}.dfs.core.windows.net",
+            _storage_key,
+        )
+        spark.createDataFrame([("ok",)], ["ping"]).write.format("delta").mode("overwrite").option(
+            "overwriteSchema", "true"
+        ).save(probe)
+        print("ABFSS write probe: OK (storage_key)")
+        return True
+    except Exception as exc2:
+        print("ABFSS write probe with key failed:", str(exc2)[:160])
+        _unset_account_key(STORAGE_ACCOUNT)
+        return False
+
+
+ABFSS_WRITE_OK = _try_set_account_key_for_writes()
+if not ABFSS_WRITE_OK:
+    raise RuntimeError(
+        "SERVERLESS / ABFSS blocked. "
+        "You are on compute that cannot write abfss:// to the FinLedger lake. "
+        "FIX: Top-right → detach Serverless → attach classic cluster "
+        "0703-105931-31juyffm → Run all from Cell 0. "
+        "This lab does not use DBFS."
+    )
+
+
+def write_lab_delta(df, abfss_path: str) -> str:
+    """Write Delta to canonical ABFSS path only."""
+    if not str(abfss_path).startswith("abfss://"):
+        raise ValueError(f"Refusing non-ABFSS path: {abfss_path}")
+    df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(abfss_path)
+    print("Wrote ABFSS:", abfss_path)
+    WRITTEN_TABLES.append(abfss_path)
+    return abfss_path
+
+
+def write_uc_mirror(df, table_name: str):
+    """Optional UC/hive table when permitted — never DBFS."""
+    if not UC_WRITE_ENABLED:
+        print(f"UC mirror skip ({table_name})")
+        return None
+    full_name = f"{UC_TABLE}.{table_name}"
+    (
+        df.write.format("delta")
+        .mode("overwrite")
+        .option("overwriteSchema", "true")
+        .saveAsTable(full_name)
+    )
+    print("UC mirror :", full_name)
+    WRITTEN_TABLES.append(full_name)
+    return full_name
+
+
+print("Canonical silver:", SILVER_EVENTS_ABFSS)
+print("ABFSS_WRITE_OK   :", ABFSS_WRITE_OK)
+print("UC mirrors       :", UC_WRITE_ENABLED, UC_TABLE or "-")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 1. Event schema
+
+# COMMAND ----------
+
+from collections import namedtuple
+
+from pyspark.sql.types import DoubleType, StringType, StructField, StructType, TimestampType
+
+Event = namedtuple(
+    "Event",
+    ["source", "metric_name", "timestamp", "metric_value", "content"],
+)
+
+EVENT_SCHEMA = StructType(
+    [
+        StructField("source", StringType(), False),
+        StructField("metric_name", StringType(), False),
+        StructField("timestamp", TimestampType(), True),
+        StructField("metric_value", DoubleType(), True),
+        StructField("content", StringType(), True),
+    ]
+)
+
+print("Event fields:", Event._fields)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 2. Load bronze + returns + processors
+# MAGIC
+# MAGIC Transactions = Cell 0 `bronze` (already loaded). Returns = same ABFSS read chain.
+
+# COMMAND ----------
+
+txn_df = bronze
+BRONZE_TXN = BRONZE_PATH
+TXN_AUTH = BRONZE_AUTH_MODE
+print("Transactions auth:", TXN_AUTH, "| rows:", txn_df.count())
+
+print("Loading returns...")
+try:
+    returns_df, BRONZE_RETURNS, RET_AUTH = _read_abfss_csv("bronze", BRONZE_RETURNS_REL)
+    print("  auth:", RET_AUTH, "| rows:", returns_df.count())
+except Exception as exc:
+    print("  RETURNS SKIP:", str(exc)[:160])
+    returns_df = None
+    BRONZE_RETURNS = _abfss("bronze", BRONZE_RETURNS_REL)
+    RET_AUTH = "skipped"
+
+
+def txn_processor(raw, source: str = "transactions"):
+    return raw.select(
+        F.lit(source).alias("source"),
+        F.lit("payment_amount").alias("metric_name"),
+        F.to_timestamp(F.col("value_date")).alias("timestamp"),
+        F.col("amount_gbp").cast("double").alias("metric_value"),
+        F.col("transaction_id").alias("content"),
+    )
+
+
+def txn_channel_processor(raw, source: str = "transactions"):
+    return raw.select(
+        F.lit(source).alias("source"),
+        F.concat(F.lit("txn_count_"), F.lower(F.col("channel"))).alias("metric_name"),
+        F.to_timestamp(F.col("value_date")).alias("timestamp"),
+        F.lit(1.0).alias("metric_value"),
+        F.col("transaction_id").alias("content"),
+    )
+
+
+def returns_processor(raw, source: str = "returns"):
+    return raw.select(
+        F.lit(source).alias("source"),
+        F.lit("refund_amount").alias("metric_name"),
+        F.to_timestamp(F.col("return_date")).alias("timestamp"),
+        F.col("refund_gbp").cast("double").alias("metric_value"),
+        F.concat_ws("|", F.col("return_id"), F.col("reason")).alias("content"),
+    )
+
+
+PROCESSORS = {
+    "transactions_payments": {"fn": txn_processor, "df": txn_df},
+    "transactions_counts": {"fn": txn_channel_processor, "df": txn_df},
+}
+if returns_df is not None:
+    PROCESSORS["returns"] = {"fn": returns_processor, "df": returns_df}
+
+print("Registered processors:", list(PROCESSORS.keys()))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 3. Runner — Event timeline → silver (ABFSS)
+
+# COMMAND ----------
+
+def run_everything():
+    frames = []
+    for name, cfg in PROCESSORS.items():
+        print(f"Processor: {name}")
+        try:
+            part = cfg["fn"](cfg["df"]).select(
+                "source", "metric_name", "timestamp", "metric_value", "content"
+            )
+            frames.append(part)
+            print(f"  rows: {part.count()}")
+        except Exception as exc:
+            print(f"  SKIP {name}: {exc}")
+
+    if not frames:
+        raise RuntimeError(
+            "No processors produced data. Fix: deploy-shared-lab.cmd; attach classic cluster."
+        )
+
+    events = frames[0]
+    for more in frames[1:]:
+        events = events.unionByName(more)
+
+    good = events.filter(
+        F.col("metric_value").isNotNull()
+        & (F.col("metric_value") > 0)
+        & F.col("timestamp").isNotNull()
+    )
+    print("Timeline good:", good.count())
+    write_lab_delta(good, SILVER_EVENTS_ABFSS)
+    write_uc_mirror(good.limit(500), "zach_events_preview")
+    return good
+
+
+events = run_everything()
+display(events.limit(20))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 4. Daily aggregates → gold (ABFSS)
+
+# COMMAND ----------
+
+daily = (
+    events.withColumn("event_date", F.to_date("timestamp"))
+    .groupBy("source", "metric_name", "event_date")
+    .agg(F.sum("metric_value").alias("metric_value"), F.count("*").alias("event_count"))
+)
+write_lab_delta(daily, GOLD_DAILY_ABFSS)
+write_uc_mirror(daily, "zach_daily_aggregates")
+display(daily.orderBy("event_date", "metric_name").limit(30))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 5. Pivot + net_cash_gbp (ABFSS)
+
+# COMMAND ----------
+
+pivoted = (
+    daily.groupBy("event_date")
+    .pivot("metric_name")
+    .sum("metric_value")
+    .orderBy("event_date")
+)
+cols = [c for c in pivoted.columns if c != "event_date"]
+if "payment_amount" in cols and "refund_amount" in cols:
+    pivoted = pivoted.withColumn(
+        "net_cash_gbp",
+        F.coalesce(F.col("payment_amount"), F.lit(0.0))
+        - F.coalesce(F.col("refund_amount"), F.lit(0.0)),
+    )
+write_lab_delta(pivoted, GOLD_PIVOT_ABFSS)
+write_uc_mirror(pivoted, "zach_pivoted")
+display(pivoted)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 6. SQL check
+
+# COMMAND ----------
+
+pivoted.createOrReplaceTempView("zach_pivoted")
+spark.sql("SELECT * FROM zach_pivoted ORDER BY event_date").show(20, truncate=False)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 7. Quality gate + exit
+
+# COMMAND ----------
+
+def assert_quality(df):
+    n = df.count()
+    assert n > 0, "pivoted gold is empty"
+    assert df.filter(F.col("event_date").isNull()).count() == 0, "null event_date"
+    print("quality OK:", n, "days")
+
+
+assert_quality(pivoted)
+
+import json
+
+summary = {
+    "run_id": RUN_ID,
+    "pattern": "eczachly_event_processor_runner_pivot_v4_abfss",
+    "txn_auth": TXN_AUTH,
+    "returns_auth": RET_AUTH if "RET_AUTH" in dir() else "n/a",
+    "abfss_write_ok": ABFSS_WRITE_OK,
+    "lake_paths": [SILVER_EVENTS_ABFSS, GOLD_DAILY_ABFSS, GOLD_PIVOT_ABFSS],
+    "sources": list(PROCESSORS.keys()),
+    "written": list(WRITTEN_TABLES),
+    "status": "Succeeded",
+}
+print(json.dumps(summary, indent=2))
+dbutils.notebook.exit(json.dumps(summary))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 8. Student troubleshooting
+# MAGIC
+# MAGIC | Symptom | Fix |
+# MAGIC |---------|-----|
+# MAGIC | Top-right says **Serverless** | Detach → attach classic `0703-105931-31juyffm` → Run all |
+# MAGIC | `SERVERLESS / ABFSS blocked` | Same — classic required for lake writes |
+# MAGIC | `SparkKeyProviderException` / mkdirs | Refresh **v4** (setup no longer calls ADLS mkdirs) |
+# MAGIC | Secrets / bronze fail | Run `50_data_engineering_problems` Cell 0 first |
+# MAGIC | Returns SKIP | `deploy-shared-lab.cmd` |
+# MAGIC
+# MAGIC **Verify:** `python scripts/run_finledger_event_processors.py`
+
+# COMMAND ----------

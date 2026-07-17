@@ -18,6 +18,11 @@ sys.path.insert(0, str(ROOT))
 
 from bronze_auth_cell import BRONZE_AUTH_CELL
 from demo_table_helpers import DEMO_TABLE_HELPERS
+from governance_medallion_helpers import (
+    GOVERNANCE_CAPSTONE_CODE,
+    GOVERNANCE_CAPSTONE_MD,
+    GOVERNANCE_HELPERS,
+)
 from notebook_helpers import code, finish, md
 from problems_50_data import ALL_PROBLEMS_50
 from problems_50_theory import (
@@ -236,6 +241,8 @@ def build() -> Path:
         parts.extend(["", "# COMMAND ----------", ""])
     parts.extend(DEMO_TABLE_HELPERS.strip().splitlines())
     parts.extend(["", "# COMMAND ----------", ""])
+    parts.extend(GOVERNANCE_HELPERS.strip().splitlines())
+    parts.extend(["", "# COMMAND ----------", ""])
 
     md(parts, FORMAT_CONCEPT_MAP.strip())
     parts.extend(["", "# COMMAND ----------", ""])
@@ -264,6 +271,15 @@ except Exception as _exc:
     print("VERIFY FAIL:", _exc)''',
             )
 
+    md(parts, GOVERNANCE_CAPSTONE_MD.strip())
+    code(
+        parts,
+        "# " + "=" * 72 + "\n"
+        "# CAPSTONE: Medallion + SQL metadata + Purview (all 50 problems)\n"
+        "# " + "=" * 72 + "\n\n"
+        + GOVERNANCE_CAPSTONE_CODE.strip(),
+    )
+
     md(parts, "## Final — all tables created this run")
     code(
         parts,
@@ -281,7 +297,9 @@ else:
         print(" ", item.path)
 print("-" * 70)
 print("Written this run:", len(WRITTEN_TABLES), "tables/paths")
-print("NOTEBOOK COMPLETE — 50 problems demonstrated.")''',
+print("Governance manifest:", MANIFEST_PATH)
+print("SQL metadata export:", SQL_EXPORT_PATH)
+print("NOTEBOOK COMPLETE — 50 problems + medallion/Purview capstone.")''',
     )
 
     OUT.write_text("\n".join(finish(parts)) + "\n", encoding="utf-8")

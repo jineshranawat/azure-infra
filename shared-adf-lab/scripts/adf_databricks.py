@@ -26,6 +26,7 @@ from azure.mgmt.datafactory.models import (
     JsonSource,
     LookupActivity,
     ParameterSpecification,
+    PipelineFolder,
     PipelineReference,
     PipelineResource,
     SetVariableActivity,
@@ -50,6 +51,7 @@ NOTEBOOK_PARAMS = "/Shared/shared-adf/nb_adf_params_echo"
 NOTEBOOK_BRONZE = "/Shared/shared-adf/nb_adf_bronze_stats"
 NOTEBOOK_INTEGRATION = "/Shared/shared-adf/nb_adf_integration_complete"
 NOTEBOOK_JOB_TASK = "/Shared/shared-adf/nb_adf_job_task"
+NOTEBOOK_MEDALLION_GOV = "/Shared/shared-adf/nb_medallion_governance_master"
 
 DATABRICKS_PIPELINE_NAMES = [
     "pl_db_01_static_notebook",
@@ -66,6 +68,7 @@ DATABRICKS_PIPELINE_NAMES = [
     "pl_db_11_databricks_job_preview",
     "pl_db_12_end_to_end_integration",
     "pl_db_13_copy_notebook_job_chain",
+    "pl_db_14_databricks_medallion_governance",
 ]
 
 
@@ -716,6 +719,24 @@ def deploy_databricks_pipelines(
         ],
     )
 
+    pipelines["pl_db_14_databricks_medallion_governance"] = PipelineResource(
+        activities=[
+            _notebook(
+                "RunMedallionGovernance",
+                notebook_path=NOTEBOOK_MEDALLION_GOV,
+                base_parameters={
+                    "run_id": "@pipeline().parameters.run_id",
+                    "triggered_by": "adf-pl_db_14-medallion-governance",
+                },
+            )
+        ],
+        parameters={
+            "run_id": ParameterSpecification(type="String", default_value="session3-lab"),
+        },
+        folder=PipelineFolder(name="14-databricks-medallion-governance"),
+        annotations=["medallion", "purview", "sql-metadata", "databricks"],
+    )
+
     for name, body in pipelines.items():
         apply_expression_builder_folder(name, body)
         adf.pipelines.create_or_update(rg, factory, name, body)
@@ -778,6 +799,8 @@ def default_params(pipeline_name: str) -> dict[str, Any]:
             "lab_tag": "db11-job",
             "job_note": "adf-databricks-job-activity-preview",
         }
+    if pipeline_name == "pl_db_14_databricks_medallion_governance":
+        return {"run_id": "session3-lab"}
     if pipeline_name in ("pl_db_12_end_to_end_integration", "pl_db_13_copy_notebook_job_chain"):
         return {
             "incoming_folder": incoming,

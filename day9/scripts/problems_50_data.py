@@ -684,22 +684,18 @@ print("UC table:", f"{UC_TABLE}.prob31_secrets_audit")''',
         "problem": "Data Lineage Gaps",
         "solution": "Data Lineage Tools",
         "theory": "**WHAT:** Lineage is a dependency map — which source tables feed which downstream tables and reports.\n\n**WHY:** Without it, nobody knows impact of a schema change; compliance cannot trace data to source.\n\n**HOW:** Create downstream from upstream (prob32 from prob01) → open Catalog **Lineage** tab → Purview for enterprise (Session 24+).",
-        "code": '''# --- Problem 32: Lineage → UC lineage ---
-# Lineage answers: "Which tables feed this report?" and "What breaks if I change this column?"
+        "code": '''# --- Problem 32: Lineage → UC + Purview manifest edge ---
 src_table = "prob01_deduped"
 dst_table = "prob32_lineage_demo"
 src = demo_table_ref(src_table)
 write_demo_table(read_demo_table(src_table).limit(10), dst_table)
 dst = demo_table_ref(dst_table)
+register_lineage_edge(src_table, dst_table, "pl_prob32_lineage_demo")
 print("LINEAGE DEMO")
 print("  upstream (source) :", src)
 print("  downstream (new)  :", dst)
 print("  rows written      :", read_demo_table(dst_table).count())
-print()
-print("View lineage in Databricks:")
-print("  Catalog ->", dst if UC_WRITE_ENABLED else dst_table, "-> Lineage tab")
-print("  Upstream should show:", src_table, "(Problem 01 deduped output)")
-print("Enterprise: Azure Purview scans ADLS and registers cross-system lineage (Session 24+)")
+print("View lineage: Catalog -> Lineage tab (UC) | Purview manifest at", MANIFEST_PATH)
 try:
     spark.sql(f"DESCRIBE EXTENDED {dst}").filter("col_name = 'Provider'").show(truncate=False)
 except Exception as e:
@@ -711,20 +707,14 @@ except Exception as e:
         "problem": "Poor Documentation",
         "solution": "Centralized Documentation",
         "theory": "**WHAT:** Column meanings live in someone's head.\n\n**WHY:** Onboarding slow; wrong joins.\n\n**HOW:** UC table/column COMMENTs; markdown in repo README.",
-        "code": '''# --- Problem 33: Documentation → UC comments ---
+        "code": '''# --- Problem 33: Documentation → UC comments + SQL metadata row ---
+apply_table_documentation("prob01_deduped", "demo", "01")
 if UC_WRITE_ENABLED:
-    spark.sql(f"""
-COMMENT ON TABLE {UC_TABLE}.prob01_deduped IS
-'Deduplicated bronze transactions — Problem 01 demo. Owner: data-platform.'
-""")
-    spark.sql(f"""
-COMMENT ON COLUMN {UC_TABLE}.prob01_deduped.transaction_id IS
-'Natural business key — unique per payment'
-""")
     print("Comments applied. View: DESCRIBE TABLE EXTENDED", f"{UC_TABLE}.prob01_deduped")
     spark.sql(f"DESCRIBE TABLE EXTENDED {UC_TABLE}.prob01_deduped").show(5, truncate=False)
 else:
-    print("SKIP: UC comments need write permission on schema")''',
+    print("SKIP: UC comments need write permission on schema")
+print("SQL metadata model export (capstone):", SQL_EXPORT_PATH)''',
         "uc_table": None,
     },
     {
@@ -996,16 +986,15 @@ print("UC table:", f"{UC_TABLE}.prob47_retention_policy")''',
         "problem": "Compliance & Governance",
         "solution": "Data Governance Framework",
         "theory": "**WHAT:** No owner, classification, or audit trail.\n\n**WHY:** Regulatory (GDPR, PCI) requires traceability.\n\n**HOW:** UC tags + Purview classification (Session 24).",
-        "code": '''# --- Problem 48: Governance framework ---
+        "code": '''# --- Problem 48: Governance → UC tags + Purview classifications ---
+apply_table_documentation("prob01_deduped", "demo", "48")
 if UC_WRITE_ENABLED:
-    spark.sql(f"""
-ALTER TABLE {UC_TABLE}.prob01_deduped SET TAGS ('domain' = 'payments', 'classification' = 'internal')
-""")
-    print("UC tags set on prob01_deduped")
     spark.sql(f"SHOW TBLPROPERTIES {UC_TABLE}.prob01_deduped").show(10, truncate=False)
 else:
     print("SKIP: UC tags need write permission")
-print("Purview: scan ADLS + register lineage (see GOVERNANCE-DEPLOY.md)")''',
+asset = problem_asset_record("48", "Compliance & Governance", "Data Governance Framework", demo_table_ref("prob01_deduped"))
+print("Purview classification:", asset["classification"], "| glossary:", asset["glossary_term"])
+print("Full manifest written at capstone:", MANIFEST_PATH)''',
         "uc_table": None,
     },
     {
@@ -1030,25 +1019,24 @@ print("UC table:", f"{UC_TABLE}.prob49_dr_backup")''',
         "problem": "End-to-End Visibility",
         "solution": "End-to-End Monitoring",
         "theory": "**WHAT:** Cannot trace bronze → gold → dashboard latency.\n\n**WHY:** Siloed logs per tool.\n\n**HOW:** Unified metrics table + ADF Monitor + Databricks job runs.",
-        "code": '''# --- Problem 50: End-to-end monitoring ---
-from pyspark.sql import functions as F
-import json
-
-tables = [r.tableName for r in spark.sql(f"SHOW TABLES IN {UC_TABLE}").collect()]
+        "code": '''# --- Problem 50: End-to-end monitoring + governance inventory ---
+tables = [r.tableName for r in spark.sql(f"SHOW TABLES IN {UC_TABLE}").collect()] if UC_WRITE_ENABLED else []
+inventory = build_problem_inventory()
 e2e = spark.createDataFrame([
     (RUN_ID, "bronze_ingest", bronze.count(), "OK"),
-    (RUN_ID, "uc_tables_created", len(tables), "OK"),
-    (RUN_ID, "notebook", "50_problems", "COMPLETE"),
+    (RUN_ID, "prob_tables", len(inventory), "OK"),
+    (RUN_ID, "lineage_edges", len(LINEAGE_EDGES), "OK"),
+    (RUN_ID, "notebook", "50_problems", "READY_FOR_CAPSTONE"),
 ], ["run_id", "stage", "metric_value", "status"])
 
-e2e.write.format("delta").mode("overwrite").saveAsTable(f"{UC_TABLE}.prob50_e2e_monitoring")
-print("E2E summary:")
+write_demo_table(e2e, "prob50_e2e_monitoring")
+print("E2E summary (feeds capstone + SQL metadata model):")
 e2e.show()
-print("UC tables in schema:", len(tables))
-for t in sorted(tables)[:15]:
-    print(" ", t)
-if len(tables) > 15:
-    print(" ... and", len(tables) - 15, "more")''',
+print("Problem assets registered for Purview:", len(inventory))
+for asset in sorted(inventory, key=lambda a: a.get("problem_num", ""))[:10]:
+    print(" ", asset["problem_num"], asset["qualified_name"][:70])
+if len(inventory) > 10:
+    print(" ... and", len(inventory) - 10, "more — full list in Part K capstone")''',
         "uc_table": "prob50_e2e_monitoring",
     },
 ]

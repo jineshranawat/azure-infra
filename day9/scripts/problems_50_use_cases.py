@@ -218,4 +218,5 @@ PROBLEM_GROUPS: list[tuple[str, str, list[str]]] = [
     ("H", "Integration & integrity (38–44)", [f"{i:02d}" for i in range(38, 45)]),
     ("I", "Optimization & lifecycle (45–47)", [f"{i:02d}" for i in range(45, 48)]),
     ("J", "Governance & ops (48–50)", [f"{i:02d}" for i in range(48, 51)]),
+    ("K", "Medallion + SQL metadata + Purview capstone", ["capstone"]),
 ]

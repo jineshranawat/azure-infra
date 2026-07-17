@@ -56,6 +56,7 @@ from adf_rbac import ensure_adf_rbac  # noqa: E402
 from azure_sql import (  # noqa: E402
     deploy_sql,
     seed_change_tracking,
+    seed_de_governance_tables,
     seed_job_metadata_table,
     seed_reference_table,
 )
@@ -297,6 +298,7 @@ def _deploy_notebooks(cfg) -> None:
         ("nb_adf_bronze_stats.py", "/Shared/shared-adf/nb_adf_bronze_stats"),
         ("nb_adf_integration_complete.py", "/Shared/shared-adf/nb_adf_integration_complete"),
         ("nb_adf_job_task.py", "/Shared/shared-adf/nb_adf_job_task"),
+        ("nb_medallion_governance_master.py", "/Shared/shared-adf/nb_medallion_governance_master"),
     ]
     mkdirs_url = f"{cfg.databricks_host}/api/2.0/workspace/mkdirs"
     mkdirs_resp = requests.post(
@@ -442,6 +444,7 @@ _DATABRICKS_PIPELINES = frozenset(
         "pl_db_11_databricks_job_preview",
         "pl_db_12_end_to_end_integration",
         "pl_db_13_copy_notebook_job_chain",
+        "pl_db_14_databricks_medallion_governance",
     }
 )
 
@@ -645,6 +648,7 @@ def main() -> int:
             seed_reference_table(sql)
             seed_change_tracking(sql)
             seed_job_metadata_table(sql)
+            seed_de_governance_tables(sql)
 
         ensure_adf_rbac(cfg, estate.storage_account, estate.data_factory, estate.databricks_workspace)
         deploy_linked_services(cfg, estate, sql)
