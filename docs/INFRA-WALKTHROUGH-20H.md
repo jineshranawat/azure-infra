@@ -1,7 +1,7 @@
 # FinLedger Infrastructure Walkthrough — 20+ hours (student + trainer)
 
-> **Classroom projector (preferred):** open **[infra-cicd-walkthrough.html](infra-cicd-walkthrough.html)** in a browser — analogies, all phases, release table, citations.  
-> This Markdown is the editable source twin.
+> **Classroom projector (preferred):** open **[infra-cicd-walkthrough.html](infra-cicd-walkthrough.html)** in a browser — analogies, all phases, release table, **theory + enterprise diagrams + file map**, citations.  
+> Jump to HTML section **Theory overview**. This Markdown is the editable source twin.
 
 **Open this file for tomorrow’s infra session.**  
 **One command that links every child script:** `infra-walkthrough.cmd` (repo root)

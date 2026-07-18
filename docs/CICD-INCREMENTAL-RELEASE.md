@@ -1,6 +1,6 @@
 # CI/CD — Check-in and incremental release (ADF + Databricks)
 
-> **Classroom projector (preferred):** open **[infra-cicd-walkthrough.html](infra-cicd-walkthrough.html)** — full release table + ADF/Databricks steps + citations.  
+> **Classroom projector (preferred):** open **[infra-cicd-walkthrough.html](infra-cicd-walkthrough.html)** — full release table + ADF/Databricks steps + **theory/enterprise diagrams/file references** + citations.  
 > This Markdown is the editable source twin.
 
 **Who this is for:** every developer / student who changes ADF pipelines or Databricks notebooks and needs a **safe, repeatable release** without rebuilding Azure from scratch.
