@@ -2,6 +2,10 @@
 
 **Start here if you are lost.** This file is the master index for the whole repo: which **session**, which **document**, which **command**, and which **portal** blade — in order.
 
+> **Tomorrow’s infra session (20+ h shared estate):**  
+> **[docs/INFRA-WALKTHROUGH-20H.md](docs/INFRA-WALKTHROUGH-20H.md)** · run `.\infra-walkthrough.cmd --list` then `--phase N`  
+> Links every child script (provision → ADF → Day 6–9 → medallion CI/CD → cost) with analogies + incremental DevOps.
+
 **Curriculum source:** [azure.html](azure.html) (60h programme, Day 0–7)
 **Student course (Data Engineering):** [docs/data-engineering-course.html](docs/data-engineering-course.html) — 60h practical programme; Storage, Data Factory, Databricks, Purview, SQL — theory + hands-on
 
