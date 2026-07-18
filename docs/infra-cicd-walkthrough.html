@@ -51,10 +51,11 @@
   main ul,main ol{margin:.4rem 0 .8rem 1.25rem}
   main li{margin:.25rem 0}
 
-  table{width:100%;border-collapse:collapse;font-size:.92rem;margin:0.8rem 0 1rem}
-  th,td{border:1px solid var(--line);padding:.45rem .55rem;text-align:left;vertical-align:top}
-  th{background:#e8f2ef;font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:.82rem}
+  table{width:100%;border-collapse:collapse;font-size:.88rem;margin:0.8rem 0 1rem}
+  th,td{border:1px solid var(--line);padding:.4rem .5rem;text-align:left;vertical-align:top}
+  th{background:#e8f2ef;font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:.75rem}
   tr:hover td{background:#f3faf7}
+  td.file-ref, .file-ref{font-size:.8rem;line-height:1.45}
   .cmd{background:var(--code-bg);color:var(--code-ink);padding:.85rem 1rem;border-radius:4px;overflow-x:auto;font-size:.84rem;margin:.7rem 0 1rem;line-height:1.5}
   .cmd .c{color:#6a8f88}
   .callout{background:#e8f2ef;border-left:4px solid var(--accent);padding:.75rem 1rem;margin:1rem 0;border-radius:0 4px 4px 0}
@@ -178,111 +179,165 @@
     FinLedger teaches the same ideas on one shared classroom estate (dev/test style), using Windows one-liners instead of a full Azure DevOps org.
   </p>
 
-  <h3>All core concepts (plain language)</h3>
+  <h3>All core concepts (plain language) — correlated to <em>our</em> workflow</h3>
+  <p class="analogy">Read left → right on each row: theory → analogy → why it matters → <strong>exact command you run</strong> → <strong>files in this repo</strong>.</p>
   <table>
-    <thead><tr><th>Concept</th><th>Theory</th><th>Analogy</th><th>Why enterprises care</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Concept</th>
+        <th>Theory</th>
+        <th>Analogy</th>
+        <th>Why enterprises care</th>
+        <th>Our workflow (command)</th>
+        <th>Repo files</th>
+      </tr>
+    </thead>
     <tbody>
       <tr>
         <td><strong>Infrastructure as Code (IaC)</strong></td>
         <td>Declare Azure resources in Bicep/ARM; deploy with Incremental mode so re-runs update in place.</td>
         <td>Architect blueprint — same file, same house.</td>
         <td>Repeatable estates, audit trail, no snowflake RGs.</td>
+        <td><code>.\infra-walkthrough.cmd --phase 1</code><br><code>.\provision-shared.cmd</code></td>
+        <td class="file-ref"><code>infra/shared-eastus.bicep</code><br><code>scripts/provision_shared.py</code><br><code>provision-shared.cmd</code><br><code>infra-walkthrough.cmd</code></td>
       </tr>
       <tr>
         <td><strong>Configuration as Code</strong></td>
         <td>ADF pipelines, linked services, triggers live in repo — not only in the portal authoring canvas.</td>
         <td>Manager’s timetable printed from HQ, not scribbled on a whiteboard.</td>
         <td>Reviewable PRs; rollback; multi-env promote.</td>
+        <td><code>.\release.cmd adf</code><br><code>.\release.cmd adf-full</code> <span class="badge rare">rare</span><br><code>.\infra-walkthrough.cmd --phase 3</code></td>
+        <td class="file-ref"><code>shared-adf-lab/orchestrate.cmd</code><br><code>shared-adf-lab/scripts/run_shared_adf.py</code><br><code>deploy-shared-adf-lab.cmd</code><br><code>infra/shared-sql-westus.bicep</code></td>
       </tr>
       <tr>
         <td><strong>Application / notebook as Code</strong></td>
         <td>Databricks notebooks generated/built from git, imported with overwrite to fixed workspace paths.</td>
         <td>Recipe books reprinted and placed on the same shelf slot.</td>
         <td>No “works on my cluster only”; versioned transforms.</td>
+        <td><code>.\release.cmd databricks</code><br><code>.\infra-walkthrough.cmd --phase 8</code><br><code>day9\orchestrate.cmd --deploy</code></td>
+        <td class="file-ref"><code>day9/scripts/build_*.py</code><br><code>day9/notebooks/nb_*.py</code><br><code>scripts/deploy_shared_lab.py</code><br><code>deploy-shared-lab.cmd</code></td>
       </tr>
       <tr>
         <td><strong>CI (Continuous Integration)</strong></td>
         <td>Every check-in merges to trunk; build regenerates artifacts; conflicts surface early.</td>
         <td>Everyone edits the same cookbook; nightly reprint finds clashes.</td>
         <td>Fewer big-bang merges; quality gates.</td>
+        <td><code>git add -A</code><br><code>git commit -m "…"</code><br><code>git push origin main</code><br><code>git push class main</code><br>then build via medallion release</td>
+        <td class="file-ref"><code>day9/scripts/build_all_notebooks.py</code><br><code>scripts/release_medallion_governance.py</code><br>(enterprise would be Azure Pipelines YAML)</td>
       </tr>
       <tr>
         <td><strong>CD (Continuous Delivery / Deploy)</strong></td>
-        <td>After green build, deploy the smallest package (DBX only, ADF only, or both).</td>
+        <td>After green build, deploy the <em>smallest</em> package (DBX only, ADF only, or both).</td>
         <td>Restock only the shelves that changed — don’t rebuild the kitchen.</td>
         <td>Fast, safe releases; low blast radius.</td>
+        <td><span class="badge">pick one</span><br><code>.\release.cmd databricks</code><br><code>.\release.cmd adf</code><br><code>.\release.cmd medallion-deploy</code></td>
+        <td class="file-ref"><code>release.cmd</code><br><code>docs/CICD-INCREMENTAL-RELEASE.md</code><br><code>docs/infra-cicd-walkthrough.html</code> §Release table</td>
       </tr>
       <tr>
         <td><strong>Idempotent release</strong></td>
         <td>Running deploy twice yields the same end state (overwrite / Incremental / skip-if-exists).</td>
         <td>Press Save twice — still one document.</td>
         <td>Retries after failure; no duplicate resources.</td>
+        <td>Re-run the <em>same</em> command:<br><code>.\release.cmd medallion-deploy</code><br><code>.\provision-shared.cmd</code></td>
+        <td class="file-ref">ARM <code>--mode Incremental</code> in <code>provision_shared.py</code><br>notebook import <code>overwrite: true</code> in <code>deploy_shared_lab.py</code><br>ADF <code>--skip-sql</code> in <code>run_shared_adf.py</code></td>
       </tr>
       <tr>
         <td><strong>Environment promotion</strong></td>
         <td>Enterprise: Dev → Test → Prod with separate factories/workspaces. Class: one shared RG (treat as Dev).</td>
         <td>Test kitchen → dining room → banquet hall.</td>
         <td>Risk isolation; approvals before prod.</td>
+        <td>Class Dev: <code>rg-shared-class1</code><br>Optional personal: <code>.\infra-walkthrough.cmd --phase 12</code><br><code>orchestrate.cmd</code></td>
+        <td class="file-ref"><code>infra/shared-eastus.bicep</code> (shared)<br><code>infra/main.bicep</code> + <code>scripts/orchestrate.py</code> (personal Class-1)</td>
       </tr>
       <tr>
         <td><strong>Secrets management</strong></td>
         <td>Key Vault + Databricks secret scope; never commit <code>.env</code>.</td>
         <td>Key cupboard — chefs borrow keys, don’t tattoo passwords.</td>
         <td>Compliance; rotate without code change.</td>
+        <td><code>.\infra-walkthrough.cmd --phase 2</code><br><code>python scripts\ensure_cost_lab_secrets.py</code></td>
+        <td class="file-ref"><code>.env</code> (local only)<br><code>scripts/deploy_shared_lab.py</code> (scope <code>finledger</code>)<br><code>scripts/ensure_cost_lab_secrets.py</code><br>KV from Bicep</td>
+      </tr>
+      <tr>
+        <td><strong>ADF ↔ Databricks integration</strong></td>
+        <td>Orchestrator triggers compute; shared <code>run_id</code> / linked service; not two siloed tools.</td>
+        <td>Manager calls the chefs when the timetable says so.</td>
+        <td>One SLA wall-clock; clear ownership of failures.</td>
+        <td><code>.\infra-walkthrough.cmd --phase 4</code><br><code>shared-adf-lab\orchestrate.cmd --setup-databricks-integration</code></td>
+        <td class="file-ref"><code>shared-adf-lab/scripts/adf_databricks.py</code><br>ADF Notebook activities / jobs</td>
+      </tr>
+      <tr>
+        <td><strong>Full platform release (medallion)</strong></td>
+        <td>Build notebooks → overwrite workspace → update ADF governance → optional job run.</td>
+        <td>Conveyor: reprint books → restock shelf → update checklist → optionally cook.</td>
+        <td>One button for a coherent change set.</td>
+        <td><code>.\release.cmd medallion-deploy</code> <span class="badge">default</span><br><code>.\release.cmd medallion</code> <span class="badge job">costs $</span><br><code>.\infra-walkthrough.cmd --phase 9</code></td>
+        <td class="file-ref"><code>release-medallion-governance.cmd</code><br><code>scripts/release_medallion_governance.py</code><br><code>scripts/run_medallion_governance_job.py</code><br><code>day9/docs/medallion_governance_cicd.md</code></td>
       </tr>
       <tr>
         <td><strong>Observability / FinOps</strong></td>
         <td>ADF Monitor + Databricks Jobs + Cost Management / Monitor metrics after release.</td>
         <td>Security cameras + utility meters after dinner service.</td>
         <td>Prove release worked; control spend.</td>
+        <td><code>.\release.cmd verify</code><br><code>.\cost-dashboard.cmd --open</code><br><code>.\infra-walkthrough.cmd --phase 10</code></td>
+        <td class="file-ref"><code>scripts/cost_dashboard.py</code><br><code>cost-dashboard.cmd</code><br><code>scripts/deploy_cost_management_lab.py</code><br><code>day9/docs/finledger_cost_and_databricks_master_guide.md</code></td>
       </tr>
     </tbody>
   </table>
+  <div class="callout">
+    <strong>How to teach this table:</strong> pick one concept → read Theory + Analogy → run the command in “Our workflow” on the projector → open the listed file in the IDE so students see the correlation in one glance.
+  </div>
 
   <h3 id="enterprise">How enterprises do it (Microsoft recommended) vs this class lab</h3>
   <table>
-    <thead><tr><th>Layer</th><th>Enterprise (best practice)</th><th>FinLedger classroom equivalent</th><th>Microsoft Learn</th></tr></thead>
+    <thead><tr><th>Layer</th><th>Enterprise (best practice)</th><th>Our workflow (command)</th><th>Repo files</th><th>Microsoft Learn</th></tr></thead>
     <tbody>
       <tr>
         <td>Source control</td>
         <td>Azure Repos / GitHub; trunk or short-lived PRs; branch policies</td>
-        <td><code>git push origin main</code> + <code>git push class main</code></td>
+        <td><code>git push origin main</code><br><code>git push class main</code></td>
+        <td class="file-ref">Git remotes <code>origin</code>, <code>class</code></td>
         <td><a href="https://learn.microsoft.com/en-us/azure/devops/repos/git/" target="_blank" rel="noopener">Azure Repos Git</a></td>
       </tr>
       <tr>
         <td>CI build</td>
         <td>Azure Pipelines / GitHub Actions — validate Bicep, build notebooks, run tests</td>
-        <td><code>day9\scripts\build_all_notebooks.py</code> inside <code>release.cmd medallion*</code></td>
+        <td>Inside <code>.\release.cmd medallion-deploy</code><br>(runs build automatically)</td>
+        <td class="file-ref"><code>day9/scripts/build_all_notebooks.py</code><br><code>scripts/release_medallion_governance.py</code></td>
         <td><a href="https://learn.microsoft.com/en-us/azure/devops/pipelines/" target="_blank" rel="noopener">Azure Pipelines</a></td>
       </tr>
       <tr>
         <td>Infra deploy</td>
         <td>Pipeline task: <code>az deployment group create --mode Incremental</code> per env</td>
-        <td><code>provision-shared.cmd</code> / <code>infra-walkthrough --phase 1</code></td>
+        <td><code>.\infra-walkthrough.cmd --phase 1</code><br><code>.\provision-shared.cmd</code></td>
+        <td class="file-ref"><code>infra/shared-eastus.bicep</code><br><code>scripts/provision_shared.py</code></td>
         <td><a href="https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deployment-modes" target="_blank" rel="noopener">ARM Incremental</a></td>
       </tr>
       <tr>
         <td>ADF release</td>
-        <td>ADF “Publish” → collaboration branch → ARM template → release pipeline to Test/Prod factories; or npm ADF Utilities</td>
-        <td><code>release.cmd adf</code> (<code>--skip-sql</code>) redeploys factory in place</td>
+        <td>ADF Publish → collaboration branch → ARM → release pipeline to Test/Prod</td>
+        <td><code>.\release.cmd adf</code><br><code>.\release.cmd adf-full</code></td>
+        <td class="file-ref"><code>shared-adf-lab/scripts/run_shared_adf.py</code><br><code>release.cmd</code></td>
         <td><a href="https://learn.microsoft.com/en-us/azure/data-factory/continuous-integration-delivery" target="_blank" rel="noopener">ADF CI/CD</a></td>
       </tr>
       <tr>
         <td>Databricks release</td>
-        <td>Repos / Asset Bundles / workspace import API / CI job to target workspace</td>
-        <td><code>release.cmd databricks</code> → workspace import overwrite</td>
+        <td>Repos / Asset Bundles / workspace import API / CI job</td>
+        <td><code>.\release.cmd databricks</code></td>
+        <td class="file-ref"><code>scripts/deploy_shared_lab.py</code><br><code>day9/orchestrate.cmd</code></td>
         <td><a href="https://learn.microsoft.com/en-us/azure/databricks/dev-tools/ci-cd/" target="_blank" rel="noopener">Databricks CI/CD</a> · <a href="https://learn.microsoft.com/en-us/azure/databricks/dev-tools/bundles/" target="_blank" rel="noopener">Asset Bundles</a></td>
       </tr>
       <tr>
-        <td>Approvals</td>
-        <td>Environment checks, gates, service connections with least privilege SPN</td>
-        <td>Trainer runs release; SPN in <code>.env</code> / Key Vault for automation</td>
+        <td>Approvals / SPN</td>
+        <td>Environment checks, gates, least-privilege service connection</td>
+        <td>Trainer runs release; SPN from <code>.env</code> → scope</td>
+        <td class="file-ref"><code>.env</code> (local)<br><code>scripts/ensure_cost_lab_secrets.py</code></td>
         <td><a href="https://learn.microsoft.com/en-us/azure/devops/pipelines/process/environments" target="_blank" rel="noopener">Pipeline environments</a></td>
       </tr>
       <tr>
         <td>Multi-env</td>
         <td>Separate RG / ADF / Databricks per Dev-Test-Prod; parameter files</td>
-        <td>One <code>rg-shared-class1</code> (Dev); personal Class-1 optional</td>
+        <td>Shared Dev: <code>rg-shared-class1</code><br>Personal: <code>orchestrate.cmd</code></td>
+        <td class="file-ref"><code>infra/shared-eastus.bicep</code><br><code>infra/main.bicep</code></td>
         <td><a href="https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/considerations/landing-zone-sandbox" target="_blank" rel="noopener">CAF landing zones</a></td>
       </tr>
     </tbody>
