@@ -84,6 +84,7 @@
   .diagram-box{border:1px solid var(--line);border-radius:4px;padding:1rem;background:#fff;margin:1rem 0;overflow-x:auto}
   .diagram-box h4{margin:0 0 .6rem;font-size:.95rem}
   .file-ref code{font-size:.8rem;background:#eef4f2;padding:.1rem .35rem;border-radius:2px}
+  .cmd.warn-ish{border-left:4px solid var(--danger)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>document.addEventListener("DOMContentLoaded",()=>{mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});});</script>
@@ -110,6 +111,7 @@
 </header>
 
 <nav class="sticky-bar" aria-label="Quick jumps">
+  <a href="#all-commands">All commands (detail)</a>
   <a href="#theory">Theory + diagrams</a>
   <a href="#release-table">Release table</a>
   <a href="#analogy">Restaurant analogy</a>
@@ -124,6 +126,12 @@
 <aside class="toc">
   <div class="toc-title">Contents</div>
   <a href="#start">Start commands</a>
+  <a href="#all-commands">All commands + detail theory</a>
+  <a class="sub" href="#cmd-prereq">0. Prerequisites</a>
+  <a class="sub" href="#cmd-infra">1. Infra phases 0–12</a>
+  <a class="sub" href="#cmd-release">2. Release paths</a>
+  <a class="sub" href="#cmd-allsafe">3. Run everything</a>
+  <a class="sub" href="#cmd-labs">4. Optional labs</a>
   <a href="#theory">Theory overview</a>
   <a class="sub" href="#enterprise">Enterprise way (MS)</a>
   <a class="sub" href="#diagrams">Diagrams</a>
@@ -169,6 +177,347 @@
     Use only the <code>.\infra-walkthrough.cmd</code> / <code>.\release.cmd</code> lines.
     Phase 1 loads <code>OWNER_EMAIL</code> / <code>CLASS_OWNER_EMAIL</code> from <code>.env</code> automatically.
   </div>
+  <p><a href="#all-commands">Jump to full command book with detailed theory →</a></p>
+</section>
+
+<section id="all-commands">
+  <h2>All commands to run everything — detailed theory + full scripts</h2>
+  <p>
+    This section is the <strong>command book</strong>. For every step you get: (1) why it exists in theory,
+    (2) the restaurant analogy, (3) the exact Windows commands (copy whole blocks), (4) which child scripts run underneath,
+    (5) what to open in Portal / Studio to prove it worked. Do not skim one-liners — teach from this page top to bottom.
+  </p>
+  <div class="callout">
+    Always start from repo root. In PowerShell use <code>.\</code> before <code>.cmd</code> files.
+  </div>
+  <div class="cmd">cd D:\azure
+<span class="c"># Confirm you are in the repo that contains infra-walkthrough.cmd and release.cmd</span>
+dir *.cmd</div>
+
+  <!-- ========== PREREQ ========== -->
+  <h3 id="cmd-prereq">0. Prerequisites — unlock the toolbox (detail)</h3>
+  <p>
+    <strong>Theory:</strong> Before any cloud change, the developer machine must have a package manager (pip),
+    authenticated Azure identity, and configuration (<code>.env</code>). Enterprises call this “agent / runner bootstrap”
+    (Azure Pipelines Microsoft-hosted agent already has az + tools; here the learner laptop is the agent).
+    Without bootstrap, every later phase fails with confusing auth or missing-module errors — so we separate Phase 0 on purpose.
+  </p>
+  <p class="analogy">Analogy: unlock the toolbox and check your badge at the restaurant gate before touching ovens.</p>
+  <div class="cmd"><span class="c"># First time on a clean Windows PC (from repo root)</span>
+.\orchestrate.cmd --install-cli
+<span class="c"># Edit .env in Notepad — must include at least:</span>
+<span class="c">#   AZURE_SUBSCRIPTION_ID=...</span>
+<span class="c">#   CLASS_OWNER_EMAIL=you@company.com   (or OWNER_EMAIL=...)</span>
+<span class="c">#   DATABRICKS_HOST=https://adb-....azuredatabricks.net</span>
+<span class="c">#   DATABRICKS_TOKEN=...                (for notebook deploys)</span>
+<span class="c"># Optional SPN for Cost API / automation:</span>
+<span class="c">#   AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET</span>
+
+az login
+az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be
+
+.\infra-walkthrough.cmd --phase 0</div>
+  <p><strong>What Phase 0 does:</strong> ensures <code>.venv</code>, reminds you to <code>az login</code>, prints Python SDK status.
+  <strong>Files:</strong> <code>.env</code>, <code>requirements.txt</code>, <code>.venv/</code>, <code>infra-walkthrough.cmd</code>.</p>
+  <p><strong>Verify:</strong> terminal shows <code>Azure CLI: OK</code> and <code>Python SDK: OK</code>.</p>
+
+  <!-- ========== INFRA PHASES ========== -->
+  <h3 id="cmd-infra">1. Infrastructure phases 0–12 — full detail</h3>
+  <p>
+    <strong>Theory:</strong> The shared estate is created once (or updated Incremental), then lab assets and orchestration
+    are layered on. Running phases in order mirrors enterprise “landing zone → platform → workloads.”
+    Each phase is idempotent: re-run after success is safe.
+  </p>
+
+  <h4>Phase 0 — Bootstrap (repeat anytime)</h4>
+  <div class="cmd">.\infra-walkthrough.cmd --phase 0</div>
+
+  <h4>Phase 1 — Shared Azure estate (IaC)</h4>
+  <p>
+    <strong>Theory:</strong> Bicep declares RG, Key Vault, ADLS, ADF, Databricks. Azure Resource Manager applies
+    <em>Incremental</em> mode: resources in the template are created or updated; unrelated resources in the RG are left alone.
+    This is the Microsoft-recommended default for ongoing estate management (not Complete mode, which can delete extras).
+  </p>
+  <p class="analogy">Build / renovate the house frame — do not demolish the neighbours.</p>
+  <div class="cmd">.\infra-walkthrough.cmd --phase 1
+<span class="c"># Same as:</span>
+.\provision-shared.cmd
+<span class="c"># Under the hood:</span>
+<span class="c">#   scripts\provision_shared.py</span>
+<span class="c">#   → az deployment group create --mode Incremental</span>
+<span class="c">#   → infra\shared-eastus.bicep</span>
+<span class="c"># OWNER_EMAIL / CLASS_OWNER_EMAIL loaded from .env automatically</span></div>
+  <p><strong>Creates / updates:</strong> <code>rg-shared-class1</code>, storage, KV, ADF, Databricks (eastus).
+  <strong>Verify:</strong> Portal → Resource groups → <code>rg-shared-class1</code> → see those four resource types.</p>
+
+  <h4>Phase 2 — Lab assets into Databricks</h4>
+  <p>
+    <strong>Theory:</strong> Infra alone is an empty kitchen. This phase uploads bronze sample data, ensures secret scope
+    <code>finledger</code>, and imports Day 8/9 notebooks to fixed workspace paths with <strong>overwrite</strong>
+    (same path every time — never “notebook (1)”). That is application-as-code delivery.
+  </p>
+  <div class="cmd">.\infra-walkthrough.cmd --phase 2
+<span class="c"># Same as:</span>
+.\deploy-shared-lab.cmd
+<span class="c"># → scripts\deploy_shared_lab.py</span></div>
+  <p><strong>Verify:</strong> Databricks → Workspace → <code>/Shared/day7-day8</code> and <code>/Shared/day9</code>; Secret scopes → <code>finledger</code>.</p>
+
+  <h4>Phase 3 — Shared ADF + SQL</h4>
+  <p>
+    <strong>Theory:</strong> Data Factory is orchestration-as-code: pipelines and linked services are deployed from the repo
+    into factory <code>adf-shared-*</code>. SQL Basic in westus holds watermarks / metadata (office ledger). First-time or SQL changes
+    need full ADF lab; later pipeline-only edits should use <code>release.cmd adf</code> with <code>--skip-sql</code>.
+  </p>
+  <div class="cmd">.\infra-walkthrough.cmd --phase 3
+<span class="c"># Same as:</span>
+.\deploy-shared-adf-lab.cmd
+<span class="c"># → shared-adf-lab\orchestrate.cmd</span>
+<span class="c"># → shared-adf-lab\scripts\run_shared_adf.py</span>
+<span class="c"># → may deploy infra\shared-sql-westus.bicep</span></div>
+  <p><strong>Verify:</strong> ADF Studio → Author → pipelines <code>pl_*</code> / <code>pl_gov_*</code>; Azure SQL server exists.</p>
+
+  <h4>Phase 4 — ADF calls Databricks</h4>
+  <p>
+    <strong>Theory:</strong> Modern lakehouse jobs are hybrid: ADF owns trigger/dependency/timeout; Databricks owns Spark compute.
+    Integration wires linked service + job/notebook activity so one pipeline run can start a notebook with parameters (e.g. <code>run_id</code>).
+  </p>
+  <div class="cmd">.\infra-walkthrough.cmd --phase 4
+<span class="c"># Same as:</span>
+shared-adf-lab\orchestrate.cmd --setup-databricks-integration
+<span class="c"># → shared-adf-lab\scripts\adf_databricks.py</span></div>
+  <p><strong>Verify:</strong> ADF linked service to Databricks healthy; a Notebook activity pipeline can be opened.</p>
+
+  <h4>Phases 5–7 — Day 6 / 7 / 8 learning labs</h4>
+  <p>
+    <strong>Theory:</strong> Pedagogy layers skills before write-path lakehouse: Python for DE → storage/lake read → PySpark transforms.
+    These orchestrators mainly prepare local/session labs; Studio still uses shared notebooks from Phase 2/8 for demos.
+  </p>
+  <div class="cmd">.\infra-walkthrough.cmd --phase 5
+<span class="c"># → day6\orchestrate.cmd</span>
+
+.\infra-walkthrough.cmd --phase 6
+<span class="c"># → day7\orchestrate.cmd</span>
+
+.\infra-walkthrough.cmd --phase 7
+<span class="c"># → day8\orchestrate.cmd</span></div>
+
+  <h4>Phase 8 — Day 9 lakehouse notebooks deploy</h4>
+  <p>
+    <strong>Theory:</strong> Rebuilds/imports Day 9 session notebooks (silver, Delta, MERGE, gold, governance, cost, system tables, …)
+    into <code>/Shared/day9/</code>. Use after editing builders under <code>day9/scripts/</code>. Equivalent CD path: <code>release.cmd databricks</code>.
+  </p>
+  <div class="cmd">.\infra-walkthrough.cmd --phase 8
+<span class="c"># Same as:</span>
+day9\orchestrate.cmd --deploy</div>
+
+  <h4>Phase 9 — Medallion CI/CD release</h4>
+  <p>
+    <strong>Theory:</strong> This is the classroom stand-in for an Azure Pipeline: build notebook sources → deploy to Databricks →
+    update ADF governance pipelines (<code>--skip-sql</code>) → optionally submit the medallion job. Prefer deploy-only in class
+    to avoid unexpected DBU spend; run the job when you explicitly want a cooked dinner.
+  </p>
+  <div class="cmd">.\infra-walkthrough.cmd --phase 9
+<span class="c"># Same family:</span>
+.\release-medallion-governance.cmd --skip-run
+.\release-medallion-governance.cmd
+.\release.cmd medallion-deploy
+.\release.cmd medallion
+<span class="c"># Driver: scripts\release_medallion_governance.py</span>
+<span class="c">#   1) day9\scripts\build_all_notebooks.py</span>
+<span class="c">#   2) deploy-shared-lab.cmd</span>
+<span class="c">#   3) shared-adf-lab\orchestrate.cmd --skip-sql</span>
+<span class="c">#   4) scripts\run_medallion_governance_job.py   (unless --skip-run)</span></div>
+
+  <h4>Phase 10 — Cost &amp; ops</h4>
+  <p>
+    <strong>Theory:</strong> FinOps INFORM step: read Azure Cost Management + Monitor metrics + optional Databricks cost notebook.
+    Two invoices exist (Azure utility bill vs Databricks DBUs). Dashboard is the laptop twin of notebook Level 6.
+  </p>
+  <div class="cmd">.\infra-walkthrough.cmd --phase 10
+<span class="c"># Same pieces:</span>
+.\cost-dashboard.cmd --open
+.\.venv\Scripts\python.exe scripts\ensure_cost_lab_secrets.py
+.\.venv\Scripts\python.exe scripts\deploy_cost_management_lab.py</div>
+
+  <h4>Phase 11 — Optional stretch labs</h4>
+  <p><strong>Theory:</strong> Extra teaching modules (Event Hub, system tables, perf/NFR, Spark DAG). Soft-fail: one lab must not block others.</p>
+  <div class="cmd">.\infra-walkthrough.cmd --phase 11
+<span class="c"># Or individually:</span>
+.\.venv\Scripts\python.exe scripts\ensure_eventhub_lab.py
+.\.venv\Scripts\python.exe scripts\deploy_eventhub_finledger_lab.py
+.\.venv\Scripts\python.exe scripts\deploy_system_tables_lab.py
+.\.venv\Scripts\python.exe scripts\deploy_perf_databricks_adf_lab.py
+.\.venv\Scripts\python.exe scripts\deploy_spark_dag_problems_lab.py
+.\run-50-problems.cmd</div>
+
+  <h4>Phase 12 — Alternate personal Class-1 (NOT shared)</h4>
+  <p>
+    <strong>Theory:</strong> Per-learner uksouth landing zone (<code>infra/main.bicep</code>). Different estate — do not confuse with
+    <code>rg-shared-class1</code>. Never teardown the shared RG.
+  </p>
+  <div class="cmd warn-ish">.\infra-walkthrough.cmd --phase 12
+<span class="c"># → orchestrate.cmd   (personal rg-&lt;learner&gt;-class1)</span>
+<span class="c"># DANGER: never  orchestrate.cmd teardown --resource-group rg-shared-class1</span></div>
+
+  <!-- ========== RELEASE PATHS ========== -->
+  <h3 id="cmd-release">2. Incremental release paths — full detail (after git push)</h3>
+  <p>
+    <strong>Theory:</strong> CI/CD separates <em>integrate</em> (git) from <em>deliver</em> (deploy). Always check in first so the repo is the
+    source of truth. Then choose the <strong>smallest</strong> deploy package — Microsoft’s guidance for ADF and Databricks is the same:
+    promote only what changed; keep environments reproducible.
+  </p>
+
+  <h4>2a. Standard check-in (every change)</h4>
+  <div class="cmd">cd D:\azure
+git status
+git pull
+<span class="c"># ... edit builders / ADF scripts / docs ...</span>
+git add -A
+git commit -m "Clear why + which guardrail"
+git push origin main
+git push class main</div>
+  <p><strong>Never commit:</strong> <code>.env</code>, keys, <code>docs/cost-dashboard-out/</code>.</p>
+
+  <h4>2b. Notebooks only → Databricks</h4>
+  <p>
+    <strong>Theory:</strong> Workspace import API overwrites the same notebook path. Re-release replaces content; it does not fork a duplicate.
+    Use when only Day 8/9 / lab notebook sources changed. Does not rebuild SQL or re-deploy every ADF pipeline definition unnecessarily
+    (though <code>deploy-shared-lab</code> may refresh shared assets).
+  </p>
+  <div class="cmd">.\release.cmd databricks
+<span class="c"># Under the hood:</span>
+<span class="c">#   day9\orchestrate.cmd --deploy</span>
+<span class="c">#   deploy-shared-lab.cmd  → scripts\deploy_shared_lab.py</span></div>
+  <p><strong>Verify:</strong> Databricks → <code>/Shared/day9/</code> → open changed notebook → check modified time → Run all on a cluster.</p>
+
+  <h4>2c. ADF pipelines only (skip SQL)</h4>
+  <p>
+    <strong>Theory:</strong> Enterprise ADF CI/CD publishes ARM and deploys to another factory. In class we redeploy pipelines/linked services
+    <strong>in place</strong> on the shared factory with <code>--skip-sql</code> so the SQL server is not touched on every pipeline typo —
+    that is blast-radius control (same idea as deploying app code without recreating the database).
+  </p>
+  <div class="cmd">.\release.cmd adf
+<span class="c"># Under the hood:</span>
+<span class="c">#   shared-adf-lab\orchestrate.cmd --skip-sql</span>
+<span class="c">#   → scripts\run_shared_adf.py --skip-sql</span>
+
+<span class="c"># Optional smoke after deploy:</span>
+shared-adf-lab\orchestrate.cmd --run-pipeline pl_01_bronze_copy</div>
+  <p><strong>Verify:</strong> ADF Studio → Author → pipeline → Debug or Trigger now → Monitor.</p>
+
+  <h4>2d. ADF + SQL (rare)</h4>
+  <p>
+    <strong>Theory:</strong> Use when SQL Bicep, firewall, login, or first-time database bootstrap changed. Recreating SQL often is slow and
+    disruptive — hence “rare.” Matches enterprise rule: schema/infra changes go through a heavier pipeline than app config.
+  </p>
+  <div class="cmd">.\release.cmd adf-full
+<span class="c"># → deploy-shared-adf-lab.cmd  (includes SQL path)</span></div>
+
+  <h4>2e. Build + Databricks + ADF — no job (classroom default)</h4>
+  <p>
+    <strong>Theory:</strong> Coherent change-set when medallion notebooks <em>and</em> ADF governance pipelines must stay in sync.
+    Skipping the job separates <em>deploy</em> from <em>execute</em> — enterprises often require a manual approval or scheduled trigger
+    before production compute burns money. In class: deploy first, run job when ready.
+  </p>
+  <div class="cmd">.\release.cmd medallion-deploy
+<span class="c"># Equivalent:</span>
+.\release-medallion-governance.cmd --skip-run</div>
+
+  <h4>2f. Same + run medallion job (costs DBUs)</h4>
+  <p>
+    <strong>Theory:</strong> Continuous Deployment that also triggers a workload. Proves the release end-to-end but spends Databricks DBUs
+    (and any ADF activity charges). Use deliberately after <code>medallion-deploy</code> when you want a cooked dinner.
+  </p>
+  <div class="cmd">.\release.cmd medallion
+<span class="c"># Equivalent:</span>
+.\release-medallion-governance.cmd
+<span class="c"># Job helper: scripts\run_medallion_governance_job.py</span></div>
+
+  <h4>2g. Verify checklist command</h4>
+  <div class="cmd">.\release.cmd verify
+<span class="c"># Then manually open:</span>
+<span class="c">#   Databricks /Shared/day9/</span>
+<span class="c">#   ADF Studio → Monitor</span>
+<span class="c">#   Portal storage bronze/silver/gold/audit</span></div>
+
+  <h4>2h. Release hub menu (see all options)</h4>
+  <div class="cmd">.\release.cmd
+.\release.cmd --help</div>
+
+  <!-- ========== ALL SAFE ========== -->
+  <h3 id="cmd-allsafe">3. Run everything (safe path) — full estate refresh</h3>
+  <p>
+    <strong>Theory:</strong> Trainer “day zero” or recovery path: bootstrap through cost labs without personal Class-1 and without teardown.
+    Still pause between phases in live teaching so students can portal-verify. This is closer to a full environment rebuild pipeline
+    than to a daily incremental commit release.
+  </p>
+  <div class="cmd">cd D:\azure
+az login
+.\infra-walkthrough.cmd --list
+.\infra-walkthrough.cmd --all-safe
+<span class="c"># Runs phases 0 → 11 in order (NO phase 12, NO teardown)</span>
+
+<span class="c"># Or step-by-step (recommended for teaching):</span>
+.\infra-walkthrough.cmd --phase 0
+.\infra-walkthrough.cmd --phase 1
+.\infra-walkthrough.cmd --phase 2
+.\infra-walkthrough.cmd --phase 3
+.\infra-walkthrough.cmd --phase 4
+.\infra-walkthrough.cmd --phase 5
+.\infra-walkthrough.cmd --phase 6
+.\infra-walkthrough.cmd --phase 7
+.\infra-walkthrough.cmd --phase 8
+.\infra-walkthrough.cmd --phase 9
+.\infra-walkthrough.cmd --phase 10
+.\infra-walkthrough.cmd --phase 11</div>
+
+  <h3>Daily developer loop (after estate already exists)</h3>
+  <p>
+    <strong>Theory:</strong> Once landing zone exists, 95% of work is incremental CD — not Phase 1. Enterprises separate
+    “platform team” (infra) from “data product team” (notebooks/pipelines). Students act as data product team most days.
+  </p>
+  <div class="cmd">git pull
+<span class="c"># edit day9 or shared-adf-lab + docs</span>
+git add -A
+git commit -m "why"
+git push origin main
+git push class main
+
+<span class="c"># pick SMALLEST:</span>
+.\release.cmd databricks
+<span class="c"># or</span>
+.\release.cmd adf
+<span class="c"># or</span>
+.\release.cmd medallion-deploy
+
+.\release.cmd verify</div>
+
+  <!-- ========== OPTIONAL ========== -->
+  <h3 id="cmd-labs">4. Optional specialised deploys (detail)</h3>
+  <p><strong>Theory:</strong> Same overwrite pattern as Day 9 — each lab has a dedicated deploy script so blast radius stays small.</p>
+  <div class="cmd">.\.venv\Scripts\python.exe scripts\deploy_cost_management_lab.py
+.\.venv\Scripts\python.exe scripts\ensure_cost_lab_secrets.py
+.\.venv\Scripts\python.exe scripts\deploy_system_tables_lab.py
+.\.venv\Scripts\python.exe scripts\grant_system_tables_access.py
+.\.venv\Scripts\python.exe scripts\deploy_perf_databricks_adf_lab.py
+.\.venv\Scripts\python.exe scripts\deploy_spark_dag_problems_lab.py
+.\.venv\Scripts\python.exe scripts\ensure_eventhub_lab.py
+.\.venv\Scripts\python.exe scripts\deploy_eventhub_finledger_lab.py
+.\cost-dashboard.cmd --open
+.\run-50-problems.cmd</div>
+
+  <h3>Flags reference (memorise with meaning)</h3>
+  <table>
+    <thead><tr><th>Flag</th><th>Detailed meaning</th><th>Typical command</th></tr></thead>
+    <tbody>
+      <tr><td><code>--skip-build</code></td><td>Do not regenerate notebook <code>.py</code> from builders — use what is already on disk.</td><td><code>release-medallion-governance.cmd --skip-build</code></td></tr>
+      <tr><td><code>--skip-deploy</code></td><td>Do not push to Databricks or ADF — useful if you only want to re-run the job.</td><td>medallion with skip-deploy</td></tr>
+      <tr><td><code>--skip-run</code></td><td>Deploy artifacts only; do not submit Databricks job (saves DBUs).</td><td><code>.\release.cmd medallion-deploy</code></td></tr>
+      <tr><td><code>--run-only</code></td><td>Assume deploy already done; only trigger compute.</td><td><code>release-medallion-governance.cmd --run-only</code></td></tr>
+      <tr><td><code>--skip-sql</code></td><td>ADF redeploy without touching Azure SQL — default for incremental pipeline edits.</td><td><code>.\release.cmd adf</code></td></tr>
+      <tr><td><code>--all-safe</code></td><td>Infra walkthrough phases 0–11; never teardown; never personal Class-1.</td><td><code>.\infra-walkthrough.cmd --all-safe</code></td></tr>
+    </tbody>
+  </table>
 </section>
 
 <section id="theory">
@@ -523,8 +872,8 @@ git add -A &amp;&amp; git commit -m "why" &amp;&amp; git push origin main &amp;&
 </section>
 
 <section id="release-table" class="release-hero">
-  <h2 style="border:0;padding:0;margin-bottom:.8rem">After git push… → Run (memorise this)</h2>
-  <p>Golden rule: check in to <code>main</code> first, then run the <strong>smallest</strong> release that matches what you changed.</p>
+  <h2 style="border:0;padding:0;margin-bottom:.8rem">After git push… → Run (quick picker)</h2>
+  <p>Full theory + copy-paste blocks for each row live in <a href="#cmd-release">§ All commands → Release paths</a>. This table is the desk card.</p>
   <table>
     <thead>
       <tr><th>After git push…</th><th>Run</th><th>Touches</th></tr>
