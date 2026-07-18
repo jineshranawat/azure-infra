@@ -1,6 +1,6 @@
 @echo off
 REM =============================================================================
-REM FinLedger INFRA WALKTHROUGH — one entry that LINKS every child infra script
+REM FinLedger INFRA WALKTHROUGH - one entry that LINKS every child infra script
 REM =============================================================================
 REM Students: read docs\INFRA-WALKTHROUGH-20H.md first, then run phases with trainer.
 REM Trainer:  infra-walkthrough.cmd --list
@@ -43,7 +43,7 @@ goto show_list
 
 :show_help
 echo.
-echo FinLedger Infra Walkthrough — links ALL child infra / DevOps scripts
+echo FinLedger Infra Walkthrough - links ALL child infra / DevOps scripts
 echo Doc: docs\INFRA-WALKTHROUGH-20H.md
 echo.
 echo Usage:
@@ -73,7 +73,7 @@ exit /b 0
 :show_list
 echo.
 echo ========================================================================
-echo  FINLEDGER INFRA WALKTHROUGH — phase map (child scripts)
+echo  FINLEDGER INFRA WALKTHROUGH - phase map (child scripts)
 echo  Full teaching text: docs\INFRA-WALKTHROUGH-20H.md
 echo ========================================================================
 echo.
@@ -100,19 +100,19 @@ echo.
 echo  [4]  ADF calls Databricks (integration)
 echo       Child:  shared-adf-lab\orchestrate.cmd --setup-databricks-integration
 echo.
-echo  [5]  Day 6 — Python for DE
+echo  [5]  Day 6 - Python for DE
 echo       Child:  day6\orchestrate.cmd
 echo.
-echo  [6]  Day 7 — Storage + lake read
+echo  [6]  Day 7 - Storage + lake read
 echo       Child:  day7\orchestrate.cmd
 echo.
-echo  [7]  Day 8 — PySpark transforms
+echo  [7]  Day 8 - PySpark transforms
 echo       Child:  day8\orchestrate.cmd
 echo.
-echo  [8]  Day 9 — lakehouse write layer notebooks
+echo  [8]  Day 9 - lakehouse write layer notebooks
 echo       Child:  day9\orchestrate.cmd --deploy
 echo.
-echo  [9]  DevOps release — medallion + Purview governance
+echo  [9]  DevOps release - medallion + Purview governance
 echo       Child:  release-medallion-governance.cmd
 echo               - scripts\release_medallion_governance.py
 echo       Incremental: build - deploy notebooks - ADF --skip-sql - job
@@ -130,7 +130,7 @@ echo               python scripts\deploy_perf_databricks_adf_lab.py
 echo               python scripts\deploy_spark_dag_problems_lab.py
 echo               run-50-problems.cmd
 echo.
-echo [12]  ALTERNATE — personal Class-1 RG (uksouth) — NOT shared estate
+echo [12]  ALTERNATE - personal Class-1 RG (uksouth) - NOT shared estate
 echo       Child:  orchestrate.cmd
 echo       WARNING: do NOT teardown rg-shared-class1
 echo.
@@ -154,7 +154,7 @@ goto :eof
 :banner
 echo.
 echo ------------------------------------------------------------------------
-echo  PHASE %~1 — %~2
+echo  PHASE %~1 - %~2
 echo  Doc: docs\INFRA-WALKTHROUGH-20H.md
 echo ------------------------------------------------------------------------
 echo.
@@ -215,12 +215,12 @@ echo Next teaching: open docs\INFRA-WALKTHROUGH-20H.md section E (portal verify)
 exit /b 0
 
 :p0
-call :banner 0 "Bootstrap — unlock the toolbox"
+call :banner 0 "Bootstrap - unlock the toolbox"
 echo Reminder: az login  (or SPN in .env)
 echo Reminder: .env must have AZURE_SUBSCRIPTION_ID, DATABRICKS_HOST/TOKEN for later phases
 where az >nul 2>&1
 if errorlevel 1 (
-  echo Azure CLI not found — run: orchestrate.cmd --install-cli
+  echo Azure CLI not found - run: orchestrate.cmd --install-cli
 ) else (
   echo Azure CLI: OK
 )
@@ -228,53 +228,54 @@ if errorlevel 1 (
 exit /b %ERRORLEVEL%
 
 :p1
-call :banner 1 "Shared estate Bicep — build the house frame"
+call :banner 1 "Shared estate Bicep - build the house frame"
+REM OWNER_EMAIL / CLASS_OWNER_EMAIL are loaded from .env by provision_shared.py
 call provision-shared.cmd
 exit /b %ERRORLEVEL%
 
 :p2
-call :banner 2 "Deploy lab assets — furniture into the house"
+call :banner 2 "Deploy lab assets - furniture into the house"
 call deploy-shared-lab.cmd
 exit /b %ERRORLEVEL%
 
 :p3
-call :banner 3 "Shared ADF + SQL — hire the kitchen manager + ledger"
+call :banner 3 "Shared ADF + SQL - hire the kitchen manager + ledger"
 call deploy-shared-adf-lab.cmd
 exit /b %ERRORLEVEL%
 
 :p4
-call :banner 4 "ADF to Databricks integration — manager calls the chefs"
+call :banner 4 "ADF to Databricks integration - manager calls the chefs"
 call shared-adf-lab\orchestrate.cmd --setup-databricks-integration
 exit /b %ERRORLEVEL%
 
 :p5
-call :banner 5 "Day 6 — Python knife skills"
+call :banner 5 "Day 6 - Python knife skills"
 call day6\orchestrate.cmd
 exit /b %ERRORLEVEL%
 
 :p6
-call :banner 6 "Day 7 — Storage walk-in fridge + read path"
+call :banner 6 "Day 7 - Storage walk-in fridge + read path"
 call day7\orchestrate.cmd
 exit /b %ERRORLEVEL%
 
 :p7
-call :banner 7 "Day 8 — PySpark cooking techniques"
+call :banner 7 "Day 8 - PySpark cooking techniques"
 call day8\orchestrate.cmd
 exit /b %ERRORLEVEL%
 
 :p8
-call :banner 8 "Day 9 — lakehouse write layer notebooks"
+call :banner 8 "Day 9 - lakehouse write layer notebooks"
 call day9\orchestrate.cmd --deploy
 exit /b %ERRORLEVEL%
 
 :p9
-call :banner 9 "DevOps release — incremental medallion + governance"
+call :banner 9 "DevOps release - incremental medallion + governance"
 echo Flags you can pass after -- : --skip-run  --skip-deploy  --run-only
 call release-medallion-governance.cmd
 exit /b %ERRORLEVEL%
 
 :p10
-call :banner 10 "Cost and ops — read the utility meters"
+call :banner 10 "Cost and ops - read the utility meters"
 call cost-dashboard.cmd
 if exist "%PY%" (
   "%PY%" scripts\ensure_cost_lab_secrets.py
@@ -283,7 +284,7 @@ if exist "%PY%" (
 exit /b %ERRORLEVEL%
 
 :p11
-call :banner 11 "Optional stretch labs (soft — continue on failure)"
+call :banner 11 "Optional stretch labs (soft - continue on failure)"
 echo Event Hub lab...
 "%PY%" scripts\ensure_eventhub_lab.py
 if errorlevel 1 echo SKIP/WARN ensure_eventhub_lab
@@ -298,12 +299,12 @@ if errorlevel 1 echo SKIP/WARN perf lab
 "%PY%" scripts\deploy_spark_dag_problems_lab.py
 if errorlevel 1 echo SKIP/WARN dag lab
 echo.
-echo Optional: run-50-problems.cmd  (submits cluster job — costs DBUs)
+echo Optional: run-50-problems.cmd  (submits cluster job - costs DBUs)
 exit /b 0
 
 :p12
-call :banner 12 "ALTERNATE personal Class-1 (uksouth) — separate estate"
-echo This creates rg-LESSONS learner RG — NOT the shared class estate.
+call :banner 12 "ALTERNATE personal Class-1 (uksouth) - separate estate"
+echo This creates rg-LESSONS learner RG - NOT the shared class estate.
 echo Press Ctrl+C to cancel, or continue...
 timeout /t 8
 call orchestrate.cmd

@@ -10,6 +10,10 @@ cd D:\azure
 .\infra-walkthrough.cmd --phase 1
 ```
 
+In **PowerShell**, do not paste `REM ...` comments (that is cmd.exe syntax). Use only the `.\infra-walkthrough.cmd ...` lines.
+
+Phase 1 reads `OWNER_EMAIL` / `CLASS_OWNER_EMAIL` from `.env` automatically (no need to type `--owner-email` unless `.env` is empty).
+
 | Role | Start here |
 |------|------------|
 | **Student** | §0 analogy → §A timetable → follow trainer phase by phase |

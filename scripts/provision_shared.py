@@ -32,6 +32,21 @@ LEARNER_RE = re.compile(r"^[a-z0-9]{2,10}$")
 logger = logging.getLogger(__name__)
 
 
+def _load_dotenv() -> None:
+    """Load repo .env into os.environ (do not overwrite existing env vars)."""
+    dotenv = REPO_ROOT / ".env"
+    if not dotenv.is_file():
+        return
+    for line in dotenv.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key, val = key.strip(), val.strip()
+        if key and key not in os.environ:
+            os.environ[key] = val
+
+
 def _configure_logging(verbose: bool) -> None:
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
@@ -237,9 +252,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _load_dotenv()
     args = _parse_args(argv)
     if not args.owner_email:
-        raise SystemExit("--owner-email or OWNER_EMAIL / CLASS_OWNER_EMAIL required.")
+        raise SystemExit(
+            "--owner-email or OWNER_EMAIL / CLASS_OWNER_EMAIL required.\n"
+            "Fix: set CLASS_OWNER_EMAIL in .env  OR  run:\n"
+            "  provision-shared.cmd --owner-email you@example.com\n"
+            "  infra-walkthrough.cmd --phase 1"
+        )
     try:
         provision(args.subscription_id, args.owner_email, verbose=args.verbose)
     except SystemExit:
