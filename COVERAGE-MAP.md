@@ -4,7 +4,10 @@
 
 > **Tomorrow’s infra session (20+ h shared estate):**  
 > **[docs/INFRA-WALKTHROUGH-20H.md](docs/INFRA-WALKTHROUGH-20H.md)** · run `.\infra-walkthrough.cmd --list` then `--phase N`  
-> Links every child script (provision → ADF → Day 6–9 → medallion CI/CD → cost) with analogies + incremental DevOps.
+> Links every child script (provision → ADF → Day 6–9 → medallion CI/CD → cost) with analogies + incremental DevOps.  
+>  
+> **Check-in → release (ADF + Databricks):**  
+> **[docs/CICD-INCREMENTAL-RELEASE.md](docs/CICD-INCREMENTAL-RELEASE.md)** · `.\release.cmd` · `.\release.cmd medallion-deploy`
 
 **Curriculum source:** [azure.html](azure.html) (60h programme, Day 0–7)
 **Student course (Data Engineering):** [docs/data-engineering-course.html](docs/data-engineering-course.html) — 60h practical programme; Storage, Data Factory, Databricks, Purview, SQL — theory + hands-on

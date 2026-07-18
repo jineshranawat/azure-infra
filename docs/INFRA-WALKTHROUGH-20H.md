@@ -20,7 +20,7 @@ Phase 1 reads `OWNER_EMAIL` / `CLASS_OWNER_EMAIL` from `.env` automatically (no 
 | **Trainer** | §B phase map → run `--phase N` → portal verify in §E |
 | **DevOps / incremental** | §D — how releases update without rebuilding from zero |
 
-**Companion guides:** [TRAINER-NOTES.md](TRAINER-NOTES.md) · [GOVERNANCE-DEPLOY.md](GOVERNANCE-DEPLOY.md) · [../COVERAGE-MAP.md](../COVERAGE-MAP.md) · [../day9/docs/finledger_cost_and_databricks_master_guide.md](../day9/docs/finledger_cost_and_databricks_master_guide.md)
+**Companion guides:** [TRAINER-NOTES.md](TRAINER-NOTES.md) · [GOVERNANCE-DEPLOY.md](GOVERNANCE-DEPLOY.md) · [CICD-INCREMENTAL-RELEASE.md](CICD-INCREMENTAL-RELEASE.md) (`release.cmd`) · [../COVERAGE-MAP.md](../COVERAGE-MAP.md) · [../day9/docs/finledger_cost_and_databricks_master_guide.md](../day9/docs/finledger_cost_and_databricks_master_guide.md)
 
 ---
 
@@ -171,7 +171,18 @@ This is the heart of tomorrow’s “how do we change production safely?” stor
 
 ### D.2 Medallion governance release pipeline (phase 9)
 
-Command:
+**Preferred hub for students after git push:**
+
+```cmd
+.\release.cmd                    REM menu
+.\release.cmd databricks         REM notebooks only
+.\release.cmd adf                REM ADF --skip-sql
+.\release.cmd medallion-deploy   REM build + DBX + ADF, no job
+```
+
+Full guide: [CICD-INCREMENTAL-RELEASE.md](CICD-INCREMENTAL-RELEASE.md)
+
+Classic command (same medallion path):
 
 ```cmd
 .\release-medallion-governance.cmd
