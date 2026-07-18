@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinLedger — Infra Walkthrough + CI/CD Incremental Release</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0b1f2a; --ink-2:#123041; --paper:#f7f4ef; --card:#fffdf9;
+    --line:#d8d0c4; --muted:#5c6b73; --accent:#0e7c6b; --accent-2:#c45c26;
+    --code-bg:#0d2430; --code-ink:#d5e8e2; --warn-bg:#fff4e5; --danger:#8b1e1e;
+    --ok:#1b6b3a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Source Serif 4",Georgia,serif;background:var(--paper);color:var(--ink);line-height:1.65}
+  h1,h2,h3,h4,.nav a,.chip,button,.toc-title{font-family:"Space Grotesk",system-ui,sans-serif}
+  code,pre,.mono{font-family:"JetBrains Mono",Consolas,monospace}
+  a{color:var(--accent);text-decoration-thickness:1px}
+  a:hover{color:var(--accent-2)}
+
+  .hero{
+    background:
+      radial-gradient(ellipse 80% 60% at 100% 0%, rgba(14,124,107,.28), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 0% 100%, rgba(196,92,38,.18), transparent 50%),
+      linear-gradient(160deg, #07151d 0%, #0b1f2a 45%, #123041 100%);
+    color:#eef6f3; padding:3.2rem 1.5rem 2.6rem; border-bottom:4px solid var(--accent);
+  }
+  .hero-inner{max-width:1100px;margin:0 auto}
+  .brand{font-size:clamp(2rem,4vw,2.8rem);font-weight:700;letter-spacing:-.02em;color:#fff;margin:0 0 .4rem}
+  .hero h1{font-size:clamp(1.35rem,2.5vw,1.85rem);font-weight:600;color:#b8e0d6;margin:0 0 1rem;max-width:36ch}
+  .hero p{max-width:62ch;color:#c5d5d0;font-size:1.05rem;margin-bottom:1.2rem}
+  .chips{display:flex;flex-wrap:wrap;gap:.5rem}
+  .chip{font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(184,224,214,.45);padding:.35rem .7rem;border-radius:2px;color:#b8e0d6}
+
+  .layout{max-width:1100px;margin:0 auto;padding:1.5rem;display:grid;grid-template-columns:240px 1fr;gap:1.75rem}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}}
+  .toc{position:sticky;top:1rem;align-self:start;background:var(--card);border:1px solid var(--line);padding:1rem;border-radius:4px;font-size:.9rem}
+  .toc-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.6rem}
+  .toc a{display:block;padding:.28rem 0;color:var(--ink-2);text-decoration:none;border-bottom:1px solid transparent}
+  .toc a:hover{color:var(--accent);border-bottom-color:var(--line)}
+  .toc .sub{padding-left:.75rem;font-size:.85rem;color:var(--muted)}
+
+  main section{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:1.4rem 1.5rem;margin-bottom:1.25rem}
+  main h2{font-size:1.35rem;margin:0 0 .75rem;padding-bottom:.45rem;border-bottom:2px solid var(--accent);color:var(--ink)}
+  main h3{font-size:1.08rem;margin:1.2rem 0 .5rem;color:var(--ink-2)}
+  main p{margin:.55rem 0}
+  main ul,main ol{margin:.4rem 0 .8rem 1.25rem}
+  main li{margin:.25rem 0}
+
+  table{width:100%;border-collapse:collapse;font-size:.92rem;margin:0.8rem 0 1rem}
+  th,td{border:1px solid var(--line);padding:.45rem .55rem;text-align:left;vertical-align:top}
+  th{background:#e8f2ef;font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:.82rem}
+  tr:hover td{background:#f3faf7}
+  .cmd{background:var(--code-bg);color:var(--code-ink);padding:.85rem 1rem;border-radius:4px;overflow-x:auto;font-size:.84rem;margin:.7rem 0 1rem;line-height:1.5}
+  .cmd .c{color:#6a8f88}
+  .callout{background:#e8f2ef;border-left:4px solid var(--accent);padding:.75rem 1rem;margin:1rem 0;border-radius:0 4px 4px 0}
+  .callout.warn{background:var(--warn-bg);border-left-color:var(--accent-2)}
+  .callout.danger{background:#fce8e8;border-left-color:var(--danger)}
+  .analogy{font-style:italic;color:var(--muted);border-left:3px solid #c4b8a5;padding-left:.8rem;margin:.6rem 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  @media(max-width:700px){.grid2{grid-template-columns:1fr}}
+  .card-mini{border:1px solid var(--line);padding:.8rem;border-radius:4px;background:#fbfaf7}
+  .card-mini h4{font-family:"Space Grotesk",sans-serif;margin:0 0 .35rem;font-size:.95rem}
+  .release-hero{background:linear-gradient(135deg,#0e7c6b12,#c45c2610);border:2px solid var(--accent);padding:1rem;border-radius:4px;margin:1rem 0}
+  .release-hero h3{margin-top:0;border:0;color:var(--accent)}
+  .badge{display:inline-block;font-family:"Space Grotesk",sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;background:var(--accent);color:#fff;padding:.15rem .45rem;border-radius:2px;margin-right:.25rem}
+  .badge.rare{background:var(--accent-2)}
+  .badge.job{background:#6b3d8a}
+  footer{max-width:1100px;margin:0 auto 2.5rem;padding:0 1.5rem;color:var(--muted);font-size:.88rem}
+  .cite ol{margin-left:1.2rem}
+  .cite li{margin:.4rem 0}
+  .flow{white-space:pre;font-family:"JetBrains Mono",monospace;font-size:.78rem;background:var(--code-bg);color:var(--code-ink);padding:1rem;border-radius:4px;overflow-x:auto;line-height:1.45}
+  .sticky-bar{position:sticky;top:0;z-index:20;background:rgba(247,244,239,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:.55rem 1.5rem;display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:center}
+  .sticky-bar a{font-family:"Space Grotesk",sans-serif;font-size:.8rem;text-decoration:none;border:1px solid var(--line);padding:.3rem .65rem;border-radius:2px;background:var(--card);color:var(--ink)}
+  .sticky-bar a:hover{border-color:var(--accent);color:var(--accent)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="brand">FinLedger</p>
+    <h1>Infrastructure walkthrough + CI/CD incremental release</h1>
+    <p>
+      One teaching page for tomorrow’s session: restaurant analogies, every child infra script,
+      and the <strong>check-in → smallest release</strong> path for ADF and Databricks.
+      Source of truth remains git <code class="mono">main</code>; HTML is the classroom projector view.
+    </p>
+    <div class="chips">
+      <span class="chip">20+ hour infra</span>
+      <span class="chip">infra-walkthrough.cmd</span>
+      <span class="chip">release.cmd</span>
+      <span class="chip">rg-shared-class1</span>
+      <span class="chip">eastus shared estate</span>
+    </div>
+  </div>
+</header>
+
+<nav class="sticky-bar" aria-label="Quick jumps">
+  <a href="#release-table">Release table</a>
+  <a href="#analogy">Restaurant analogy</a>
+  <a href="#phases">Infra phases 0–12</a>
+  <a href="#cicd">CI/CD steps</a>
+  <a href="#verify">Verify</a>
+  <a href="#citations">Citations</a>
+  <a href="INFRA-WALKTHROUGH-20H.md">MD: Infra</a>
+  <a href="CICD-INCREMENTAL-RELEASE.md">MD: CI/CD</a>
+</nav>
+
+<div class="layout">
+<aside class="toc">
+  <div class="toc-title">Contents</div>
+  <a href="#start">Start commands</a>
+  <a href="#release-table">After git push → Run</a>
+  <a href="#analogy">0. Master analogy</a>
+  <a href="#estates">0b. Two estates</a>
+  <a href="#timetable">A. 20h timetable</a>
+  <a href="#phases">B. Phase map</a>
+  <a href="#concepts">C. Concept cards</a>
+  <a href="#devops-layers">D. DevOps layers</a>
+  <a href="#cicd">CI/CD deep dive</a>
+  <a class="sub" href="#dbx-release">Databricks release</a>
+  <a class="sub" href="#adf-release">ADF release</a>
+  <a class="sub" href="#medallion">Medallion full</a>
+  <a href="#verify">E. Verify checklists</a>
+  <a href="#danger">H. Danger board</a>
+  <a href="#citations">Citations &amp; references</a>
+</aside>
+
+<main>
+
+<section id="start">
+  <h2>Start here (projector)</h2>
+  <div class="grid2">
+    <div class="card-mini">
+      <h4>Infra linker</h4>
+      <div class="cmd">cd D:\azure
+.\infra-walkthrough.cmd --list
+.\infra-walkthrough.cmd --phase 0
+.\infra-walkthrough.cmd --phase 1</div>
+      <p class="analogy">Unlock the toolbox, then build the house frame.</p>
+    </div>
+    <div class="card-mini">
+      <h4>Release hub (after git push)</h4>
+      <div class="cmd">cd D:\azure
+.\release.cmd
+.\release.cmd medallion-deploy
+.\release.cmd verify</div>
+      <p class="analogy">Put new recipe books on the shelf — do not rebuild the restaurant.</p>
+    </div>
+  </div>
+  <div class="callout warn">
+    <strong>PowerShell:</strong> do not paste <code>REM ...</code> comments (cmd.exe only).
+    Use only the <code>.\infra-walkthrough.cmd</code> / <code>.\release.cmd</code> lines.
+    Phase 1 loads <code>OWNER_EMAIL</code> / <code>CLASS_OWNER_EMAIL</code> from <code>.env</code> automatically.
+  </div>
+</section>
+
+<section id="release-table" class="release-hero">
+  <h2 style="border:0;padding:0;margin-bottom:.8rem">After git push… → Run (memorise this)</h2>
+  <p>Golden rule: check in to <code>main</code> first, then run the <strong>smallest</strong> release that matches what you changed.</p>
+  <table>
+    <thead>
+      <tr><th>After git push…</th><th>Run</th><th>Touches</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge">common</span> Notebooks only</td>
+        <td><code>.\release.cmd databricks</code></td>
+        <td>Databricks <code>/Shared/day9/</code> overwrite</td>
+      </tr>
+      <tr>
+        <td><span class="badge">common</span> ADF pipelines only</td>
+        <td><code>.\release.cmd adf</code></td>
+        <td>ADF in place (<code>--skip-sql</code>)</td>
+      </tr>
+      <tr>
+        <td><span class="badge rare">rare</span> ADF + SQL</td>
+        <td><code>.\release.cmd adf-full</code></td>
+        <td>ADF + SQL westus</td>
+      </tr>
+      <tr>
+        <td><span class="badge">default</span> Build + DBX + ADF, no job</td>
+        <td><code>.\release.cmd medallion-deploy</code></td>
+        <td>Build → notebooks → ADF gov</td>
+      </tr>
+      <tr>
+        <td><span class="badge job">costs $</span> Same + run job</td>
+        <td><code>.\release.cmd medallion</code></td>
+        <td>Above + Databricks job (DBUs)</td>
+      </tr>
+      <tr>
+        <td>What to click next</td>
+        <td><code>.\release.cmd verify</code></td>
+        <td>Portal / Studio checklist</td>
+      </tr>
+      <tr>
+        <td><span class="badge rare">rare</span> New Azure resource / Bicep</td>
+        <td><code>.\infra-walkthrough.cmd --phase 1</code></td>
+        <td>Shared estate infra</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="cmd"><span class="c">REM Check-in (both remotes)</span>
+git status
+git add -A
+git commit -m "Clear why + which guardrail"
+git push origin main
+git push class main</div>
+</section>
+
+<section id="analogy">
+  <h2>0. Master analogy — one restaurant for the class</h2>
+  <p>FinLedger is a <strong>bank restaurant</strong> that must cook the same dinner every night (bronze → silver → gold).</p>
+  <table>
+    <thead><tr><th>Kitchen / city</th><th>Azure piece</th><th>Script</th></tr></thead>
+    <tbody>
+      <tr><td>Land plot + permit</td><td>RG <code>rg-shared-class1</code></td><td><code>provision-shared.cmd</code></td></tr>
+      <tr><td>Blueprint</td><td>Bicep <code>infra/shared-eastus.bicep</code></td><td>same</td></tr>
+      <tr><td>Walk-in fridge</td><td>ADLS Gen2</td><td>same</td></tr>
+      <tr><td>Key cupboard</td><td>Key Vault</td><td>same</td></tr>
+      <tr><td>Manager + timetable</td><td>Azure Data Factory</td><td><code>deploy-shared-adf-lab.cmd</code></td></tr>
+      <tr><td>Kitchen + chefs</td><td>Databricks</td><td>provision + <code>deploy-shared-lab</code></td></tr>
+      <tr><td>Back-office ledger</td><td>Azure SQL <code>finledger</code></td><td>ADF lab / SQL Bicep</td></tr>
+      <tr><td>Health inspector</td><td>Purview</td><td>medallion release</td></tr>
+      <tr><td>Utility meters</td><td>Cost + Monitor</td><td><code>cost-dashboard.cmd</code></td></tr>
+      <tr><td>Recipe books</td><td><code>/Shared/day9/</code></td><td><code>release.cmd databricks</code></td></tr>
+      <tr><td>CI/CD conveyor</td><td>build → deploy → optional run</td><td><code>release.cmd medallion*</code></td></tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <strong>Golden rules:</strong> (1) Re-run is safe — teardown of shared RG is not a classroom toy.
+    (2) Two estates exist — do not mix. (3) Incremental = renovate one room, do not demolish the house.
+  </div>
+
+  <h3 id="estates">0b. Two estates (do not mix)</h3>
+  <table>
+    <thead><tr><th>Estate</th><th>Who</th><th>Region</th><th>Entry</th><th>RG</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Shared class</strong> (default)</td><td>Whole cohort</td><td>eastus (+ SQL westus)</td><td><code>provision-shared.cmd</code>…</td><td><code>rg-shared-class1</code></td></tr>
+      <tr><td>Per-learner Class-1</td><td>Personal sandbox</td><td>uksouth / ukwest</td><td><code>orchestrate.cmd</code></td><td><code>rg-&lt;learner&gt;-class1</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="timetable">
+  <h2>A. 20+ hour timetable</h2>
+  <table>
+    <thead><tr><th>Block</th><th>Hours</th><th>Theme</th><th>Run</th></tr></thead>
+    <tbody>
+      <tr><td>A0</td><td>0–1</td><td>Why infra-as-code</td><td><code>--list</code></td></tr>
+      <tr><td>A1</td><td>1–3</td><td>Shared Bicep house</td><td><code>--phase 1</code></td></tr>
+      <tr><td>A2</td><td>3–4</td><td>Secrets, bronze, notebooks</td><td><code>--phase 2</code></td></tr>
+      <tr><td>A3</td><td>4–7</td><td>ADF as code</td><td><code>--phase 3</code></td></tr>
+      <tr><td>A4</td><td>7–8.5</td><td>ADF ↔ Databricks</td><td><code>--phase 4</code></td></tr>
+      <tr><td>A5</td><td>8.5–10.5</td><td>Day 6–7</td><td><code>--phase 5</code> then <code>6</code></td></tr>
+      <tr><td>A6</td><td>10.5–12.5</td><td>Day 8 PySpark</td><td><code>--phase 7</code></td></tr>
+      <tr><td>A7</td><td>12.5–15.5</td><td>Day 9 lakehouse</td><td><code>--phase 8</code></td></tr>
+      <tr><td>A8</td><td>15.5–18</td><td><strong>DevOps incremental</strong></td><td><code>--phase 9</code> / <code>release.cmd</code></td></tr>
+      <tr><td>A9</td><td>18–19.5</td><td>Cost &amp; ops</td><td><code>--phase 10</code></td></tr>
+      <tr><td>A10</td><td>19.5–21+</td><td>Stretch</td><td><code>--phase 11</code></td></tr>
+    </tbody>
+  </table>
+  <p class="analogy">Tip: one <code>--phase N</code> on the projector, then portal verify, then next phase.</p>
+</section>
+
+<section id="phases">
+  <h2>B. Phase map — every child script</h2>
+  <p>Master entry: <code>infra-walkthrough.cmd</code></p>
+  <table>
+    <thead><tr><th>#</th><th>Child command(s)</th><th>What appears</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>venv + <code>az</code> check</td><td>Toolbox ready</td></tr>
+      <tr><td>1</td><td><code>provision-shared.cmd</code> → <code>provision_shared.py</code> → <code>shared-eastus.bicep</code></td><td>RG, KV, Storage, ADF, Databricks</td></tr>
+      <tr><td>2</td><td><code>deploy-shared-lab.cmd</code></td><td>Bronze, <code>finledger</code> secrets, notebooks</td></tr>
+      <tr><td>3</td><td><code>deploy-shared-adf-lab.cmd</code></td><td>Pipelines + SQL westus</td></tr>
+      <tr><td>4</td><td><code>shared-adf-lab\orchestrate.cmd --setup-databricks-integration</code></td><td>ADF can start jobs</td></tr>
+      <tr><td>5–7</td><td><code>day6</code> / <code>day7</code> / <code>day8\orchestrate.cmd</code></td><td>Python → lake → PySpark</td></tr>
+      <tr><td>8</td><td><code>day9\orchestrate.cmd --deploy</code></td><td><code>/Shared/day9/*</code></td></tr>
+      <tr><td>9</td><td><code>release-medallion-governance.cmd</code></td><td>Build → deploy → ADF → job</td></tr>
+      <tr><td>10</td><td><code>cost-dashboard.cmd</code> + cost notebook deploy</td><td>Bill + metrics</td></tr>
+      <tr><td>11</td><td><code>deploy_*_lab.py</code> helpers</td><td>EH, system tables, perf, DAG</td></tr>
+      <tr><td>12</td><td><code>orchestrate.cmd</code></td><td><em>Different</em> personal RG — careful</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Shared estate inventory (examples)</h3>
+  <table>
+    <thead><tr><th>Resource</th><th>Example</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>RG</td><td><code>rg-shared-class1</code></td><td>Land plot</td></tr>
+      <tr><td>Storage</td><td><code>stsharedqgr7mj</code></td><td>Fridge</td></tr>
+      <tr><td>Key Vault</td><td><code>kv-shared-qgr7mj</code></td><td>Key cupboard</td></tr>
+      <tr><td>ADF</td><td><code>adf-shared-qgr7mj</code></td><td>Manager</td></tr>
+      <tr><td>Databricks</td><td><code>dbw-shared-qgr7mj</code></td><td>Kitchen</td></tr>
+      <tr><td>SQL</td><td><code>sql-shared-…</code> / <code>finledger</code></td><td>Ledger</td></tr>
+      <tr><td>Secret scope</td><td><code>finledger</code></td><td>Chef passwords</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="concepts">
+  <h2>C. Concept cards (teach before each phase)</h2>
+  <div class="grid2">
+    <div class="card-mini"><h4>Resource Group</h4><p class="analogy">One fenced plot — cost and lifecycle as one unit.</p></div>
+    <div class="card-mini"><h4>Bicep + Incremental</h4><p class="analogy">Blueprint. Azure updates what changed — does not build a second house next door.</p><div class="cmd">az deployment group create --mode Incremental ...</div></div>
+    <div class="card-mini"><h4>Key Vault + scope</h4><p class="analogy">Locked cupboard. Never hard-code secrets in notebooks.</p></div>
+    <div class="card-mini"><h4>ADLS medallion</h4><p class="analogy">Fridge shelves: bronze raw, silver cleaned, gold plated, audit rejects.</p></div>
+    <div class="card-mini"><h4>ADF</h4><p class="analogy">Manager timetable — Copy, Notebook, Wait, ForEach. Pay per visit + van hours.</p></div>
+    <div class="card-mini"><h4>Databricks</h4><p class="analogy">Kitchen. DBUs = taxi meter; Azure VMs = petrol.</p></div>
+    <div class="card-mini"><h4>SQL Basic</h4><p class="analogy">Small office ledger for watermarks — cheap fixed tier.</p></div>
+    <div class="card-mini"><h4>Idempotency</h4><p class="analogy">Press Save twice — still one document. Re-run = same end state.</p></div>
+  </div>
+</section>
+
+<section id="devops-layers">
+  <h2>D. Three layers of release</h2>
+  <div class="flow">1. INFRA (rarely)     Bicep Incremental     provision-shared.cmd / --phase 1
+2. LAB ASSETS (often) Notebooks + secrets   release.cmd databricks
+3. PIPELINE (often)   ADF in place          release.cmd adf
+   BOTH (classroom)   build+DBX+ADF         release.cmd medallion-deploy
+   + COOK (optional)  Databricks job        release.cmd medallion</div>
+  <p class="analogy">Conveyor: reprint recipes → restock shelf → update manager checklist → optionally cook one dinner.</p>
+
+  <h3>Flags to memorise</h3>
+  <table>
+    <thead><tr><th>Flag</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>--skip-build</code></td><td>Use existing notebook sources</td></tr>
+      <tr><td><code>--skip-deploy</code></td><td>Do not re-import / re-push ADF</td></tr>
+      <tr><td><code>--skip-run</code></td><td>Deploy only — preferred in class</td></tr>
+      <tr><td><code>--run-only</code></td><td>Job only</td></tr>
+      <tr><td><code>--skip-sql</code></td><td>ADF without touching SQL server</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Four re-run scenarios</h3>
+  <table>
+    <thead><tr><th>Scenario</th><th>Safe?</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td>Fresh machine</td><td>Yes</td><td>Creates / updates in place</td></tr>
+      <tr><td>After full success</td><td>Yes</td><td>Overwrite / already present</td></tr>
+      <tr><td>After partial failure</td><td>Yes</td><td>Resume; Incremental</td></tr>
+      <tr><td>Teardown shared RG mid-class</td><td><strong>NO</strong></td><td>Never. Personal RG teardown only.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="cicd">
+  <h2>CI/CD deep dive — check-in then release</h2>
+
+  <h3>What changed → which release?</h3>
+  <table>
+    <thead><tr><th>You changed…</th><th>Paths</th><th>Command</th></tr></thead>
+    <tbody>
+      <tr><td>Day 9 builders / notebooks</td><td><code>day9/scripts/build_*.py</code>, <code>day9/notebooks/</code></td><td><code>release.cmd databricks</code></td></tr>
+      <tr><td>ADF pipelines / generators</td><td><code>shared-adf-lab/**</code></td><td><code>release.cmd adf</code></td></tr>
+      <tr><td>SQL / first-time SQL</td><td><code>infra/shared-sql-westus.bicep</code></td><td><code>release.cmd adf-full</code></td></tr>
+      <tr><td>Medallion + ADF governance</td><td>day9 + shared-adf gov</td><td><code>release.cmd medallion-deploy</code></td></tr>
+      <tr><td>Same + run now</td><td>as above</td><td><code>release.cmd medallion</code></td></tr>
+      <tr><td>Bicep / new Azure resource</td><td><code>infra/shared-eastus.bicep</code></td><td><code>infra-walkthrough --phase 1</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="dbx-release">Databricks incremental (overwrite, not copy)</h3>
+  <p>Import uses <strong>overwrite</strong> on the same path (e.g. <code>/Shared/day9/cost_management_master</code>). Re-release does <em>not</em> create <code>… (1)</code>.</p>
+  <ol>
+    <li>Edit builder or notebook source in git</li>
+    <li><code>git commit</code> + push origin + class</li>
+    <li><code>.\release.cmd databricks</code></li>
+    <li>Studio → <code>/Shared/day9/</code> → Run all</li>
+  </ol>
+  <div class="cmd">day9\orchestrate.cmd --deploy
+deploy-shared-lab.cmd    <span class="c">→ scripts\deploy_shared_lab.py</span></div>
+  <p>Specialised labs after check-in:</p>
+  <ul>
+    <li><code>python scripts\deploy_cost_management_lab.py</code></li>
+    <li><code>python scripts\deploy_system_tables_lab.py</code></li>
+    <li><code>python scripts\deploy_perf_databricks_adf_lab.py</code></li>
+    <li><code>python scripts\deploy_spark_dag_problems_lab.py</code></li>
+    <li><code>python scripts\ensure_cost_lab_secrets.py</code> (SPN into <code>finledger</code>)</li>
+  </ul>
+
+  <h3 id="adf-release">ADF incremental (in place, skip SQL)</h3>
+  <p>Redeploys linked services and pipelines on <code>adf-shared-qgr7mj</code>. Classroom default: <code>--skip-sql</code>.</p>
+  <ol>
+    <li>Edit pipeline / generator in <code>shared-adf-lab/</code></li>
+    <li>Docs-as-code in same commit</li>
+    <li><code>.\release.cmd adf</code></li>
+    <li>ADF Studio → Author → Debug / Trigger</li>
+    <li>Optional smoke: <code>shared-adf-lab\orchestrate.cmd --run-pipeline pl_01_bronze_copy</code></li>
+  </ol>
+  <div class="callout warn"><strong>adf-full</strong> only when SQL Bicep, firewall, or first-time SQL changed — not every commit.</div>
+
+  <h3 id="medallion">Full medallion CI/CD</h3>
+  <div class="flow">git push main
+    │
+    ▼
+release.cmd medallion-deploy          (classroom default)
+    │
+    ├─1─ build_all_notebooks.py       regenerate day9 sources
+    ├─2─ deploy-shared-lab.cmd        overwrite /Shared/day9 + bronze/secrets
+    └─3─ shared-adf --skip-sql        update ADF governance pipelines
+
+optional:
+release.cmd medallion                 (+ run_medallion_governance_job.py)</div>
+  <p>Classic equivalent: <code>release-medallion-governance.cmd --skip-run</code></p>
+
+  <h3>Definition of Done</h3>
+  <ol>
+    <li>Code + docs on <code>main</code>, pushed to <strong>origin</strong> and <strong>class</strong></li>
+    <li>Correct <code>release.cmd …</code> succeeded</li>
+    <li>Verify checklist signed off</li>
+    <li>Same release command is safe to re-run (idempotent)</li>
+  </ol>
+
+  <h3>Anti-patterns</h3>
+  <table>
+    <thead><tr><th>Bad habit</th><th>Do instead</th></tr></thead>
+    <tbody>
+      <tr><td>Edit only in Databricks UI</td><td>Edit in git → <code>release.cmd databricks</code></td></tr>
+      <tr><td>Change ADF only in portal</td><td>Edit repo → <code>release.cmd adf</code></td></tr>
+      <tr><td><code>provision-shared</code> for a typo</td><td><code>release.cmd databricks</code></td></tr>
+      <tr><td>Teardown <code>rg-shared-class1</code></td><td><strong>Never</strong></td></tr>
+      <tr><td>Commit <code>.env</code></td><td>Keep local; Key Vault / scope</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="verify">
+  <h2>E. Verify checklists</h2>
+  <div class="grid2">
+    <div class="card-mini">
+      <h4>After infra phase 1</h4>
+      <ul>
+        <li>Portal → <code>rg-shared-class1</code></li>
+        <li>Storage, KV, ADF, Databricks present</li>
+      </ul>
+    </div>
+    <div class="card-mini">
+      <h4>After phase 2</h4>
+      <ul>
+        <li><code>/Shared/day7-day8</code> and <code>/Shared/day9</code></li>
+        <li>Secret scope <code>finledger</code></li>
+      </ul>
+    </div>
+    <div class="card-mini">
+      <h4>After ADF / release</h4>
+      <ul>
+        <li>Studio pipelines <code>pl_*</code> / <code>pl_gov_*</code></li>
+        <li>Monitor → pipeline runs</li>
+        <li>Databricks linked service healthy</li>
+      </ul>
+    </div>
+    <div class="card-mini">
+      <h4>After medallion</h4>
+      <ul>
+        <li>Notebook timestamps updated</li>
+        <li>Job <code>finledger-medallion-governance</code> (if run)</li>
+        <li><code>audit/governance/</code> artifacts after success</li>
+      </ul>
+    </div>
+  </div>
+  <div class="cmd">.\release.cmd verify</div>
+</section>
+
+<section id="danger">
+  <h2>H. Danger board</h2>
+  <table>
+    <thead><tr><th>Action</th><th>OK in class?</th></tr></thead>
+    <tbody>
+      <tr><td>Re-run <code>provision-shared.cmd</code> / <code>release.cmd *</code></td><td>Yes</td></tr>
+      <tr><td><code>medallion-deploy</code> / <code>--skip-run</code></td><td>Yes</td></tr>
+      <tr><td>Warm cluster for 2 hours</td><td>Costly — trainer only</td></tr>
+      <tr><td><code>teardown</code> on <code>rg-shared-class1</code></td><td class="callout danger" style="border:0;background:transparent;color:var(--danger)"><strong>NEVER</strong></td></tr>
+      <tr><td>Teardown personal <code>rg-&lt;learner&gt;-class1</code> at course end</td><td>Yes, with confirmation</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Whiteboard close</h3>
+  <div class="flow">Bicep           = blueprint
+Incremental     = renovate, don't rebuild next door
+deploy-shared   = furniture / recipe books on shelves
+ADF             = manager timetable
+Databricks      = kitchen (DBU meter)
+release.cmd     = CI/CD conveyor (build → deploy → optional cook)
+git main        = single source of truth</div>
+  <p><strong>Architect one-liner:</strong> Infra creates the building; DevOps releases change the recipes and checklists without knocking walls down.</p>
+</section>
+
+<section id="citations" class="cite">
+  <h2>Citations &amp; references</h2>
+  <h3>Microsoft Learn (official)</h3>
+  <ol>
+    <li><a href="https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deployment-modes" target="_blank" rel="noopener">ARM deployment modes (Incremental vs Complete)</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/" target="_blank" rel="noopener">Bicep documentation</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/data-factory/" target="_blank" rel="noopener">Azure Data Factory overview</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/data-factory/continuous-integration-delivery" target="_blank" rel="noopener">Data Factory CI/CD</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/databricks/admin/" target="_blank" rel="noopener">Azure Databricks administration</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/databricks/dev-tools/ci-cd/" target="_blank" rel="noopener">Databricks CI/CD</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/databricks/admin/system-tables/" target="_blank" rel="noopener">Databricks system tables</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/rest/api/cost-management/query/usage" target="_blank" rel="noopener">Cost Management Query API</a></li>
+  </ol>
+  <h3>Repo docs (markdown twins)</h3>
+  <ol>
+    <li><a href="INFRA-WALKTHROUGH-20H.md">INFRA-WALKTHROUGH-20H.md</a> — full 20h text</li>
+    <li><a href="CICD-INCREMENTAL-RELEASE.md">CICD-INCREMENTAL-RELEASE.md</a> — check-in / release</li>
+    <li><a href="TRAINER-NOTES.md">TRAINER-NOTES.md</a> · <a href="GOVERNANCE-DEPLOY.md">GOVERNANCE-DEPLOY.md</a></li>
+    <li><a href="../day9/docs/medallion_governance_cicd.md">day9 medallion_governance_cicd.md</a></li>
+    <li><a href="../day9/docs/finledger_cost_and_databricks_master_guide.md">Cost + Databricks master guide</a></li>
+    <li><a href="../COVERAGE-MAP.md">COVERAGE-MAP.md</a> — programme index</li>
+  </ol>
+  <h3>Repo entry points (code)</h3>
+  <ol>
+    <li><code>infra-walkthrough.cmd</code> · <code>release.cmd</code> · <code>release-medallion-governance.cmd</code></li>
+    <li><code>scripts/provision_shared.py</code> · <code>infra/shared-eastus.bicep</code></li>
+    <li><code>scripts/deploy_shared_lab.py</code> · <code>shared-adf-lab/scripts/run_shared_adf.py</code></li>
+    <li><code>scripts/release_medallion_governance.py</code></li>
+  </ol>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <p>FinLedger training — open this HTML in a browser for class. Markdown sources stay in git for edits; regenerate/update this HTML when the guides change.</p>
+  <p>Start commands: <code>.\infra-walkthrough.cmd --list</code> · <code>.\release.cmd</code></p>
+</footer>
+
+</body>
+</html>
