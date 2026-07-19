@@ -8,8 +8,11 @@ import re
 import secrets
 import shutil
 import string
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+import requests
 
 LAB_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = LAB_ROOT.parent
@@ -21,6 +24,7 @@ ADF_LOCATION = "eastus"
 SQL_LOCATION = "westus"  # documented exception — SQL only
 # Shared all-purpose cluster in dbw-shared-* (same as run-50-problems.cmd).
 DEFAULT_DATABRICKS_CLUSTER_ID = "0703-105931-31juyffm"
+DATABRICKS_AAD_RESOURCE = "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
 LEARNER_RE = re.compile(r"^[a-z0-9]{2,10}$")
 
 
@@ -174,6 +178,74 @@ def generate_sql_password(length: int = 20) -> str:
             return pwd
 
 
+def _databricks_token_works(host: str, token: str) -> bool:
+    """Return whether a token can authenticate to this Databricks workspace."""
+    if not host or not token:
+        return False
+    try:
+        response = requests.get(
+            f"{host.rstrip('/')}/api/2.0/preview/scim/v2/Me",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30,
+        )
+        return response.status_code < 300
+    except requests.RequestException:
+        # Do not open a browser for transient DNS/network failures. The real API
+        # call will report the useful network error later.
+        return True
+
+
+def _azure_ad_databricks_token(*, allow_browser_login: bool = True) -> str:
+    """Get a fresh Databricks AAD token, opening az login when the session expired."""
+    az = find_az()
+    command = [
+        az,
+        "account",
+        "get-access-token",
+        "--resource",
+        DATABRICKS_AAD_RESOURCE,
+        "--query",
+        "accessToken",
+        "-o",
+        "tsv",
+    ]
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    if result.returncode != 0 and allow_browser_login:
+        print("INFO  Azure CLI login expired/missing - opening browser for az login...")
+        login = subprocess.run([az, "login"], check=False)
+        if login.returncode == 0:
+            result = subprocess.run(command, capture_output=True, text=True, check=False)
+    token = result.stdout.strip()
+    if result.returncode != 0 or not token:
+        detail = (result.stderr or result.stdout).strip()
+        raise SystemExit(
+            "Could not refresh Azure AD token for Databricks. Run `az login`, "
+            f"complete browser sign-in, then re-run this phase.\nDetail: {detail}"
+        )
+    return token
+
+
+def resolve_databricks_token(host: str, configured_token: str) -> str:
+    """Prefer a working PAT; otherwise transparently refresh through Azure CLI."""
+    token = configured_token.strip().strip('"').strip("'")
+    if token and _databricks_token_works(host, token):
+        print("INFO  Databricks authentication: configured PAT is valid.")
+        return token
+    if token:
+        print("WARN  Databricks PAT is invalid/expired - refreshing with Azure AD.")
+    else:
+        print("INFO  Databricks PAT not configured - using Azure AD.")
+    aad_token = _azure_ad_databricks_token()
+    if not _databricks_token_works(host, aad_token):
+        raise SystemExit(
+            "Azure AD login succeeded, but Databricks rejected the token. "
+            "Use the same account that has access to the workspace, or ask the trainer "
+            "to add the account under Databricks Admin > Users."
+        )
+    print("INFO  Databricks authentication: fresh Azure AD token is valid.")
+    return aad_token
+
+
 def load_config() -> SharedAdfConfig:
     file_env = _load_dotenv(ENV_FILE)
     subscription_id = (
@@ -206,6 +278,8 @@ def load_config() -> SharedAdfConfig:
             f"estate ({SHARED_RG}); continuing as LEARNER={SHARED_LEARNER}."
         )
         learner = SHARED_LEARNER
+    if databricks_host:
+        databricks_token = resolve_databricks_token(databricks_host, databricks_token)
 
     return SharedAdfConfig(
         subscription_id=subscription_id,

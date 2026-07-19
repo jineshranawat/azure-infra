@@ -162,31 +162,33 @@ def _normalize_secret(value: str) -> str:
 
 
 def _aad_databricks_token(az: str) -> str:
-    """Azure AD access token for Databricks APIs — works after az login if user is in the workspace."""
-    try:
-        tok = subprocess.check_output(
-            [
-                az,
-                "account",
-                "get-access-token",
-                "--resource",
-                DATABRICKS_AAD_RESOURCE,
-                "--query",
-                "accessToken",
-                "-o",
-                "tsv",
-            ],
-            text=True,
-            stderr=subprocess.STDOUT,
-        ).strip()
-    except subprocess.CalledProcessError as exc:
+    """Get a fresh AAD token; open browser sign-in when Azure CLI login expired."""
+    command = [
+        az,
+        "account",
+        "get-access-token",
+        "--resource",
+        DATABRICKS_AAD_RESOURCE,
+        "--query",
+        "accessToken",
+        "-o",
+        "tsv",
+    ]
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        logger.warning("Azure CLI login expired/missing — opening browser for az login…")
+        login = subprocess.run([az, "login"], check=False)
+        if login.returncode == 0:
+            result = subprocess.run(command, capture_output=True, text=True, check=False)
+    tok = result.stdout.strip()
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
         raise SystemExit(
-            "Could not get Azure AD token for Databricks.\n"
-            "Run: az login\n"
-            f"Detail: {exc.output if hasattr(exc, 'output') else exc}"
-        ) from exc
+            "Could not refresh Azure AD token for Databricks. Complete the browser "
+            f"sign-in opened by `az login`, then re-run this phase.\nDetail: {detail}"
+        )
     if not tok:
-        raise SystemExit("Empty Azure AD token — run: az login")
+        raise SystemExit("Empty Azure AD token — run `az login` and complete browser sign-in")
     return tok
 
 
