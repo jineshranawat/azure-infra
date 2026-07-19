@@ -48,13 +48,14 @@ echo Doc: docs\INFRA-WALKTHROUGH-20H.md
 echo.
 echo Usage:
 echo   infra-walkthrough.cmd --list          Show all phases + child commands
-echo   infra-walkthrough.cmd --phase N       Run one phase (0-12)
+echo   infra-walkthrough.cmd --phase N       Run one phase (0-12, or 1t = Terraform)
 echo   infra-walkthrough.cmd --all-safe      Run phases 0-11 in order (NO teardown)
 echo   infra-walkthrough.cmd --help
 echo.
 echo Phase cheat sheet:
 echo   0  Bootstrap (venv + Azure CLI hint)
 echo   1  Shared infra Bicep          - provision-shared.cmd
+echo  1t  Shared infra Terraform      - provision-shared-tf.cmd  (twin of Bicep)
 echo   2  Lab assets to Databricks    - deploy-shared-lab.cmd
 echo   3  Shared ADF + SQL            - deploy-shared-adf-lab.cmd
 echo   4  ADF to Databricks link      - shared-adf-lab\orchestrate.cmd --setup-databricks-integration
@@ -81,11 +82,18 @@ echo  [0]  Bootstrap PC
 echo       Child:  .venv + pip  (auto) ; az login reminder
 echo       Analogy: unlock the toolbox before building the house
 echo.
-echo  [1]  Shared Azure estate (eastus)
+echo  [1]  Shared Azure estate (eastus) — BICEP
 echo       Child:  provision-shared.cmd
 echo               - scripts\provision_shared.py
 echo               - infra\shared-eastus.bicep
 echo       Creates: rg-shared-class1, KV, ADLS, ADF, Databricks
+echo.
+echo  [1t] Shared Azure estate (eastus) — TERRAFORM twin (same case)
+echo       Child:  provision-shared-tf.cmd
+echo               - scripts\provision_shared_tf.py
+echo               - infra\terraform\shared-eastus\main.tf
+echo       Docs:   docs\BICEP-TERRAFORM-SHARED-ESTATE.md
+echo       Tip:    --plan-only first; name_hash=qgr7mj matches live Bicep names
 echo.
 echo  [2]  Put lab assets into Databricks
 echo       Child:  deploy-shared-lab.cmd
@@ -165,6 +173,7 @@ call :ensure_venv
 if errorlevel 1 exit /b 1
 if "%PHASE%"=="0" goto p0
 if "%PHASE%"=="1" goto p1
+if /I "%PHASE%"=="1t" goto p1t
 if "%PHASE%"=="2" goto p2
 if "%PHASE%"=="3" goto p3
 if "%PHASE%"=="4" goto p4
@@ -176,7 +185,7 @@ if "%PHASE%"=="9" goto p9
 if "%PHASE%"=="10" goto p10
 if "%PHASE%"=="11" goto p11
 if "%PHASE%"=="12" goto p12
-echo Unknown phase "%PHASE%". Use 0-12. Run --list
+echo Unknown phase "%PHASE%". Use 0-12 or 1t. Run --list
 exit /b 2
 
 :run_all_safe
@@ -231,6 +240,13 @@ exit /b %ERRORLEVEL%
 call :banner 1 "Shared estate Bicep - build the house frame"
 REM OWNER_EMAIL / CLASS_OWNER_EMAIL are loaded from .env by provision_shared.py
 call provision-shared.cmd
+exit /b %ERRORLEVEL%
+
+:p1t
+call :banner 1t "Shared estate Terraform twin - same house, HashiCorp blueprint"
+echo Docs: docs\BICEP-TERRAFORM-SHARED-ESTATE.md
+echo Plan first (safe): provision-shared-tf.cmd --plan-only
+call provision-shared-tf.cmd --auto-approve
 exit /b %ERRORLEVEL%
 
 :p2

@@ -1,6 +1,7 @@
 # FinLedger Infrastructure Walkthrough — 20+ hours (student + trainer)
 
 > **Classroom projector (preferred):** open **[infra-cicd-walkthrough.html](infra-cicd-walkthrough.html)** in a browser — analogies, all phases, release table, **theory + enterprise diagrams + file map**, citations.  
+> **Bicep ↔ Terraform (same estate):** [BICEP-TERRAFORM-SHARED-ESTATE.md](BICEP-TERRAFORM-SHARED-ESTATE.md) · `provision-shared-tf.cmd`  
 > Jump to HTML section **Theory overview**. This Markdown is the editable source twin.
 
 **Open this file for tomorrow’s infra session.**  
@@ -11,11 +12,12 @@ cd D:\azure
 .\infra-walkthrough.cmd --list
 .\infra-walkthrough.cmd --phase 0
 .\infra-walkthrough.cmd --phase 1
+.\infra-walkthrough.cmd --phase 1t
 ```
 
 In **PowerShell**, do not paste `REM ...` comments (that is cmd.exe syntax). Use only the `.\infra-walkthrough.cmd ...` lines.
 
-Phase 1 reads `OWNER_EMAIL` / `CLASS_OWNER_EMAIL` from `.env` automatically (no need to type `--owner-email` unless `.env` is empty).
+Phase **1** = Bicep shared estate. Phase **1t** = Terraform twin (same resources — [BICEP-TERRAFORM-SHARED-ESTATE.md](BICEP-TERRAFORM-SHARED-ESTATE.md)). Both read `OWNER_EMAIL` / `CLASS_OWNER_EMAIL` from `.env` automatically.
 
 | Role | Start here |
 |------|------------|
@@ -68,6 +70,7 @@ Tomorrow’s session focuses on the **shared** estate. Phase 12 of the walkthrou
 |------:|-------|-------|-----|-------------|
 | **A0** | 0–1 | Why infra-as-code + guardrails | `.\infra-walkthrough.cmd --list` | This file §0–§1; `.cursorrules` |
 | **A1** | 1–3 | Shared Bicep house frame | `--phase 1` | `infra/shared-eastus.bicep` in editor + Portal RG |
+| **A1t** | optional | Same house via Terraform | `--phase 1t` or `provision-shared-tf.cmd --plan-only` | `infra/terraform/shared-eastus/main.tf` + [BICEP-TERRAFORM](BICEP-TERRAFORM-SHARED-ESTATE.md) |
 | **A2** | 3–4 | Secrets, bronze, notebooks | `--phase 2` | Portal Storage + Databricks `/Shared` |
 | **A3** | 4–7 | ADF as code (manager) | `--phase 3` | `shared-adf-lab/README.md` |
 | **A4** | 7–8.5 | ADF ↔ Databricks | `--phase 4` | ADF Linked Service + Job |
@@ -91,6 +94,7 @@ Master entry: **`infra-walkthrough.cmd`**
 |------:|------------------|-------------------------------------|
 | **0** | venv + `az` check | Local toolbox ready |
 | **1** | `provision-shared.cmd` → `scripts/provision_shared.py` → `infra/shared-eastus.bicep` | RG, KV, Storage, ADF, Databricks |
+| **1t** | `provision-shared-tf.cmd` → `scripts/provision_shared_tf.py` → `infra/terraform/shared-eastus/` | Same estate via Terraform (`name_hash=qgr7mj`) |
 | **2** | `deploy-shared-lab.cmd` → `scripts/deploy_shared_lab.py` | Bronze CSV, scope `finledger`, notebooks |
 | **3** | `deploy-shared-adf-lab.cmd` → `shared-adf-lab/orchestrate.cmd` | Pipelines + SQL westus |
 | **4** | `shared-adf-lab\orchestrate.cmd --setup-databricks-integration` | ADF can start Databricks jobs |

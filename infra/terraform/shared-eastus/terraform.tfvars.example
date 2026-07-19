@@ -1,0 +1,15 @@
+# Example tfvars for the LIVE Bicep-created shared estate (same names).
+# Copy to terraform.tfvars (gitignored) or pass -var flags from provision-shared-tf.cmd
+#
+# name_hash MUST be qgr7mj to match:
+#   stsharedqgr7mj / kv-shared-qgr7mj / adf-shared-qgr7mj / dbw-shared-qgr7mj
+
+subscription_id     = "a64c0dd2-3a31-4604-bde3-3d40c7d5e8be"
+resource_group_name = "rg-shared-class1"
+location            = "eastus"
+learner             = "shared"
+name_hash           = "qgr7mj"
+owner_email         = "training@stalwartlearning.com"
+# principal_object_id = "<from: az ad signed-in-user show --query id -o tsv>"
+principal_type      = "User"
+deploy_budget       = false
