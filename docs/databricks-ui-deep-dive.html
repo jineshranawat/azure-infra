@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinLedger — Databricks UI Deep Dive (100h+)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});});</script>
+<style>
+  :root{
+    --ink:#0b1520; --ink-2:#142433; --paper:#f5f7fa; --card:#ffffff;
+    --line:#d0d7e2; --muted:#5a6a7a; --accent:#ff3621; --accent-2:#1b3139;
+    --teal:#00a972; --code-bg:#0d1b24; --code-ink:#d5e8e2;
+    --warn-bg:#fff4e5; --danger:#8b1e1e; --ok:#1b6b3a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Source Serif 4",Georgia,serif;background:var(--paper);color:var(--ink);line-height:1.65}
+  h1,h2,h3,h4,.toc-title{font-family:"Space Grotesk",system-ui,sans-serif}
+  code,pre,.mono,.cmd{font-family:"JetBrains Mono",Consolas,monospace}
+  a{color:var(--teal)} a:hover{color:var(--accent)}
+  .hero{
+    background:
+      radial-gradient(ellipse 60% 50% at 95% 10%, rgba(255,54,33,.35), transparent 55%),
+      radial-gradient(ellipse 45% 40% at 5% 90%, rgba(0,169,114,.2), transparent 50%),
+      linear-gradient(155deg,#0b1520 0%,#1b3139 55%,#0d1b24 100%);
+    color:#eef6f3;padding:3rem 1.5rem 2.4rem;border-bottom:4px solid var(--accent);
+  }
+  .hero-inner{max-width:1120px;margin:0 auto}
+  .brand{font-size:clamp(1.9rem,3.8vw,2.6rem);font-weight:700;color:#fff;margin:0 0 .35rem}
+  .hero h1{font-size:clamp(1.2rem,2.4vw,1.7rem);font-weight:600;color:#ffb3a8;margin:0 0 1rem;max-width:42ch}
+  .hero p{max-width:70ch;color:#c5d5d0;margin-bottom:1rem}
+  .chips{display:flex;flex-wrap:wrap;gap:.45rem}
+  .chip{font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(255,179,168,.4);padding:.28rem .6rem;color:#ffb3a8}
+  .sticky-bar{position:sticky;top:0;z-index:20;background:rgba(245,247,250,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:.5rem 1rem;display:flex;flex-wrap:wrap;gap:.45rem;justify-content:center}
+  .sticky-bar a{font-family:"Space Grotesk",sans-serif;font-size:.76rem;text-decoration:none;border:1px solid var(--line);padding:.26rem .5rem;background:var(--card);color:var(--ink)}
+  .sticky-bar a:hover{border-color:var(--accent);color:var(--accent)}
+  .layout{max-width:1120px;margin:0 auto;padding:1.5rem;display:grid;grid-template-columns:255px 1fr;gap:1.5rem}
+  @media(max-width:920px){.layout{grid-template-columns:1fr}}
+  .toc{position:sticky;top:3.1rem;align-self:start;background:var(--card);border:1px solid var(--line);padding:1rem;font-size:.86rem;max-height:calc(100vh - 4rem);overflow:auto}
+  .toc-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.5rem}
+  .toc a{display:block;padding:.22rem 0;color:var(--ink-2);text-decoration:none}
+  .toc a:hover{color:var(--accent)}
+  .toc .sub{padding-left:.65rem;font-size:.8rem;color:var(--muted)}
+  main section{background:var(--card);border:1px solid var(--line);padding:1.35rem 1.45rem;margin-bottom:1.1rem}
+  main h2{font-size:1.28rem;margin:0 0 .7rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent)}
+  main h3{font-size:1.05rem;margin:1.1rem 0 .4rem;color:var(--ink-2)}
+  main h4{font-family:"Space Grotesk",sans-serif;font-size:.94rem;margin:.85rem 0 .3rem}
+  main p,main li{margin:.38rem 0}
+  main ul,main ol{margin:.3rem 0 .65rem 1.2rem}
+  table{width:100%;border-collapse:collapse;font-size:.85rem;margin:.7rem 0 .95rem}
+  th,td{border:1px solid var(--line);padding:.38rem .48rem;vertical-align:top;text-align:left}
+  th{background:#edf2f6;font-family:"Space Grotesk",sans-serif;font-size:.72rem}
+  tr:hover td{background:#f7fafc}
+  .cmd{background:var(--code-bg);color:var(--code-ink);padding:.8rem 1rem;overflow-x:auto;font-size:.8rem;margin:.6rem 0 .95rem;line-height:1.5;white-space:pre}
+  .cmd .c{color:#6a8f88}
+  .callout{background:#e8f6f1;border-left:4px solid var(--teal);padding:.7rem 1rem;margin:.9rem 0}
+  .callout.warn{background:var(--warn-bg);border-left-color:var(--accent)}
+  .callout.danger{background:#fce8e8;border-left-color:var(--danger)}
+  .analogy{font-style:italic;color:var(--muted);border-left:3px solid #b8c4d0;padding-left:.7rem;margin:.5rem 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+  @media(max-width:700px){.grid2{grid-template-columns:1fr}}
+  .card-mini{border:1px solid var(--line);padding:.75rem;background:#fafbfc}
+  .card-mini h4{margin:0 0 .3rem}
+  .steps{counter-reset:step}
+  .steps li{list-style:none;position:relative;padding-left:2.4rem;margin:.7rem 0 1rem}
+  .steps li::before{
+    counter-increment:step;content:counter(step);
+    position:absolute;left:0;top:0;width:1.7rem;height:1.7rem;
+    background:var(--accent);color:#fff;border-radius:50%;
+    font-family:"Space Grotesk",sans-serif;font-size:.85rem;font-weight:600;
+    display:flex;align-items:center;justify-content:center;line-height:1.7rem;text-align:center;
+  }
+  .hours{font-family:"Space Grotesk",sans-serif;font-size:.76rem;color:var(--muted)}
+  .badge{display:inline-block;font-family:"Space Grotesk",sans-serif;font-size:.64rem;text-transform:uppercase;letter-spacing:.04em;background:var(--accent);color:#fff;padding:.12rem .4rem;margin-right:.2rem}
+  .badge.when{background:var(--teal)} .badge.job{background:#6b3d8a}
+  footer{max-width:1120px;margin:0 auto 2.5rem;padding:0 1.5rem;color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="brand">FinLedger</p>
+    <h1>Databricks UI — every pane, when to use it, how to use it (100h+)</h1>
+    <p>
+      A separate, readable classroom guide for the <strong>Azure Databricks workspace UI</strong>.
+      Each section: <em>what it is</em> → <em>when to use</em> → <em>nice step-by-step</em> → <em>class workflow</em> → official docs.
+      Built around shared workspace <code class="mono">dbw-shared-qgr7mj</code> and folders under <code class="mono">/Shared/</code>.
+    </p>
+    <div class="chips">
+      <span class="chip">Workspace</span>
+      <span class="chip">Notebooks</span>
+      <span class="chip">Compute</span>
+      <span class="chip">Workflows / Jobs</span>
+      <span class="chip">SQL</span>
+      <span class="chip">Catalog</span>
+      <span class="chip">Secrets</span>
+      <span class="chip">Repos</span>
+      <span class="chip">100h syllabus</span>
+    </div>
+  </div>
+</header>
+
+<nav class="sticky-bar" aria-label="Quick jumps">
+  <a href="infra-cicd-walkthrough.html">← Infra hub</a>
+  <a href="adf-monitoring-deep-dive.html">ADF Monitor</a>
+  <a href="#open">Open workspace</a>
+  <a href="#nav">Left nav map</a>
+  <a href="#workspace">Workspace</a>
+  <a href="#notebook">Notebook</a>
+  <a href="#compute">Compute</a>
+  <a href="#workflows">Workflows</a>
+  <a href="#sql">SQL</a>
+  <a href="#catalog">Catalog</a>
+  <a href="#syllabus">100h syllabus</a>
+</nav>
+
+<div class="layout">
+<aside class="toc">
+  <div class="toc-title">Contents</div>
+  <a href="#open">0. Open the shared workspace</a>
+  <a href="#nav">1. Left navigation map</a>
+  <a href="#workspace">2. Workspace</a>
+  <a href="#notebook">3. Notebook editor</a>
+  <a href="#compute">4. Compute (clusters)</a>
+  <a href="#workflows">5. Workflows / Jobs</a>
+  <a href="#sql">6. SQL Editor &amp; warehouses</a>
+  <a href="#catalog">7. Catalog (Unity Catalog)</a>
+  <a href="#data">8. Data / Volumes</a>
+  <a href="#secrets">9. Secrets</a>
+  <a href="#repos">10. Repos / Git</a>
+  <a href="#query">11. Query history &amp; system tables</a>
+  <a href="#admin">12. Settings &amp; admin (awareness)</a>
+  <a href="#class-paths">13. Class notebook map</a>
+  <a href="#day-flow">14. Daily class workflow</a>
+  <a href="#troubleshoot">15. UI troubleshooting</a>
+  <a href="#syllabus">16. 100+ hour syllabus</a>
+  <a href="#citations">Citations (official)</a>
+</aside>
+
+<main>
+
+<!-- 0 OPEN -->
+<section id="open">
+  <h2>0. Open the shared workspace</h2>
+  <p class="hours">First 30 minutes of every Databricks day</p>
+  <p class="analogy">Analogy: Databricks is the restaurant kitchen. The UI is the door, stations, and recipe books. Azure Portal is the building lease — you still cook in the kitchen UI.</p>
+
+  <div class="grid2">
+    <div class="card-mini">
+      <h4><span class="badge when">When</span> Use this</h4>
+      <p>Every lab that needs Spark, notebooks, Jobs, SQL, or Catalog — Day 7–9, ADF notebook activities, cost / system tables.</p>
+    </div>
+    <div class="card-mini">
+      <h4>Class facts</h4>
+      <p>Workspace: <code>dbw-shared-qgr7mj</code><br>
+      Host: <code>https://adb-7405613791235979.19.azuredatabricks.net</code><br>
+      Folders: <code>/Shared/day7-day8</code>, <code>/Shared/day9</code>, <code>/Shared/shared-adf</code></p>
+    </div>
+  </div>
+
+  <h3>Nice step-by-step — get in</h3>
+  <ol class="steps">
+    <li>
+      <strong>From Azure Portal (most reliable for SSO)</strong><br>
+      Portal → Resource groups → <code>rg-shared-class1</code> → <code>dbw-shared-qgr7mj</code> →
+      click <strong>Launch Workspace</strong> (or URL on the Overview blade).
+    </li>
+    <li>
+      <strong>Sign in</strong> with your work account (<code>…@mastekus.onmicrosoft.com</code>).
+      Accept MFA if prompted. You should land on the Databricks home / Recents.
+    </li>
+    <li>
+      <strong>Bookmark the host</strong> from <code>.env</code> key <code>DATABRICKS_HOST</code>,
+      or copy from the browser address bar (keep <code>https://adb-….azuredatabricks.net</code>).
+    </li>
+    <li>
+      <strong>Confirm you can see Shared folders</strong> — left nav → <strong>Workspace</strong> →
+      expand <strong>Shared</strong>. If empty, ask trainer to run deploy (next command).
+    </li>
+  </ol>
+
+  <div class="cmd"><span class="c"># Trainer / first-time: put notebooks + secret scope into the shared workspace</span>
+cd D:\azure
+.\deploy-shared-lab.cmd
+<span class="c"># or incremental later:</span>
+.\release.cmd databricks</div>
+
+  <div class="callout">
+    Deep link to the Day 7–8 master notebook:<br>
+    <a href="https://adb-7405613791235979.19.azuredatabricks.net/#workspace/Shared/day7-day8/master_pyspark_complete" target="_blank" rel="noopener">/Shared/day7-day8/master_pyspark_complete</a>
+  </div>
+</section>
+
+<!-- 1 NAV -->
+<section id="nav">
+  <h2>1. Left navigation map — every major pane</h2>
+  <p class="hours">~3 hours until the map is muscle memory</p>
+  <p>UI labels move slightly between Databricks versions; the <em>concepts</em> stay. If a name differs, use the search (⌘/Ctrl+K) or the table below.</p>
+
+  <table>
+    <thead><tr><th>Left-nav concept</th><th>What it is</th><th>When to use (FinLedger)</th><th>Skip / careful</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Workspace</strong></td><td>Folders + notebooks + files</td><td>Open <code>/Shared/day9/…</code> labs</td><td>Don’t create duplicates under Users for shared labs</td></tr>
+      <tr><td><strong>Recents / Home</strong></td><td>Shortcuts to last notebooks</td><td>Resume today’s lab fast</td><td>—</td></tr>
+      <tr><td><strong>Catalog</strong></td><td>Unity Catalog: catalogs, schemas, tables, volumes</td><td>Explore Delta tables; system tables browse</td><td>Need grants for <code>system</code></td></tr>
+      <tr><td><strong>SQL</strong> / SQL Editor</td><td>Run SQL on a SQL warehouse</td><td>Ad-hoc SQL, grants, dashboards</td><td>Warehouses cost money — stop when idle</td></tr>
+      <tr><td><strong>Compute</strong></td><td>All-purpose clusters + job clusters</td><td>Create <code>finledger-lab</code> Single-user</td><td>Never leave large clusters on overnight</td></tr>
+      <tr><td><strong>Workflows</strong> (Jobs)</td><td>Scheduled / multi-task jobs</td><td>Jobs called from ADF; Job UI runs</td><td>Prefer code deploy for class jobs</td></tr>
+      <tr><td><strong>Repos</strong></td><td>Git-backed folders</td><td>Enterprise pattern; optional in class</td><td>Class default = Workspace import overwrite</td></tr>
+      <tr><td><strong>Marketplace</strong> / Partner</td><td>Partners &amp; data products</td><td>Awareness only</td><td>Not needed for labs</td></tr>
+      <tr><td><strong>Settings</strong></td><td>User + workspace prefs</td><td>Theme, editor; admins: more</td><td>Account Console is separate URL</td></tr>
+    </tbody>
+  </table>
+
+  <pre class="mermaid">
+flowchart LR
+  Home[Home / Recents] --> WS[Workspace folders]
+  WS --> NB[Notebook editor]
+  NB --> CL[Attach Compute]
+  CL --> RUN[Run cells]
+  RUN --> CAT[Catalog / tables]
+  RUN --> JOB[Workflows / Jobs]
+  RUN --> SQL[SQL Editor]
+  ADF[ADF Monitor] -.->|Notebook activity| JOB
+  ADF -.->|or notebook path| NB
+  </pre>
+</section>
+
+<!-- 2 WORKSPACE -->
+<section id="workspace">
+  <h2>2. Workspace — folders &amp; notebooks</h2>
+  <p class="hours">~6 hours practice</p>
+  <p><span class="badge when">When</span> You need to find, open, rename, or organize notebooks and files in the workspace browser.</p>
+  <p class="analogy">Workspace = the filing cabinets. <code>/Shared</code> = the shared staff room cabinet. <code>/Users/you@…</code> = your personal locker.</p>
+
+  <h3>Nice step-by-step — open a class notebook</h3>
+  <ol class="steps">
+    <li>Left nav → <strong>Workspace</strong>.</li>
+    <li>Expand <strong>Shared</strong> (not Users, for shared-class labs).</li>
+    <li>Open <strong>day7-day8</strong> → click <code>master_pyspark_complete</code>.</li>
+    <li>Or open <strong>day9</strong> → pick a notebook from the class map (§13).</li>
+    <li>Confirm the browser URL contains <code>#workspace/Shared/…</code> — that is the canonical path ADF and deploy scripts use.</li>
+  </ol>
+
+  <h3>Create a personal scratch notebook (optional)</h3>
+  <ol class="steps">
+    <li>Workspace → <strong>Users</strong> → your email → right-click → <strong>Create</strong> → <strong>Notebook</strong>.</li>
+    <li>Name it clearly (e.g. <code>scratch_spark_notes</code>). Language: Python.</li>
+    <li>Do <strong>not</strong> put finished class solutions only under Users if the trainer expects Shared paths — deploys overwrite Shared.</li>
+  </ol>
+
+  <div class="callout warn">
+    <strong>Class rule:</strong> <code>deploy-shared-lab.cmd</code> / <code>release.cmd databricks</code> <em>overwrite</em> the same Shared paths.
+    Re-running deploy refreshes content — it does not create <code>notebook (1)</code> copies. That is intentional CI behaviour.
+  </div>
+</section>
+
+<!-- 3 NOTEBOOK -->
+<section id="notebook">
+  <h2>3. Notebook editor — cells, run, attach</h2>
+  <p class="hours">~12 hours (heart of every Spark day)</p>
+  <p><span class="badge when">When</span> Interactive coding, teaching, exploring data, debugging Spark — the default FinLedger learning surface.</p>
+
+  <h3>UI anatomy (top → bottom)</h3>
+  <table>
+    <thead><tr><th>Control</th><th>What it does</th><th>Class tip</th></tr></thead>
+    <tbody>
+      <tr><td>Cluster selector</td><td>Attach / detach compute</td><td>Must show a running cluster before Spark cells work</td></tr>
+      <tr><td>Run all / Run cell</td><td>Execute code</td><td>Run cell-by-cell while learning; Run all for smoke tests</td></tr>
+      <tr><td>Language</td><td>Python / SQL / Scala / R per cell via magic</td><td><code>%sql</code>, <code>%md</code> magics</td></tr>
+      <tr><td>Markdown cells</td><td>Teaching text</td><td>Masters use lots of <code>%md</code> — read before run</td></tr>
+      <tr><td>Variables / widgets</td><td>Parameters at top</td><td>Change widget → re-run dependent cells</td></tr>
+      <tr><td>Spark UI / Driver logs</td><td>Deep debug links</td><td>Use when a cell is slow or fails with executor errors</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Nice step-by-step — first successful cell</h3>
+  <ol class="steps">
+    <li>Open <code>/Shared/day7-day8/master_pyspark_complete</code>.</li>
+    <li>Top bar → cluster dropdown → select <strong>finledger-lab</strong> (create it in §4 if missing).</li>
+    <li>Wait until status is <strong>Running</strong> (green). Attaching can take 1–3 minutes on cold start.</li>
+    <li>Find the first code cell after the intro markdown → click into it → <strong>Shift+Enter</strong> (run cell + move next).</li>
+    <li>Read the output under the cell. If error mentions cluster / context — you are not attached; go back to step 2.</li>
+    <li>Continue cell-by-cell. Do not skip setup cells that create SparkSession or read secrets.</li>
+  </ol>
+
+  <div class="cmd"><span class="c"># Typical first checks inside a notebook (after attach)</span>
+spark
+dbutils.secrets.list("finledger")</div>
+
+  <pre class="mermaid">
+flowchart TD
+  O[Open notebook in Workspace] --> A{Cluster attached?}
+  A -->|no| C[Compute: create/start finledger-lab]
+  C --> Att[Attach from notebook dropdown]
+  A -->|yes| R[Run cell Shift+Enter]
+  Att --> R
+  R --> OK{Success?}
+  OK -->|yes| N[Next cell]
+  OK -->|no| E[Read error - secrets? path? RBAC?]
+  E --> R
+  </pre>
+</section>
+
+<!-- 4 COMPUTE -->
+<section id="compute">
+  <h2>4. Compute — clusters (all-purpose)</h2>
+  <p class="hours">~8 hours including cost discipline</p>
+  <p><span class="badge when">When</span> You need Spark for notebooks. Jobs can use job clusters; interactive labs use an all-purpose cluster.</p>
+  <p class="analogy">Compute = turning the ovens on. Auto-terminate = ovens switch off if nobody cooks — saves money.</p>
+
+  <h3>Class cluster recipe</h3>
+  <table>
+    <thead><tr><th>Setting</th><th>Value</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Name</td><td><code>finledger-lab</code></td><td>Everyone recognises it</td></tr>
+      <tr><td>Policy</td><td>Unrestricted / default (as allowed)</td><td>Training simplicity</td></tr>
+      <tr><td>Access mode</td><td><strong>Single user</strong> (you)</td><td>Storage key / secrets patterns work; Shared can block</td></tr>
+      <tr><td>Runtime</td><td>Latest LTS ML or standard (trainer choice)</td><td>Stability</td></tr>
+      <tr><td>Node</td><td>Smallest viable (e.g. Standard_DS3_v2 class)</td><td>Cost guardrail</td></tr>
+      <tr><td>Workers</td><td>1 (or single-node if offered)</td><td>Labs are small</td></tr>
+      <tr><td>Auto-terminate</td><td><strong>30 minutes</strong></td><td>Mandatory habit</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Nice step-by-step — create <code>finledger-lab</code></h3>
+  <ol class="steps">
+    <li>Left nav → <strong>Compute</strong> → <strong>Create compute</strong> (or Create cluster).</li>
+    <li>Name: <code>finledger-lab</code>.</li>
+    <li>Access mode: <strong>Single user</strong> → select your user.</li>
+    <li>Pick a small node type; set workers to minimum; set auto-terminate to 30 minutes.</li>
+    <li>Create → wait until state <strong>Running</strong>.</li>
+    <li>Return to notebook → attach this cluster → run a cell.</li>
+    <li>When you leave for lunch: Compute → cluster → <strong>Terminate</strong> (or trust auto-terminate).</li>
+  </ol>
+
+  <div class="callout danger">
+    Leaving a large cluster Running overnight burns budget. FinLedger cost notebooks and the laptop cost dashboard exist for a reason —
+    treat Compute like a metered oven.
+  </div>
+</section>
+
+<!-- 5 WORKFLOWS -->
+<section id="workflows">
+  <h2>5. Workflows (Jobs) — scheduled &amp; multi-task runs</h2>
+  <p class="hours">~10 hours</p>
+  <p><span class="badge when">When</span> You need unattended runs, multi-notebook DAGs, or ADF to trigger a <em>Job</em> (not only an interactive notebook).</p>
+  <p class="analogy">Notebook = cooking at the station interactively. Job = the printed ticket that runs even if the chef walked away.</p>
+
+  <h3>Nice step-by-step — inspect a Job run</h3>
+  <ol class="steps">
+    <li>Left nav → <strong>Workflows</strong> (sometimes labelled Jobs).</li>
+    <li>Open <strong>Jobs</strong> list → pick a job (ADF lab may create/update jobs via scripts).</li>
+    <li>Open <strong>Runs</strong> tab → click the latest run.</li>
+    <li>See task graph, duration, Succeeded/Failed.</li>
+    <li>Open failed task → view notebook output / error — same spirit as ADF Monitor activity Error.</li>
+    <li>Correlate with ADF: if ADF Notebook/Job activity failed, ADF Error often links or names this run.</li>
+  </ol>
+
+  <div class="grid2">
+    <div class="card-mini">
+      <h4>Use Jobs when…</h4>
+      <ul>
+        <li>ADF should start a versioned job id</li>
+        <li>Multiple tasks with dependencies</li>
+        <li>Schedules (cron) without ADF</li>
+      </ul>
+    </div>
+    <div class="card-mini">
+      <h4>Use notebook only when…</h4>
+      <ul>
+        <li>Learning / debugging cell by cell</li>
+        <li>One-shot ADF “Notebook” activity on a path</li>
+        <li>Class demos on Shared paths</li>
+      </ul>
+    </div>
+  </div>
+
+  <pre class="mermaid">
+flowchart LR
+  ADF[ADF pipeline activity] -->|Notebook path| NB[Interactive notebook on cluster]
+  ADF -->|Job id| JOB[Workflows Job run]
+  JOB --> T1[Task: notebook A]
+  JOB --> T2[Task: notebook B]
+  NB --> OUT[Cell outputs]
+  T1 --> LOG[Job run logs / UI]
+  </pre>
+</section>
+
+<!-- 6 SQL -->
+<section id="sql">
+  <h2>6. SQL Editor &amp; SQL warehouses</h2>
+  <p class="hours">~8 hours</p>
+  <p><span class="badge when">When</span> You want warehouse-backed SQL (BI style), grants in SQL, or dashboards — not full PySpark notebooks.</p>
+
+  <h3>Nice step-by-step — first SQL query</h3>
+  <ol class="steps">
+    <li>Left nav → <strong>SQL</strong> → <strong>SQL Editor</strong> (wording varies).</li>
+    <li>Select or create a <strong>SQL warehouse</strong> — start the smallest size; note it bills while Running.</li>
+    <li>Write a simple query, e.g. <code>SHOW CATALOGS;</code> or <code>SELECT 1;</code>.</li>
+    <li>Run → see results grid.</li>
+    <li>For system tables (if granted): <code>SELECT * FROM system.billing.usage LIMIT 10;</code> —
+      see <code>/Shared/day9/system_tables_master</code> and its doc.</li>
+    <li>When done: SQL warehouses → <strong>Stop</strong> the warehouse.</li>
+  </ol>
+
+  <div class="callout warn">
+    SQL warehouses are a different meter from all-purpose clusters. Stopping the cluster does <em>not</em> stop the warehouse.
+  </div>
+</section>
+
+<!-- 7 CATALOG -->
+<section id="catalog">
+  <h2>7. Catalog — Unity Catalog browser</h2>
+  <p class="hours">~10 hours with medallion / governance labs</p>
+  <p><span class="badge when">When</span> Browse tables, schemas, volumes, lineage (if enabled), and permissions — the “data library” UI.</p>
+  <p class="analogy">Catalog = the card catalog in a library. Schemas = shelves. Tables = books. Volumes = filing boxes for files.</p>
+
+  <h3>Nice step-by-step — explore a table</h3>
+  <ol class="steps">
+    <li>Left nav → <strong>Catalog</strong>.</li>
+    <li>Expand a catalog → schema → table (or use search).</li>
+    <li>Open <strong>Overview</strong> (columns, type), <strong>Sample data</strong>, <strong>Details</strong>.</li>
+    <li>Use <strong>Permissions</strong> (if you are admin) to understand grants — do not revoke class grants casually.</li>
+    <li>For FinLedger lakehouse labs, tables often appear after notebooks write Delta to UC or to the metastore paths taught in Day 9.</li>
+  </ol>
+
+  <div class="callout">
+    System catalog <code>system</code> needs Metastore Admin / grants — workspace admin alone is not enough.
+    Trainers: see system tables master guide + account console steps.
+  </div>
+</section>
+
+<!-- 8 DATA -->
+<section id="data">
+  <h2>8. Data explorer / Volumes / external locations (awareness)</h2>
+  <p class="hours">~5 hours</p>
+  <p><span class="badge when">When</span> You need to see files (Volumes) or external locations governed by UC — complementary to ADLS in Azure Portal.</p>
+  <ol class="steps">
+    <li>In Catalog, look for <strong>Volumes</strong> under a schema.</li>
+    <li>Browse files; compare with Portal ADLS containers <code>bronze/silver/gold</code> for the shared storage account.</li>
+    <li>Remember: many FinLedger labs still use <code>abfss://</code> + secrets for teaching storage keys — UC Volumes are the enterprise direction.</li>
+  </ol>
+</section>
+
+<!-- 9 SECRETS -->
+<section id="secrets">
+  <h2>9. Secrets — scopes in the UI &amp; in code</h2>
+  <p class="hours">~4 hours</p>
+  <p><span class="badge when">When</span> Notebooks must read storage keys / tokens without hard-coding. Class scope: <code>finledger</code>.</p>
+
+  <h3>Nice step-by-step — verify scope</h3>
+  <ol class="steps">
+    <li>Prefer CLI/deploy for creation: <code>deploy-shared-lab.cmd</code> creates scope <code>finledger</code> with keys <code>storage-account</code>, <code>storage-key</code>.</li>
+    <li>In a notebook on a running cluster:<br>
+      <code>dbutils.secrets.listScopes()</code><br>
+      <code>dbutils.secrets.list("finledger")</code></li>
+    <li>Read a secret: <code>dbutils.secrets.get("finledger", "storage-account")</code> — value is redacted in UI output.</li>
+    <li>If scope missing: re-run deploy or Session 3 secrets setup; do not paste keys into notebook cells.</li>
+  </ol>
+
+  <div class="cmd">cd D:\azure
+.\deploy-shared-lab.cmd
+<span class="c"># Creates / updates secret scope finledger</span></div>
+</section>
+
+<!-- 10 REPOS -->
+<section id="repos">
+  <h2>10. Repos / Git folders</h2>
+  <p class="hours">~6 hours (enterprise pattern; light in class)</p>
+  <p><span class="badge when">When</span> Enterprise CI clones git into the workspace. FinLedger class default is still <strong>Workspace import overwrite</strong> from laptop scripts.</p>
+  <ol class="steps">
+    <li>Left nav → <strong>Repos</strong> (if enabled) → Add repo → paste git URL (needs PAT / auth).</li>
+    <li>Pull / branch as your org requires.</li>
+    <li>For this course, prefer editing in git on the laptop → <code>release.cmd databricks</code> so everyone shares the same Shared paths.</li>
+  </ol>
+  <div class="callout">
+    Official direction: Databricks Asset Bundles + Repos for production. Class uses simpler overwrite to keep one Shared tree for 30 learners.
+  </div>
+</section>
+
+<!-- 11 QUERY / SYSTEM -->
+<section id="query">
+  <h2>11. Query history, Spark UI &amp; system tables</h2>
+  <p class="hours">~8 hours</p>
+  <table>
+    <thead><tr><th>Tool</th><th>When</th><th>How (short)</th></tr></thead>
+    <tbody>
+      <tr><td>Spark UI (from notebook)</td><td>Slow stages, skew</td><td>Cluster → Spark UI / link under cell</td></tr>
+      <tr><td>Driver logs</td><td>Library / Python crashes</td><td>Compute → cluster → Driver logs</td></tr>
+      <tr><td>SQL Query history</td><td>Warehouse query cost/time</td><td>SQL → Query history</td></tr>
+      <tr><td>System tables</td><td>Billing, jobs, lineage metrics</td><td>Notebook <code>/Shared/day9/system_tables_master</code></td></tr>
+      <tr><td>Cost notebook</td><td>FinOps teaching</td><td><code>/Shared/day9/cost_management_master</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 12 ADMIN -->
+<section id="admin">
+  <h2>12. Settings &amp; admin awareness (don’t break the class)</h2>
+  <p class="hours">~4 hours awareness</p>
+  <ul>
+    <li><strong>User settings</strong> — theme, editor font — safe.</li>
+    <li><strong>Workspace admin</strong> — users, cluster policies — trainer only.</li>
+    <li><strong>Account Console</strong> (<code>accounts.azuredatabricks.net</code>) — metastore admin, account users — not the same as workspace UI.</li>
+  </ul>
+  <div class="callout danger">Do not delete Shared folders, secret scopes, or other learners’ clusters.</div>
+</section>
+
+<!-- 13 PATHS -->
+<section id="class-paths">
+  <h2>13. Class notebook map — what to open</h2>
+  <table>
+    <thead><tr><th>Path</th><th>Use for</th></tr></thead>
+    <tbody>
+      <tr><td><code>/Shared/day7-day8/master_pyspark_complete</code></td><td>Main PySpark teaching book</td></tr>
+      <tr><td><code>/Shared/day9/file_formats_and_secrets</code></td><td>Formats + secrets</td></tr>
+      <tr><td><code>/Shared/day9/50_data_engineering_problems</code></td><td>Practice problems</td></tr>
+      <tr><td><code>/Shared/day9/dbx_teach_all_topics</code></td><td>Broad Databricks topics</td></tr>
+      <tr><td><code>/Shared/day9/medallion_governance_e2e</code></td><td>Medallion + governance</td></tr>
+      <tr><td><code>/Shared/day9/system_tables_master</code></td><td>System tables</td></tr>
+      <tr><td><code>/Shared/day9/cost_management_master</code></td><td>Cost / FinOps</td></tr>
+      <tr><td><code>/Shared/shared-adf/nb_adf_hello</code> (and siblings)</td><td>ADF → Databricks activities</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 14 DAY FLOW -->
+<section id="day-flow">
+  <h2>14. Daily class workflow (follow every Databricks day)</h2>
+  <pre class="mermaid">
+flowchart TD
+  A[Launch Workspace from Portal] --> B[Compute: start finledger-lab]
+  B --> C[Workspace: open /Shared notebook]
+  C --> D[Attach cluster]
+  D --> E[Run cells / learn]
+  E --> F{Need Job or SQL?}
+  F -->|Job| G[Workflows: inspect runs]
+  F -->|SQL| H[SQL Editor + small warehouse]
+  F -->|no| I[Continue notebook]
+  G --> J[End of day: terminate cluster]
+  H --> J
+  I --> J
+  J --> K[Optional: stop SQL warehouse]
+  </pre>
+
+  <div class="cmd"><span class="c"># Morning refresh of Shared notebooks (trainer)</span>
+cd D:\azure
+.\release.cmd databricks
+
+<span class="c"># Learners: Portal → Launch Workspace → Compute → start → open Shared notebook</span></div>
+</section>
+
+<!-- 15 TROUBLESHOOT -->
+<section id="troubleshoot">
+  <h2>15. UI troubleshooting (quick)</h2>
+  <table>
+    <thead><tr><th>Symptom</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>Shared folder empty</td><td><code>deploy-shared-lab.cmd</code> / <code>release.cmd databricks</code></td></tr>
+      <tr><td>Cell: “no cluster” / SparkSession error</td><td>Attach Running <code>finledger-lab</code></td></tr>
+      <tr><td>Secret does not exist</td><td>Re-run deploy; check scope name <code>finledger</code></td></tr>
+      <tr><td>403 on abfss</td><td>RBAC on storage + correct account key/secret</td></tr>
+      <tr><td>ADF notebook 404</td><td>Confirm path under <code>/Shared/shared-adf/…</code> exists</td></tr>
+      <tr><td>System tables permission denied</td><td>Metastore admin grants — not fixable in Workspace UI alone</td></tr>
+      <tr><td>SSO loop</td><td>Portal Launch Workspace; clear cache; try InPrivate</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 16 SYLLABUS -->
+<section id="syllabus">
+  <h2>16. 100+ hour syllabus — Databricks UI mastery</h2>
+  <p>Hands-on hours including re-runs. Pair with Day 7–9 notebooks and <a href="adf-monitoring-deep-dive.html">ADF Monitoring</a> when pipelines call notebooks.</p>
+  <table>
+    <thead><tr><th>Module</th><th>Hours</th><th>Focus</th><th>Exit criteria</th></tr></thead>
+    <tbody>
+      <tr><td>D0 Portal → Workspace</td><td>3</td><td>§0 launch, SSO, bookmark host</td><td>Land in Shared without help</td></tr>
+      <tr><td>D1 Nav literacy</td><td>4</td><td>§1 every pane</td><td>Name each left-nav purpose</td></tr>
+      <tr><td>D2 Workspace files</td><td>6</td><td>§2 Shared vs Users</td><td>Open 5 class paths from memory</td></tr>
+      <tr><td>D3 Notebook fluency</td><td>14</td><td>§3 cells, magics, widgets</td><td>Teach a peer one markdown+code pattern</td></tr>
+      <tr><td>D4 Compute &amp; cost</td><td>10</td><td>§4 Single-user, auto-term</td><td>Create/stop cluster correctly</td></tr>
+      <tr><td>D5 Spark debug UI</td><td>8</td><td>Spark UI, stages, logs</td><td>Explain one slow stage</td></tr>
+      <tr><td>D6 Secrets &amp; storage</td><td>6</td><td>§9 + bronze read</td><td>List scope; read ADLS via secrets</td></tr>
+      <tr><td>D7 Workflows / Jobs</td><td>10</td><td>§5 + ADF job activities</td><td>Read a failed job task</td></tr>
+      <tr><td>D8 SQL warehouses</td><td>8</td><td>§6</td><td>Run SQL; stop warehouse</td></tr>
+      <tr><td>D9 Catalog / UC</td><td>12</td><td>§7–8 medallion tables</td><td>Find a Delta table in Catalog</td></tr>
+      <tr><td>D10 System tables</td><td>8</td><td>§11 + grants story</td><td>Query one system table (if granted)</td></tr>
+      <tr><td>D11 Repos awareness</td><td>4</td><td>§10 vs class overwrite</td><td>Explain when Repos win</td></tr>
+      <tr><td>D12 ADF↔DBX UI</td><td>8</td><td>Shared-adf notebooks + ADF Monitor</td><td>Trace one failure across both UIs</td></tr>
+      <tr><td>D13 Cost / ops UI</td><td>6</td><td>cost_management_master</td><td>Present MTD cost clues</td></tr>
+      <tr><td>D14 Capstone tour</td><td>8</td><td>Full day flow §14 solo</td><td>Recorded walkthrough for portfolio</td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>~115</strong></td><td colspan="2">Stretch with day9 advanced notebooks</td></tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <strong>Daily 40-minute drill:</strong> Launch → start cluster → open Shared notebook → run 3 cells → terminate cluster.
+    Habit beats slides.
+  </div>
+</section>
+
+<section id="citations">
+  <h2>Citations — official Databricks / Microsoft</h2>
+  <ol>
+    <li><a href="https://docs.databricks.com/en/workspace/index.html" target="_blank" rel="noopener">Databricks workspace</a></li>
+    <li><a href="https://docs.databricks.com/en/notebooks/index.html" target="_blank" rel="noopener">Databricks notebooks</a></li>
+    <li><a href="https://docs.databricks.com/en/compute/index.html" target="_blank" rel="noopener">Compute / clusters</a></li>
+    <li><a href="https://docs.databricks.com/en/jobs/index.html" target="_blank" rel="noopener">Jobs / workflows</a></li>
+    <li><a href="https://docs.databricks.com/en/sql/index.html" target="_blank" rel="noopener">Databricks SQL</a></li>
+    <li><a href="https://docs.databricks.com/en/data-governance/unity-catalog/index.html" target="_blank" rel="noopener">Unity Catalog</a></li>
+    <li><a href="https://docs.databricks.com/en/security/secrets/index.html" target="_blank" rel="noopener">Secrets</a></li>
+    <li><a href="https://docs.databricks.com/en/repos/index.html" target="_blank" rel="noopener">Repos / Git folders</a></li>
+    <li><a href="https://docs.databricks.com/en/admin/system-tables/index.html" target="_blank" rel="noopener">System tables</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/databricks/" target="_blank" rel="noopener">Azure Databricks (Microsoft Learn)</a></li>
+  </ol>
+  <h3>Repo twins</h3>
+  <ul>
+    <li><a href="DATABRICKS-UI-DEEP-DIVE.md">DATABRICKS-UI-DEEP-DIVE.md</a> — short pointer</li>
+    <li><a href="../session-3/UI-OVERVIEW.md">session-3/UI-OVERVIEW.md</a> · <a href="../session-3/MANUAL-LAB.md">MANUAL-LAB.md</a></li>
+    <li><a href="../day9/README.md">day9/README.md</a></li>
+    <li><a href="adf-monitoring-deep-dive.html">ADF Monitoring deep dive</a> — pair when pipelines call notebooks</li>
+    <li><a href="infra-cicd-walkthrough.html">Infra / CI hub</a></li>
+  </ul>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <p>FinLedger — Databricks UI deep dive. Separate page so UI literacy can fill full practice days.</p>
+  <p>Start: Portal → <code>dbw-shared-qgr7mj</code> → Launch Workspace → Compute → <code>finledger-lab</code> → Workspace → <code>/Shared/day7-day8/master_pyspark_complete</code></p>
+</footer>
+
+</body>
+</html>

@@ -5,7 +5,9 @@
 Aligned to [docs/data-engineering-course.html](../docs/data-engineering-course.html) sessions 9–15.
 
 > **Start here for Cost + Databricks (one file):**  
-> **[docs/finledger_cost_and_databricks_master_guide.md](docs/finledger_cost_and_databricks_master_guide.md)** — kitchen analogies, every NFR, system tables grants, laptop dashboard, citations to Microsoft Learn / FinOps, and the exact open/run commands.
+> **[docs/finledger_cost_and_databricks_master_guide.md](docs/finledger_cost_and_databricks_master_guide.md)** — kitchen analogies, every NFR, system tables grants, laptop dashboard, citations to Microsoft Learn / FinOps, and the exact open/run commands.  
+> **Databricks UI deep dive (100h, every pane step-by-step):**  
+> **[../docs/databricks-ui-deep-dive.html](../docs/databricks-ui-deep-dive.html)**
 
 ## A. What & why (before code)
 

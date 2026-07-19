@@ -1,6 +1,7 @@
 # Session 3 — UI & concepts overview (graphs)
 
-> **Start here for theory.** Classroom steps: [SESSION3-STUDENT-GUIDE.md](SESSION3-STUDENT-GUIDE.md) · Portal clicks: [MANUAL-LAB.md](MANUAL-LAB.md) · All links: [LINK-MAP.md](LINK-MAP.md)
+> **Start here for theory.** Classroom steps: [SESSION3-STUDENT-GUIDE.md](SESSION3-STUDENT-GUIDE.md) · Portal clicks: [MANUAL-LAB.md](MANUAL-LAB.md) · All links: [LINK-MAP.md](LINK-MAP.md)  
+> **Full Databricks UI deep dive (100h+ projector HTML):** [../docs/databricks-ui-deep-dive.html](../docs/databricks-ui-deep-dive.html)
 
 Replace `<learner>` with your `.env` value (e.g. `jinesh`).
 
