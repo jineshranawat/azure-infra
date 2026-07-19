@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Upload bronze sample data, FinLedger secrets, and master PySpark notebook to shared Databricks."""
+"""Upload bronze sample data, FinLedger secrets, and master PySpark notebook to shared Databricks.
+
+Auth (phase 2 / deploy-shared-lab.cmd):
+  1. If DATABRICKS_TOKEN in .env is present and valid → use PAT.
+  2. Else (missing or 401/403) → Azure AD token from `az account get-access-token`
+     for resource 2ff814a6-3304-4ab8-85cb-cd0e6f879c1d (students only need az login).
+  3. STORAGE_ACCOUNT_KEY and DATABRICKS_HOST are optional — auto-resolved via Azure CLI.
+"""
 
 from __future__ import annotations
 
@@ -31,6 +38,11 @@ SCOPE = "finledger"
 logger = logging.getLogger(__name__)
 
 
+# Azure AD resource ID for Azure Databricks REST APIs (Microsoft-documented).
+# Used when DATABRICKS_TOKEN is missing or invalid — students only need `az login`.
+DATABRICKS_AAD_RESOURCE = "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
+
+
 class DbxClient:
     def __init__(self, host: str, token: str) -> None:
         self.base = host.rstrip("/")
@@ -53,7 +65,28 @@ class DbxClient:
                 return json.loads(raw) if raw else {}
         except urllib.error.HTTPError as e:
             payload = e.read().decode()
-            raise SystemExit(f"Databricks API {method} {path} failed ({e.code}): {payload}") from e
+            hint = ""
+            if e.code in (401, 403):
+                hint = (
+                    "\n\nToken rejected by Databricks (invalid / expired / no workspace access).\n"
+                    "Fix options:\n"
+                    "  1) Prefer: stay logged in with `az login` — this script can use an Azure AD token.\n"
+                    "  2) Or create a PAT: Workspace → your icon → Settings → Developer → Access tokens\n"
+                    "     Put it in repo-root .env as DATABRICKS_TOKEN=dapi... (no quotes).\n"
+                    "  3) Confirm DATABRICKS_HOST matches the shared workspace URL.\n"
+                )
+            raise SystemExit(
+                f"Databricks API {method} {path} failed ({e.code}): {payload}{hint}"
+            ) from e
+
+    def whoami(self) -> dict:
+        """Lightweight auth preflight."""
+        try:
+            return self._request("GET", "/api/2.0/preview/scim/v2/Me")
+        except SystemExit as exc:
+            if "failed (401)" in str(exc) or "failed (403)" in str(exc):
+                raise
+            return {"ok": True, "scopes_probe": self.list_scopes()}
 
     def list_scopes(self) -> list[str]:
         data = self._request("GET", "/api/2.0/secrets/scopes/list")
@@ -120,8 +153,130 @@ def _load_env() -> dict[str, str]:
     return values
 
 
+def _normalize_secret(value: str) -> str:
+    """Strip whitespace and accidental wrapping quotes from .env values."""
+    v = (value or "").strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'):
+        v = v[1:-1].strip()
+    return v
+
+
+def _aad_databricks_token(az: str) -> str:
+    """Azure AD access token for Databricks APIs — works after az login if user is in the workspace."""
+    try:
+        tok = subprocess.check_output(
+            [
+                az,
+                "account",
+                "get-access-token",
+                "--resource",
+                DATABRICKS_AAD_RESOURCE,
+                "--query",
+                "accessToken",
+                "-o",
+                "tsv",
+            ],
+            text=True,
+            stderr=subprocess.STDOUT,
+        ).strip()
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(
+            "Could not get Azure AD token for Databricks.\n"
+            "Run: az login\n"
+            f"Detail: {exc.output if hasattr(exc, 'output') else exc}"
+        ) from exc
+    if not tok:
+        raise SystemExit("Empty Azure AD token — run: az login")
+    return tok
+
+
+def _token_preflight(host: str, token: str) -> bool:
+    """Return True if token can call the workspace API."""
+    client = DbxClient(host, token)
+    try:
+        client.whoami()
+        return True
+    except SystemExit as exc:
+        msg = str(exc)
+        if "failed (401)" in msg or "failed (403)" in msg or "invalid" in msg.lower():
+            return False
+        # Other errors (network, 5xx) — still try; let later calls surface
+        logger.warning("Preflight inconclusive: %s", msg.split("\n", 1)[0][:200])
+        return True
+
+
+def _resolve_token(file_env: dict[str, str], host: str) -> tuple[str, str]:
+    """Return (token, source_label). Prefer valid PAT from .env; else Azure AD via az login."""
+    az = _find_az()
+    pat = _normalize_secret(
+        file_env.get("DATABRICKS_TOKEN") or os.environ.get("DATABRICKS_TOKEN", "")
+    )
+    if pat:
+        if _token_preflight(host, pat):
+            logger.info("Databricks auth: DATABRICKS_TOKEN from .env (PAT) — OK")
+            return pat, "pat"
+        logger.warning(
+            "DATABRICKS_TOKEN in .env was rejected (invalid/expired). "
+            "Falling back to Azure AD token from az login…"
+        )
+    else:
+        logger.info("DATABRICKS_TOKEN not set — using Azure AD token from az login…")
+
+    aad = _aad_databricks_token(az)
+    if not _token_preflight(host, aad):
+        raise SystemExit(
+            "Azure AD token also rejected by Databricks.\n"
+            "Checklist:\n"
+            f"  1) az account set --subscription {SHARED_SUB}\n"
+            "  2) az login (same work account that can open the workspace in browser)\n"
+            f"  3) Portal → {WORKSPACE} → Launch Workspace — confirm you can open it\n"
+            "  4) Trainer: add your user to the Databricks workspace (Admin → Users)\n"
+            "  5) Or put a fresh PAT in .env:\n"
+            "       DATABRICKS_TOKEN=dapi...   (no quotes, no spaces)\n"
+            f"       DATABRICKS_HOST=https://…  (optional; auto-detected from {WORKSPACE})\n"
+        )
+    logger.info("Databricks auth: Azure AD token via az login — OK")
+    return aad, "aad"
+
+
+def _resolve_storage_key(file_env: dict[str, str]) -> str:
+    key = _normalize_secret(
+        file_env.get("STORAGE_ACCOUNT_KEY") or os.environ.get("STORAGE_ACCOUNT_KEY", "")
+    )
+    if key:
+        return key
+    az = _find_az()
+    logger.info("STORAGE_ACCOUNT_KEY not in .env — fetching key1 from Azure CLI…")
+    key = subprocess.check_output(
+        [
+            az,
+            "storage",
+            "account",
+            "keys",
+            "list",
+            "-g",
+            SHARED_RG,
+            "-n",
+            STORAGE_ACCOUNT,
+            "--query",
+            "[0].value",
+            "-o",
+            "tsv",
+        ],
+        text=True,
+    ).strip()
+    if not key:
+        raise SystemExit(
+            f"Could not read storage key for {STORAGE_ACCOUNT}. "
+            "Set STORAGE_ACCOUNT_KEY in .env or ensure az has access to the RG."
+        )
+    return key
+
+
 def _resolve_host(file_env: dict[str, str]) -> str:
-    host = (os.environ.get("DATABRICKS_HOST") or file_env.get("DATABRICKS_HOST", "")).strip().rstrip("/")
+    host = _normalize_secret(
+        os.environ.get("DATABRICKS_HOST") or file_env.get("DATABRICKS_HOST", "")
+    ).rstrip("/")
     if host:
         return host if host.startswith("http") else f"https://{host}"
     az = _find_az()
@@ -135,14 +290,9 @@ def _resolve_host(file_env: dict[str, str]) -> str:
     return f"https://{raw}" if raw and not raw.startswith("http") else raw
 
 
-def _upload_bronze(file_env: dict[str, str]) -> None:
+def _upload_bronze(file_env: dict[str, str], storage_key: str) -> None:
     az = _find_az()
-    key = (os.environ.get("STORAGE_ACCOUNT_KEY") or file_env.get("STORAGE_ACCOUNT_KEY", "")).strip()
-    if not key:
-        key = subprocess.check_output(
-            [az, "storage", "account", "keys", "list", "-g", SHARED_RG, "-n", STORAGE_ACCOUNT, "--query", "[0].value", "-o", "tsv"],
-            text=True,
-        ).strip()
+    key = storage_key
     dest = "loaded/run=session3-lab/sample_transactions.csv"
     logger.info("Uploading sample CSV to %s/bronze/%s", STORAGE_ACCOUNT, dest)
     subprocess.run(
@@ -222,13 +372,15 @@ def _import_notebooks(client: DbxClient) -> None:
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s — %(message)s")
     file_env = _load_env()
-    token = (file_env.get("DATABRICKS_TOKEN") or os.environ.get("DATABRICKS_TOKEN", "")).strip()
-    storage_key = (file_env.get("STORAGE_ACCOUNT_KEY") or os.environ.get("STORAGE_ACCOUNT_KEY", "")).strip()
-    if not token or not storage_key:
-        raise SystemExit("DATABRICKS_TOKEN and STORAGE_ACCOUNT_KEY required in .env")
     host = _resolve_host(file_env)
+    logger.info("Databricks host: %s", host)
+    token, auth_src = _resolve_token(file_env, host)
+    storage_key = _resolve_storage_key(file_env)
     client = DbxClient(host, token)
-    _upload_bronze(file_env)
+    me = client.whoami()
+    user_hint = me.get("userName") or me.get("displayName") or auth_src
+    logger.info("Authenticated to Databricks as: %s (via %s)", user_hint, auth_src)
+    _upload_bronze(file_env, storage_key)
     _setup_secrets(client, storage_key)
     _build_day9_notebooks()
     _import_notebooks(client)

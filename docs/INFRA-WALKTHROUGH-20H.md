@@ -259,6 +259,25 @@ The **git repo is the source of truth**. Students do not “just change it local
 - [ ] Databricks → Workspace → `/Shared/day7-day8` and `/Shared/day9`  
 - [ ] Secret scopes → `finledger` exists  
 
+#### Phase 2 auth — avoid “invalid token”
+
+Phase 2 runs `deploy-shared-lab.cmd` → `scripts/deploy_shared_lab.py`.
+
+| Auth | What students do |
+|------|------------------|
+| **Preferred** | `az login` only. Leave `DATABRICKS_TOKEN` empty — the script uses an Azure AD token automatically. |
+| **Optional PAT** | Workspace → Settings → Developer → Access tokens → put `DATABRICKS_TOKEN=dapi…` in `.env` with **no quotes**. |
+| **Bad PAT** | If the PAT is expired/wrong, the script **detects 401/403** and falls back to `az login` AAD token. |
+| **Host / storage key** | Optional in `.env` — auto-detected from `dbw-shared-qgr7mj` / storage account keys. |
+
+```cmd
+az login
+az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be
+.\infra-walkthrough.cmd --phase 2
+```
+
+If both PAT and AAD fail: Portal → `dbw-shared-qgr7mj` → **Launch Workspace**. If the browser cannot open it, ask the trainer to add your user to the workspace.
+
 ### After phase 3–4 — manager + chefs linked
 - [ ] ADF Studio → pipelines list (`pl_01…`, `pl_gov_…`)  
 - [ ] Linked services include Databricks / storage / SQL  

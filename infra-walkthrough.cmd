@@ -251,6 +251,8 @@ exit /b %ERRORLEVEL%
 
 :p2
 call :banner 2 "Deploy lab assets - furniture into the house"
+echo Auth: uses DATABRICKS_TOKEN from .env if valid; otherwise Azure AD token from az login.
+echo Host/storage key auto-detected when omitted. Invalid/expired PAT falls back automatically.
 call deploy-shared-lab.cmd
 exit /b %ERRORLEVEL%
 

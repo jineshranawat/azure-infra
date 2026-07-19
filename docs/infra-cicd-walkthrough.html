@@ -295,7 +295,15 @@ winget install Hashicorp.Terraform --accept-source-agreements --accept-package-a
     <code>finledger</code>, and imports Day 8/9 notebooks to fixed workspace paths with <strong>overwrite</strong>
     (same path every time — never “notebook (1)”). That is application-as-code delivery.
   </p>
-  <div class="cmd">.\infra-walkthrough.cmd --phase 2
+  <div class="callout">
+    <strong>Auth (invalid token fix):</strong> Students do <strong>not</strong> need a PAT if
+    <code>az login</code> works. <code>deploy-shared-lab.cmd</code> preflights
+    <code>DATABRICKS_TOKEN</code>; if missing or 401/403, it uses an Azure AD token from the CLI.
+    Strip quotes around tokens in <code>.env</code>. Host + storage key auto-detect when omitted.
+  </div>
+  <div class="cmd">az login
+az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be
+.\infra-walkthrough.cmd --phase 2
 <span class="c"># Same as:</span>
 .\deploy-shared-lab.cmd
 <span class="c"># → scripts\deploy_shared_lab.py</span></div>
