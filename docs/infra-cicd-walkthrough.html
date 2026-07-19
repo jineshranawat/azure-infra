@@ -114,6 +114,7 @@
 
 <nav class="sticky-bar" aria-label="Quick jumps">
   <a href="#terraform">Terraform theory → run</a>
+  <a href="#tf-lineage">TF code lineage</a>
   <a href="#all-commands">All commands (detail)</a>
   <a href="#theory">Theory + diagrams</a>
   <a href="#release-table">Release table</a>
@@ -129,6 +130,8 @@
 <aside class="toc">
   <div class="toc-title">Contents</div>
   <a href="#terraform">Terraform theory → run (T0–T9)</a>
+  <a class="sub" href="#tf-lineage">Code lineage (cmd → py → .tf)</a>
+  <a class="sub" href="#tf-summary">What the code does (summary)</a>
   <a href="#start">Start commands</a>
   <a href="#all-commands">All commands + detail theory</a>
   <a class="sub" href="#cmd-prereq">0. Prerequisites</a>
@@ -1436,16 +1439,183 @@ az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be
 .\provision-shared-tf.cmd --plan-only
 <span class="c"># Then open Portal → rg-shared-class1 and confirm names match the plan outputs</span></div>
 
-  <h3>Flow</h3>
+  <h3>High-level: Bicep vs Terraform entry</h3>
   <pre class="mermaid">
 flowchart LR
   A[.env + az login] --> B{IaC choice}
   B -->|Bicep| C[provision-shared.cmd]
-  B -->|Terraform| D[provision-shared-tf.cmd --plan-only]
+  B -->|Terraform| D[provision-shared-tf.cmd]
   C --> E[ARM / Azure resources]
   D --> E
   E --> F[release.cmd app layers]
   </pre>
+
+  <!-- ========== CODE LINEAGE ========== -->
+  <h3 id="tf-lineage">Code lineage — what is called first (detail)</h3>
+  <p class="lead">
+    Read this top-to-bottom while the projector shows the files.
+    <strong>You type one <code>.cmd</code></strong>; everything below is what that command wakes up, in order.
+  </p>
+
+  <h4>L0 — What the human types (three safe variants)</h4>
+  <div class="cmd">cd D:\azure
+.\provision-shared-tf.cmd --plan-only
+<span class="c"># or apply (trainer; auto-imports Bicep estate first):</span>
+.\provision-shared-tf.cmd --auto-approve
+<span class="c"># or walkthrough phase (same apply path):</span>
+.\infra-walkthrough.cmd --phase 1t</div>
+  <p><strong>Also called from:</strong> <code>infra-walkthrough.cmd</code> label <code>:p1t</code> →
+  <code>call provision-shared-tf.cmd --auto-approve</code>.</p>
+
+  <h4>L1 — <code>provision-shared-tf.cmd</code> (thin Windows launcher — runs FIRST)</h4>
+  <p>
+    <strong>File:</strong> repo-root <code>provision-shared-tf.cmd</code> (22 lines).
+    No Azure logic here — only bootstrap Python, then hand off.
+  </p>
+  <ol>
+    <li><code>cd /d "%~dp0"</code> — jump to repo root (wherever the <code>.cmd</code> lives).</li>
+    <li>If <code>.venv\Scripts\python.exe</code> missing → <code>python -m venv .venv</code> then
+      <code>pip install -r requirements.txt</code>.</li>
+    <li><strong>Always last:</strong>
+      <code>".venv\Scripts\python.exe" scripts\provision_shared_tf.py %*</code>
+      (forwards every flag: <code>--plan-only</code>, <code>--auto-approve</code>, <code>--name-hash</code>, …).</li>
+  </ol>
+  <div class="cmd"><span class="c"># Equivalent if venv already exists:</span>
+.\.venv\Scripts\python.exe scripts\provision_shared_tf.py --plan-only</div>
+
+  <h4>L2 — <code>scripts/provision_shared_tf.py</code> → <code>main()</code> call order</h4>
+  <p>
+    <strong>File:</strong> <code>scripts/provision_shared_tf.py</code>.
+    This is the real brain. Functions run in this exact sequence:
+  </p>
+  <table>
+    <thead><tr><th>#</th><th>Function / step</th><th>What it does</th><th>Calls next</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>sys.stdout.reconfigure(utf-8)</code></td><td>Windows consoles can print arrows without crashing</td><td>—</td></tr>
+      <tr><td>2</td><td><code>_load_dotenv()</code></td><td>Reads <code>.env</code> into <code>os.environ</code> (does not overwrite existing vars). Needs <code>OWNER_EMAIL</code> / <code>CLASS_OWNER_EMAIL</code></td><td>—</td></tr>
+      <tr><td>3</td><td><code>argparse</code></td><td>Parses <code>--plan-only</code>, <code>--auto-approve</code>, <code>--name-hash</code> (default <code>qgr7mj</code>), subscription, owner</td><td>—</td></tr>
+      <tr><td>4</td><td><code>_find_az()</code> + <code>_find_terraform()</code></td><td>Locate <code>az</code> and <code>terraform</code> on PATH; clear error if missing</td><td>—</td></tr>
+      <tr><td>5</td><td><code>_principal(az)</code></td><td><code>az account show</code> → user or SP object ID + type (for RBAC vars)</td><td>az CLI</td></tr>
+      <tr><td>6</td><td><code>az account set --subscription …</code></td><td>Pin the class subscription</td><td>az CLI</td></tr>
+      <tr><td>7</td><td><code>ARM_USE_CLI=true</code></td><td>azurerm provider reuses your <code>az login</code> token</td><td>—</td></tr>
+      <tr><td>8</td><td><code>terraform init -input=false</code></td><td>Working dir = <code>infra/terraform/shared-eastus/</code>; downloads providers; reads <code>.terraform.lock.hcl</code></td><td>TF CLI</td></tr>
+      <tr><td>9</td><td>Build <code>var_args</code></td><td>Passes <code>-var=subscription_id=…</code>, <code>owner_email</code>, <code>principal_object_id</code>, <code>name_hash=qgr7mj</code>, <code>deploy_budget=false</code>, … into every TF command</td><td>—</td></tr>
+      <tr><td>10a</td><td>If <code>--plan-only</code></td><td><code>terraform plan</code> then <strong>exit 0</strong> — no import, no apply</td><td>STOP</td></tr>
+      <tr><td>10b</td><td><code>_import_existing(…)</code></td><td>For apply path only: probe Azure; <code>terraform import</code> anything that exists but is missing from state (fixes “already exists”)</td><td>az + TF</td></tr>
+      <tr><td>11</td><td><code>_plan_is_destructive(…)</code></td><td><code>terraform plan -out=tfplan.autoguard</code> → <code>terraform show -json</code>; if any action contains <code>delete</code> → <strong>ABORT</strong></td><td>TF CLI</td></tr>
+      <tr><td>12</td><td><code>terraform apply tfplan.autoguard</code></td><td>Applies the exact saved plan (or interactive apply if no <code>--auto-approve</code>)</td><td>TF → ARM</td></tr>
+      <tr><td>13</td><td><code>terraform output -json</code></td><td>Prints RG / storage / KV / ADF / Databricks names to the console</td><td>TF CLI</td></tr>
+    </tbody>
+  </table>
+
+  <pre class="mermaid">
+flowchart TD
+  H[Human: provision-shared-tf.cmd] --> C[provision-shared-tf.cmd]
+  C --> V{venv exists?}
+  V -->|no| P[python -m venv + pip install]
+  V -->|yes| PY
+  P --> PY[".venv python scripts/provision_shared_tf.py"]
+  PY --> D[_load_dotenv .env]
+  D --> F[_find_az + _find_terraform]
+  F --> PR[_principal via az]
+  PR --> SUB[az account set]
+  SUB --> INIT[terraform init in shared-eastus]
+  INIT --> BRANCH{--plan-only?}
+  BRANCH -->|yes| PLAN[terraform plan] --> STOP1[Exit — Azure unchanged]
+  BRANCH -->|no| IMP[_import_existing]
+  IMP --> GATE[_plan_is_destructive]
+  GATE -->|delete in plan| ABORT[ABORT — print addresses]
+  GATE -->|safe| APPLY[terraform apply saved plan]
+  APPLY --> OUT[terraform output -json]
+  OUT --> DONE[Print SHARED ESTATE COMPLETE]
+  </pre>
+
+  <h4>L3 — What <code>_import_existing</code> imports (apply path only)</h4>
+  <p>
+    Order matters for dependencies. Driver checks Azure with <code>az group show</code> /
+    <code>az resource show</code>, then imports only addresses missing from <code>terraform state list</code>:
+  </p>
+  <ol>
+    <li><code>azurerm_resource_group.shared</code> → <code>rg-shared-class1</code></li>
+    <li><code>azurerm_key_vault.shared</code> + <code>azurerm_role_assignment.kv_secrets_officer</code></li>
+    <li><code>azurerm_storage_account.shared</code> + lifecycle policy + containers
+      <code>bronze</code> / <code>silver</code> / <code>gold</code> / <code>audit</code> + storage RBAC</li>
+    <li><code>azurerm_data_factory.shared</code> + <code>AdlsBronzeLinkedService</code> + ADF→storage RBAC</li>
+    <li><code>azurerm_databricks_workspace.shared</code></li>
+  </ol>
+  <p>Role-assignment import IDs are rebuilt with proper-case <code>/resourceGroups/</code>
+  (az CLI returns lowercase — that case-only diff used to force destroy+recreate).</p>
+
+  <h4>L4 — <code>infra/terraform/shared-eastus/main.tf</code> — what Terraform manages</h4>
+  <p>
+    After init, every <code>plan</code>/<code>apply</code> reads this file.
+    Providers <code>azurerm</code> (~&gt; 3.117) + <code>azuread</code>; lock file pins exact versions.
+  </p>
+  <table>
+    <thead><tr><th>Block in main.tf</th><th>Creates / manages</th><th>Azure name (live hash)</th></tr></thead>
+    <tbody>
+      <tr><td><code>variable</code> + <code>locals</code></td><td>Inputs + <code>name_hash</code> → names</td><td><code>stsharedqgr7mj</code>, …</td></tr>
+      <tr><td><code>azurerm_resource_group.shared</code></td><td>Resource group</td><td><code>rg-shared-class1</code></td></tr>
+      <tr><td><code>azurerm_key_vault.shared</code></td><td>Key Vault RBAC</td><td><code>kv-shared-qgr7mj</code></td></tr>
+      <tr><td><code>azurerm_role_assignment.kv_secrets_officer</code></td><td>Deployer KV access</td><td>(GUID assignment)</td></tr>
+      <tr><td><code>azurerm_storage_account.shared</code></td><td>ADLS Gen2</td><td><code>stsharedqgr7mj</code></td></tr>
+      <tr><td><code>azurerm_storage_container.medallion</code> <code>for_each</code></td><td>bronze/silver/gold/audit</td><td>same account</td></tr>
+      <tr><td><code>azurerm_storage_management_policy.lifecycle</code></td><td>cool 30d + delete 7d</td><td>policy on storage</td></tr>
+      <tr><td><code>azurerm_role_assignment.storage_blob_contributor</code></td><td>Deployer blob access</td><td>—</td></tr>
+      <tr><td><code>azurerm_data_factory.shared</code></td><td>ADF + system MSI</td><td><code>adf-shared-qgr7mj</code></td></tr>
+      <tr><td><code>…linked_service…bronze</code></td><td>AdlsBronzeLinkedService</td><td>inside ADF</td></tr>
+      <tr><td><code>azurerm_role_assignment.adf_storage</code></td><td>ADF MSI → storage</td><td>—</td></tr>
+      <tr><td><code>azurerm_databricks_workspace.shared</code></td><td>Premium workspace</td><td><code>dbw-shared-qgr7mj</code></td></tr>
+      <tr><td><code>output "…"</code></td><td>Same names as Bicep outputs</td><td>printed after apply</td></tr>
+    </tbody>
+  </table>
+  <p><strong>SQL twin (separate module, not in the shared-eastus driver):</strong>
+  <code>infra/terraform/shared-sql-westus/main.tf</code> ↔ <code>infra/shared-sql-westus.bicep</code>.</p>
+
+  <h4>L5 — Bicep twin lineage (same house, other door)</h4>
+  <table>
+    <thead><tr><th>#</th><th>Called</th><th>Does</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>provision-shared.cmd</code> or <code>infra-walkthrough.cmd --phase 1</code></td><td>Launcher → venv python</td></tr>
+      <tr><td>2</td><td><code>scripts/provision_shared.py</code></td><td><code>_load_dotenv</code> → ensure RG → <code>az deployment group create --mode Incremental</code></td></tr>
+      <tr><td>3</td><td><code>infra/shared-eastus.bicep</code></td><td>Declares KV, ADLS, ADF, Databricks (ARM Incremental)</td></tr>
+      <tr><td>4</td><td>Azure Resource Manager</td><td>Creates/updates resources; no Terraform state file</td></tr>
+    </tbody>
+  </table>
+  <pre class="mermaid">
+flowchart LR
+  B1[provision-shared.cmd] --> B2[provision_shared.py]
+  B2 --> B3[az deployment group create Incremental]
+  B3 --> B4[shared-eastus.bicep]
+  B4 --> ARM[ARM]
+  T1[provision-shared-tf.cmd] --> T2[provision_shared_tf.py]
+  T2 --> T3[terraform init / import / plan / apply]
+  T3 --> T4[shared-eastus/main.tf]
+  T4 --> ARM
+  ARM --> RG[rg-shared-class1]
+  </pre>
+
+  <h3 id="tf-summary">What has been done in the code (executive summary)</h3>
+  <p>Plain-language recap of the Terraform twin shipped in this repo:</p>
+  <ul>
+    <li><strong>Twin estate:</strong> <code>main.tf</code> mirrors <code>shared-eastus.bicep</code> (same RG, names via <code>name_hash=qgr7mj</code>, same SKUs, eastus exception).</li>
+    <li><strong>One Windows entry:</strong> <code>provision-shared-tf.cmd</code> → Python driver (guardrail: single entry point).</li>
+    <li><strong>Plan-first teaching:</strong> <code>--plan-only</code> shows create/change/destroy without mutating Azure.</li>
+    <li><strong>Auto-import:</strong> apply path adopts a Bicep-built estate so learners no longer hit
+      “already exists … needs to be imported”.</li>
+    <li><strong>Destroy-gate:</strong> any plan that would delete/recreate aborts before apply (protects shared class RG).</li>
+    <li><strong>Role-assignment case fix:</strong> import IDs + <code>lifecycle ignore_changes = [scope]</code> avoid bogus RBAC recreates.</li>
+    <li><strong>Idempotent:</strong> verified re-run ends at <code>0 added, 0 changed, 0 destroyed</code>.</li>
+    <li><strong>App layer unchanged:</strong> after either IaC, still <code>release.cmd</code> / <code>deploy-shared-lab.cmd</code>.</li>
+    <li><strong>Docs:</strong> this HTML (T0–T9 + lineage) + <code>docs/BICEP-TERRAFORM-SHARED-ESTATE.md</code>.</li>
+  </ul>
+  <div class="callout">
+    <strong>Classroom one-liner:</strong>
+    You type <code>provision-shared-tf.cmd</code> → the <code>.cmd</code> starts Python → Python runs Terraform in
+    <code>infra/terraform/shared-eastus/</code> → <code>main.tf</code> tells ARM what the house should look like →
+    Azure builds or updates <code>rg-shared-class1</code>. Bicep does the same job through
+    <code>provision-shared.cmd</code> + <code>shared-eastus.bicep</code> instead.
+  </div>
 </section>
 
 <section id="citations" class="cite">

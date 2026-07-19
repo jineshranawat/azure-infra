@@ -267,6 +267,40 @@ remote state backend (Azure Storage + state locking).
 | `provision-shared.cmd` | Windows entry Bicep |
 | `provision-shared-tf.cmd` | Windows entry Terraform |
 | `docs/BICEP-TERRAFORM-SHARED-ESTATE.md` | This guide |
+| `docs/infra-cicd-walkthrough.html` | Projector: T0–T9 + **code lineage** |
+
+### G.1 Code lineage — what is called first (Terraform)
+
+```text
+Human types:
+  .\provision-shared-tf.cmd --plan-only | --auto-approve
+       │
+       ▼
+  provision-shared-tf.cmd          (L1) ensure .venv → call python
+       │
+       ▼
+  scripts/provision_shared_tf.py   (L2) main()
+       │  1. _load_dotenv(.env)
+       │  2. _find_az / _find_terraform
+       │  3. _principal(az)
+       │  4. az account set
+       │  5. terraform init          cwd=infra/terraform/shared-eastus
+       │  6a. --plan-only → terraform plan → EXIT
+       │  6b. apply path:
+       │       _import_existing → terraform import (if Azure has it, state lacks it)
+       │       _plan_is_destructive → plan -out + show -json (ABORT on delete)
+       │       terraform apply saved plan
+       │       terraform output -json
+       ▼
+  infra/terraform/shared-eastus/main.tf   (L4)
+       │  azurerm_* resources → ARM
+       ▼
+  rg-shared-class1  (KV, ADLS, ADF, Databricks, …)
+```
+
+Bicep twin: `provision-shared.cmd` → `provision_shared.py` → `az deployment group create --mode Incremental` → `shared-eastus.bicep` → same ARM.
+
+Full classroom tables + Mermaid: HTML section **Code lineage** (`#tf-lineage`) and **What the code does** (`#tf-summary`).
 
 ---
 
