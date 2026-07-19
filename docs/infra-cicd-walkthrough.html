@@ -1344,27 +1344,34 @@ terraform validate</div>
   and names <code>stsharedqgr7mj</code>, <code>adf-shared-qgr7mj</code>, … matching the live Bicep estate.
   Line <code>Plan only — no changes applied</code> means Azure was not mutated.</p>
 
-  <h4>T6 — Why plan says “create” when Portal already has the resources (Benefit: state)</h4>
+  <h4>T6 — The “already exists … needs to be imported” error (Benefit: state)</h4>
   <p>
-    <strong>Theory:</strong> Empty local <code>terraform.tfstate</code> = Terraform thinks nothing exists.
-    Azure may already have the RG from Bicep. Plan proposes creates → a blind apply would collide on names.
-    <strong>State</strong> is Terraform’s memory. Bicep has no state file — Azure deployment history is different.
-    Classroom rule: on the shared class RG, stay on <strong>plan-only</strong> unless the trainer runs import.
+    <strong>Theory:</strong> Empty local <code>terraform.tfstate</code> = Terraform thinks nothing exists, but Azure
+    already has the RG from Bicep. Terraform refuses to adopt resources it did not create:
+  </p>
+  <pre>Error: A resource with the ID ".../resourceGroups/rg-shared-class1" already exists -
+to be managed via Terraform this resource needs to be imported into the State.</pre>
+  <p>
+    This error is <strong>safe</strong> — nothing was changed. <strong>State</strong> is Terraform’s memory; Bicep has no
+    state file. Our driver now fixes this itself: before apply it <strong>auto-imports</strong> every existing resource
+    into state (check-before-create), then a <strong>destroy-gate</strong> aborts if the plan would delete or recreate
+    anything. So the fix for a learner who hits it is just:
   </p>
   <div class="cmd">cd D:\azure
-<span class="c"># Safe classroom default — always:</span>
-.\provision-shared-tf.cmd --plan-only
-
-<span class="c"># Greenfield ONLY (new names) — empty hash creates sha1-derived names, not qgr7mj:</span>
-<span class="c"># .\provision-shared-tf.cmd --name-hash "" --plan-only</span></div>
+git pull
+.\provision-shared-tf.cmd --auto-approve
+<span class="c"># Driver: imports existing resources → plans → aborts on any destroy → applies</span></div>
 
   <h4>T7 — apply = make Azure match the plan (Benefit: declarative converge)</h4>
   <p>
-    <strong>Theory:</strong> Apply executes the plan and writes IDs into state. Re-run is idempotent when state matches Azure
-    (0 to add). Use on a sandbox / greenfield hash — <strong>not</strong> on live <code>rg-shared-class1</code> without import.
+    <strong>Theory:</strong> Apply executes the saved plan and writes IDs into state. Re-run is idempotent —
+    verified on the live estate: run 1 imported 14 resources, run 2 converged (tags only, 0 destroyed),
+    run 3 printed <code>No changes. 0 added, 0 changed, 0 destroyed</code>.
+    Team rule: state is <strong>local per laptop</strong> — students stay on <code>--plan-only</code>,
+    the <strong>trainer</strong> applies (enterprises use a remote state backend with locking instead).
   </p>
   <div class="cmd warn-ish">cd D:\azure
-<span class="c"># TRAINER ONLY — greenfield or after import. Do NOT run on live shared estate without §E import.</span>
+<span class="c"># TRAINER applies; students use --plan-only. Note: owner tag follows the applier's .env OWNER_EMAIL.</span>
 .\provision-shared-tf.cmd --auto-approve</div>
 
   <h4>T8 — for_each + outputs (Benefit: HCL loops)</h4>

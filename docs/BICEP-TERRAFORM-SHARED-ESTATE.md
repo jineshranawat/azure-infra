@@ -195,22 +195,50 @@ IaC only builds the house. Notebooks / ADF pipelines still use:
 
 ---
 
-## E. Import existing Bicep estate into Terraform (advanced)
+## E. Import existing Bicep estate into Terraform — now AUTOMATIC
 
-If resources already exist from Bicep and you want TF to manage them:
+### The error a learner will see without import
 
-1. Set `name_hash=qgr7mj`.
-2. `terraform init`
-3. Import each resource ID (examples):
-
-```cmd
-cd infra\terraform\shared-eastus
-terraform import -var-file=... azurerm_resource_group.shared /subscriptions/.../resourceGroups/rg-shared-class1
-terraform import ... azurerm_storage_account.shared /subscriptions/.../storageAccounts/stsharedqgr7mj
-REM ... KV, ADF, Databricks similarly
+```text
+Error: A resource with the ID "/subscriptions/.../resourceGroups/rg-shared-class1" already exists -
+to be managed via Terraform this resource needs to be imported into the State.
 ```
 
-Prefer **plan-only** first. Full import scripts are trainer-led (avoid students fighting state in class).
+**Why:** the estate was built by Bicep, so the learner's local `terraform.tfstate` is empty.
+Terraform refuses to adopt resources it did not create — safety by design, nothing was harmed.
+
+### The fix (built into the driver, tested 19 Jul 2026)
+
+`scripts/provision_shared_tf.py` now does **check-before-create** (guardrail 2) on every apply:
+
+1. **Auto-import** — for each expected resource (RG, KV, storage + 4 containers + lifecycle,
+   ADF + linked service, Databricks, 3 role assignments): if it exists in Azure but not in state,
+   run `terraform import` automatically. Role-assignment IDs are rebuilt with proper-case
+   `/resourceGroups/` (az CLI returns lowercase, which would force a bogus recreate).
+2. **Destroy-gate** — plan is saved to a file and inspected as JSON; if ANY resource would be
+   deleted or recreated, the run ABORTS before touching Azure and tells you to review with
+   `--plan-only`. On the shared class estate destroys are never automatic.
+3. **Apply the saved plan** — exactly what was inspected, nothing else.
+
+So the failing command simply works now:
+
+```cmd
+git pull
+.\provision-shared-tf.cmd --auto-approve
+```
+
+Verified sequence on the live estate: run 1 = imported 14 resources, gate blocked two
+role-assignment recreates (then fixed in code); run 2 = converged with 6 in-place updates
+(tags only + ADF linked-service managed identity), **0 destroyed**; run 3 =
+**No changes. 0 added, 0 changed, 0 destroyed** — idempotent.
+
+### Team rule — one applier, everyone else plans
+
+State is **local per laptop** (`infra/terraform/shared-eastus/terraform.tfstate`, gitignored).
+Two people applying from different laptops both work (auto-import rebuilds state), but the
+`owner` tag flips to whoever ran last (it comes from their `.env` OWNER_EMAIL). In class:
+**students run `--plan-only`; the trainer applies.** Enterprises solve this properly with a
+remote state backend (Azure Storage + state locking).
 
 ---
 

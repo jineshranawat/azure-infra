@@ -9,12 +9,13 @@
 # Generated cost dashboard output (re-create with cost-dashboard.cmd)
 docs/cost-dashboard-out/
 
-# Terraform local state / plugins (never commit)
+# Terraform local state / plugins / saved plans (never commit)
 **/.terraform/
 **/*.tfstate
 **/*.tfstate.*
 **/terraform.tfvars
 **/.terraform.lock.hcl.backup
+**/tfplan.autoguard
 
 # Python caches
 __pycache__/

@@ -118,15 +118,15 @@ locals {
   managed_rg_name      = "rg-${var.learner}-dbw-${local.name_hash}"
 
   tags = {
-    env             = "training"
-    owner           = var.owner_email
-    costcentre      = "boe-data-enablement"
-    "data-class"    = "training-synthetic"
-    course          = "azure-etl-boe"
-    class           = "shared-eastus"
+    env          = "training"
+    owner        = var.owner_email
+    costcentre   = "boe-data-enablement"
+    "data-class" = "training-synthetic"
+    course       = "azure-etl-boe"
+    class        = "shared-eastus"
+    # Keep tags identical to Bicep so both IaC paths converge to the same state
     "auto-teardown" = "manual"
     estate          = "shared"
-    iac             = "terraform"
   }
 
   budget_start = var.budget_start_date != "" ? var.budget_start_date : formatdate("YYYY-MM-01", timestamp())
@@ -208,7 +208,12 @@ resource "azurerm_role_assignment" "kv_secrets_officer" {
   scope                = azurerm_key_vault.shared.id
   role_definition_name = "Key Vault Secrets Officer"
   principal_id         = var.principal_object_id
-  # principal_type not required when using object id; TF resolves
+
+  # Bicep-created assignments store the scope with lowercase /resourcegroups/;
+  # the case-only diff would otherwise force destroy+recreate on the live estate.
+  lifecycle {
+    ignore_changes = [scope]
+  }
 }
 
 # ---------------------------------------------------------------------------
@@ -216,18 +221,20 @@ resource "azurerm_role_assignment" "kv_secrets_officer" {
 # ---------------------------------------------------------------------------
 
 resource "azurerm_storage_account" "shared" {
-  name                            = local.storage_account_name
-  resource_group_name             = azurerm_resource_group.shared.name
-  location                        = azurerm_resource_group.shared.location
-  account_tier                    = "Standard"
-  account_replication_type        = "LRS"
-  account_kind                    = "StorageV2"
-  access_tier                     = "Hot"
-  is_hns_enabled                  = true
-  https_traffic_only_enabled      = true
-  min_tls_version                 = "TLS1_2"
-  allow_nested_items_to_be_public = false
-  tags                            = local.tags
+  name                     = local.storage_account_name
+  resource_group_name      = azurerm_resource_group.shared.name
+  location                 = azurerm_resource_group.shared.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  account_kind             = "StorageV2"
+  access_tier              = "Hot"
+  is_hns_enabled           = true
+  # Live Bicep account has this off; azurerm 3.x defaults to true — pin to avoid drift
+  cross_tenant_replication_enabled = false
+  https_traffic_only_enabled       = true
+  min_tls_version                  = "TLS1_2"
+  allow_nested_items_to_be_public  = false
+  tags                             = local.tags
 
   blob_properties {
     delete_retention_policy {
@@ -281,6 +288,11 @@ resource "azurerm_role_assignment" "storage_blob_contributor" {
   scope                = azurerm_storage_account.shared.id
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = var.principal_object_id
+
+  # Case-only scope diff from Bicep-created assignment must not force recreate
+  lifecycle {
+    ignore_changes = [scope]
+  }
 }
 
 # ---------------------------------------------------------------------------
@@ -312,6 +324,10 @@ resource "azurerm_role_assignment" "adf_storage" {
   scope                = azurerm_storage_account.shared.id
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = azurerm_data_factory.shared.identity[0].principal_id
+
+  lifecycle {
+    ignore_changes = [scope]
+  }
 }
 
 # ---------------------------------------------------------------------------
