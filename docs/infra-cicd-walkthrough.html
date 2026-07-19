@@ -103,6 +103,8 @@
     <div class="chips">
       <span class="chip">20+ hour infra</span>
       <span class="chip">infra-walkthrough.cmd</span>
+      <span class="chip">Bicep + Terraform</span>
+      <span class="chip">provision-shared-tf.cmd</span>
       <span class="chip">release.cmd</span>
       <span class="chip">rg-shared-class1</span>
       <span class="chip">eastus shared estate</span>
@@ -111,7 +113,7 @@
 </header>
 
 <nav class="sticky-bar" aria-label="Quick jumps">
-  <a href="#terraform">Bicep ↔ Terraform</a>
+  <a href="#terraform">Terraform theory → run</a>
   <a href="#all-commands">All commands (detail)</a>
   <a href="#theory">Theory + diagrams</a>
   <a href="#release-table">Release table</a>
@@ -126,11 +128,12 @@
 <div class="layout">
 <aside class="toc">
   <div class="toc-title">Contents</div>
-  <a href="#terraform">Bicep ↔ Terraform</a>
+  <a href="#terraform">Terraform theory → run (T0–T9)</a>
   <a href="#start">Start commands</a>
   <a href="#all-commands">All commands + detail theory</a>
   <a class="sub" href="#cmd-prereq">0. Prerequisites</a>
   <a class="sub" href="#cmd-infra">1. Infra phases 0–12</a>
+  <a class="sub" href="#cmd-phase-1t">1t. Terraform twin (plan-only)</a>
   <a class="sub" href="#cmd-release">2. Release paths</a>
   <a class="sub" href="#cmd-allsafe">3. Run everything</a>
   <a class="sub" href="#cmd-labs">4. Optional labs</a>
@@ -251,6 +254,29 @@ az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be
 <span class="c"># OWNER_EMAIL / CLASS_OWNER_EMAIL loaded from .env automatically</span></div>
   <p><strong>Creates / updates:</strong> <code>rg-shared-class1</code>, storage, KV, ADF, Databricks (eastus).
   <strong>Verify:</strong> Portal → Resource groups → <code>rg-shared-class1</code> → see those four resource types.</p>
+
+  <h4 id="cmd-phase-1t">Phase 1t — Same estate via Terraform (say theory → they run)</h4>
+  <p>
+    <strong>Theory:</strong> Same Azure resources as Phase 1, written in HashiCorp HCL. Terraform does <strong>not</strong>
+    call the <code>.bicep</code> file — both talk to ARM. Killer classroom demo: <strong>plan before apply</strong>
+    (create/change/destroy preview with zero Azure mutation). Live RG already exists from Bicep → use
+    <code>--plan-only</code> in class; full teach ladder is
+    <a href="#terraform">Terraform theory T0–T9</a>.
+  </p>
+  <p class="analogy">Second CAD drawing of the same kitchen — do not pour concrete twice on the shared plot.</p>
+  <div class="cmd">cd D:\azure
+<span class="c"># One-time if missing:</span>
+winget install Hashicorp.Terraform --accept-source-agreements --accept-package-agreements
+
+<span class="c"># SAFE class demo (recommended):</span>
+.\provision-shared-tf.cmd --plan-only
+
+<span class="c"># Walkthrough alias applies with --auto-approve — trainer only after import/greenfield:</span>
+<span class="c"># .\infra-walkthrough.cmd --phase 1t</span></div>
+  <p><strong>Files:</strong> <code>infra/terraform/shared-eastus/main.tf</code>, <code>scripts/provision_shared_tf.py</code>,
+  <code>provision-shared-tf.cmd</code>, <code>docs/BICEP-TERRAFORM-SHARED-ESTATE.md</code>.
+  <strong>Verify:</strong> plan names match <code>stsharedqgr7mj</code> / <code>adf-shared-qgr7mj</code> / <code>dbw-shared-qgr7mj</code>
+  and line <code>Plan only — no changes applied</code>.</p>
 
   <h4>Phase 2 — Lab assets into Databricks</h4>
   <p>
@@ -1206,66 +1232,209 @@ git main        = single source of truth</div>
 </section>
 
 <section id="terraform">
-  <h2>Bicep ↔ Terraform (same shared estate)</h2>
-  <p class="lead">Terraform does <strong>not</strong> call the <code>.bicep</code> file. Both tools describe the same Azure resources and talk to ARM. Pick one path per environment; do not apply both blindly on the same RG.</p>
+  <h2>Terraform theory → students run these (same estate as Bicep)</h2>
+  <p class="lead">
+    Teach top-to-bottom. Each theory block has the <strong>exact Windows command students run next</strong>.
+    Terraform does <strong>not</strong> call the <code>.bicep</code> file — both blueprints talk to ARM for the same house.
+  </p>
 
   <div class="callout">
-    <strong>Full desk guide:</strong>
+    <strong>Desk twin:</strong>
     <a href="BICEP-TERRAFORM-SHARED-ESTATE.md">docs/BICEP-TERRAFORM-SHARED-ESTATE.md</a>
-    — resource map, naming (<code>name_hash=qgr7mj</code>), import notes, four re-run scenarios.
+    · Live hash <code>name_hash=qgr7mj</code> · Never teardown <code>rg-shared-class1</code>
   </div>
-
-  <h3>Analogy</h3>
-  <p>Bicep = Microsoft’s blueprint language for the Azure house. Terraform = HashiCorp’s blueprint for the <em>same</em> house. The builder (ARM) still pours the concrete. The furniture (ADF pipelines, notebooks) arrives later via <code>release.cmd</code> — unchanged.</p>
 
   <div class="callout">
-    <strong>Tested on this repo (19 Jul 2026):</strong> Terraform <code>v1.15.8</code> installed via
-    <code>winget install Hashicorp.Terraform</code> → <code>terraform validate</code> = <em>Success</em> on both modules →
-    <code>provision-shared-tf.cmd --plan-only</code> = clean plan, <strong>14 to add, 0 to change, 0 to destroy</strong>,
-    with names identical to the live Bicep estate (<code>stsharedqgr7mj</code>, <code>adf-shared-qgr7mj</code>,
-    <code>dbw-shared-qgr7mj</code>, <code>kv-shared-qgr7mj</code>). Apply is deliberately NOT run against
-    <code>rg-shared-class1</code> — Bicep already owns those resources; import first (see desk guide §E).
+    <strong>Verified 19 Jul 2026:</strong> Terraform <code>v1.15.8</code> →
+    <code>terraform validate</code> Success →
+    <code>provision-shared-tf.cmd --plan-only</code> =
+    <strong>14 to add, 0 change, 0 destroy</strong>
+    (<code>stsharedqgr7mj</code> / <code>kv-shared-qgr7mj</code> / <code>adf-shared-qgr7mj</code> / <code>dbw-shared-qgr7mj</code>).
+    Do <em>not</em> apply on the live shared RG without import — Bicep already owns it.
   </div>
 
-  <h3>Benefits of Terraform over Bicep — and the exact command that uses each</h3>
-  <p>Every row is a real, runnable command in this repo — not theory.</p>
+  <!-- ========== TF THEORY LADDER ========== -->
+  <h3 id="tf-ladder">Classroom ladder — say the theory, then they run the block</h3>
+  <p class="analogy">Analogy: Bicep = Microsoft CAD; Terraform = HashiCorp AutoCAD. Same walls. Different drawing tool. ARM still pours the concrete.</p>
+
+  <h4>T0 — Install the drawing tool (once per laptop)</h4>
+  <p>
+    <strong>Theory:</strong> Bicep rides inside Azure CLI. Terraform is a separate binary that downloads
+    <em>providers</em> (plugins) for Azure, Entra ID, etc. Enterprises pin the binary + lock file so every
+    agent builds the same plan. Without install, every later TF command fails with “terraform not found.”
+  </p>
+  <div class="cmd"><span class="c"># From any folder — one-time install</span>
+winget install Hashicorp.Terraform --accept-source-agreements --accept-package-agreements
+
+<span class="c"># Close and reopen Command Prompt / PowerShell, then:</span>
+terraform version
+<span class="c"># Expect: Terraform v1.x.x</span></div>
+  <p><strong>Verify:</strong> <code>terraform version</code> prints a version. <strong>Files:</strong> WinGet PATH entry for Hashicorp.Terraform.</p>
+
+  <h4>T1 — Auth + config (same gate as Bicep)</h4>
+  <p>
+    <strong>Theory:</strong> Terraform’s Azure provider uses your <code>az login</code> token when
+    <code>ARM_USE_CLI=true</code> (our driver sets this). Same identity, same subscription, same
+    <code>.env</code> owner email. IaC language changes; Azure identity does not.
+  </p>
+  <div class="cmd">cd D:\azure
+az login
+az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be
+<span class="c"># .env must have CLASS_OWNER_EMAIL or OWNER_EMAIL (driver reads it)</span>
+.\infra-walkthrough.cmd --phase 0</div>
+
+  <h4>T2 — Open both blueprints side-by-side (teach, no Azure change)</h4>
+  <p>
+    <strong>Theory:</strong> Declarative IaC means you describe <em>desired state</em>, not a click path.
+    Compare one resource (e.g. storage account) in Bicep vs HCL: same SKU, same region exception (eastus),
+    same tags. Students see that TF is not “calling” Bicep — it is a second description of the same ARM types.
+  </p>
+  <div class="cmd">cd D:\azure
+<span class="c"># Open in editor (Cursor / VS Code / notepad)</span>
+notepad infra\shared-eastus.bicep
+notepad infra\terraform\shared-eastus\main.tf
+notepad docs\BICEP-TERRAFORM-SHARED-ESTATE.md
+
+<span class="c"># Or list the twin folders</span>
+dir infra\terraform\shared-eastus
+dir infra\terraform\shared-sql-westus</div>
+  <p><strong>Point at in class:</strong> <code>variable</code> / <code>locals</code> / <code>resource "azurerm_storage_account"</code>
+  ↔ Bicep <code>param</code> / <code>var</code> / <code>Microsoft.Storage/storageAccounts</code>.</p>
+
+  <h4>T3 — init = download providers + lock file (Benefit: registry + pins)</h4>
+  <p>
+    <strong>Theory:</strong> <code>terraform init</code> reads <code>required_providers</code>, downloads signed
+    <code>azurerm</code> / <code>azuread</code> binaries into <code>.terraform/</code>, and records exact versions in
+    <code>.terraform.lock.hcl</code> (committed). Next machine gets the same plugins — reproducible builds.
+    Bicep has no equivalent lock file for providers.
+  </p>
+  <div class="cmd">cd D:\azure\infra\terraform\shared-eastus
+terraform init -input=false
+<span class="c"># Look at the pin file we commit:</span>
+type .terraform.lock.hcl | more</div>
+  <p><strong>Verify:</strong> message <em>Terraform has been successfully initialized</em>.
+  <strong>Do not commit</strong> <code>.terraform/</code> folder (gitignored) — <strong>do commit</strong> <code>.terraform.lock.hcl</code>.</p>
+
+  <h4>T4 — validate = syntax + provider schema (Benefit: HCL validation)</h4>
+  <p>
+    <strong>Theory:</strong> Catch typos and wrong argument names <em>before</em> talking to Azure.
+    Our module uses azurerm <code>~&gt; 3.117</code> (e.g. <code>enable_rbac_authorization</code>, not the 4.x name).
+    <code>validation</code> blocks on variables (location must be <code>eastus</code>) fail fast here.
+  </p>
+  <div class="cmd">cd D:\azure\infra\terraform\shared-eastus
+terraform validate
+<span class="c"># Also validate the SQL twin:</span>
+cd D:\azure\infra\terraform\shared-sql-westus
+terraform init -input=false
+terraform validate</div>
+  <p><strong>Verify:</strong> <code>Success! The configuration is valid.</code></p>
+
+  <h4>T5 — plan = show create/change/destroy BEFORE Azure changes (Benefit: plan before apply)</h4>
+  <p>
+    <strong>Theory:</strong> This is Terraform’s killer feature vs click-ops and vs optional Bicep <code>what-if</code>.
+    Plan answers: what will be added, changed, or destroyed? Students approve in their head; nothing is applied yet.
+    Our Windows entry wraps plan with <code>.env</code> + subscription + principal + <code>name_hash=qgr7mj</code>.
+  </p>
+  <div class="cmd">cd D:\azure
+.\provision-shared-tf.cmd --plan-only
+
+<span class="c"># Same thing via walkthrough phase 1t (applies with --auto-approve — trainers: prefer --plan-only above in class)</span>
+<span class="c"># .\infra-walkthrough.cmd --phase 1t</span></div>
+  <p><strong>Verify:</strong> Plan ends with a summary like <code>Plan: N to add, 0 to change, 0 to destroy</code>
+  and names <code>stsharedqgr7mj</code>, <code>adf-shared-qgr7mj</code>, … matching the live Bicep estate.
+  Line <code>Plan only — no changes applied</code> means Azure was not mutated.</p>
+
+  <h4>T6 — Why plan says “create” when Portal already has the resources (Benefit: state)</h4>
+  <p>
+    <strong>Theory:</strong> Empty local <code>terraform.tfstate</code> = Terraform thinks nothing exists.
+    Azure may already have the RG from Bicep. Plan proposes creates → a blind apply would collide on names.
+    <strong>State</strong> is Terraform’s memory. Bicep has no state file — Azure deployment history is different.
+    Classroom rule: on the shared class RG, stay on <strong>plan-only</strong> unless the trainer runs import.
+  </p>
+  <div class="cmd">cd D:\azure
+<span class="c"># Safe classroom default — always:</span>
+.\provision-shared-tf.cmd --plan-only
+
+<span class="c"># Greenfield ONLY (new names) — empty hash creates sha1-derived names, not qgr7mj:</span>
+<span class="c"># .\provision-shared-tf.cmd --name-hash "" --plan-only</span></div>
+
+  <h4>T7 — apply = make Azure match the plan (Benefit: declarative converge)</h4>
+  <p>
+    <strong>Theory:</strong> Apply executes the plan and writes IDs into state. Re-run is idempotent when state matches Azure
+    (0 to add). Use on a sandbox / greenfield hash — <strong>not</strong> on live <code>rg-shared-class1</code> without import.
+  </p>
+  <div class="cmd warn-ish">cd D:\azure
+<span class="c"># TRAINER ONLY — greenfield or after import. Do NOT run on live shared estate without §E import.</span>
+.\provision-shared-tf.cmd --auto-approve</div>
+
+  <h4>T8 — for_each + outputs (Benefit: HCL loops)</h4>
+  <p>
+    <strong>Theory:</strong> One resource block with <code>for_each</code> creates bronze/silver/gold/audit containers.
+    Outputs mirror Bicep output names so later app scripts can use the same labels.
+  </p>
+  <div class="cmd">cd D:\azure
+notepad infra\terraform\shared-eastus\main.tf
+<span class="c"># Search for: azurerm_storage_container.medallion</span>
+<span class="c"># Search for: output "storageAccountName"</span>
+
+<span class="c"># After a successful apply/import you can print outputs:</span>
+<span class="c"># cd infra\terraform\shared-eastus</span>
+<span class="c"># terraform output</span></div>
+
+  <h4>T9 — After either IaC: same app release (not Terraform)</h4>
+  <p>
+    <strong>Theory:</strong> IaC builds the kitchen. Notebooks and ADF pipelines are the recipes — still shipped with
+    <code>release.cmd</code>. Switching Bicep ↔ Terraform does not change the CI/CD conveyor for app code.
+  </p>
+  <div class="cmd">cd D:\azure
+.\deploy-shared-lab.cmd
+.\release.cmd adf
+.\release.cmd medallion-deploy
+.\release.cmd verify</div>
+
+  <!-- ========== BENEFITS TABLE ========== -->
+  <h3 id="tf-benefits">Benefits of Terraform over Bicep — each maps to a run above</h3>
   <table>
-    <thead><tr><th>#</th><th>Benefit</th><th>What it means</th><th>Run it here (executable)</th></tr></thead>
+    <thead><tr><th>#</th><th>Benefit</th><th>Theory in one line</th><th>Students run</th></tr></thead>
     <tbody>
-      <tr><td>1</td><td><strong>Plan before apply</strong></td><td>Full diff (create / change / destroy) shown and approvable <em>before</em> anything touches Azure. Bicep’s <code>what-if</code> exists but is optional and less exact.</td><td><code>provision-shared-tf.cmd --plan-only</code></td></tr>
-      <tr><td>2</td><td><strong>State file = drift detection</strong></td><td><code>terraform.tfstate</code> remembers what TF built. If someone clicks in the portal, the next plan shows the drift. Bicep has no state — it only knows the template.</td><td><code>terraform plan</code> in <code>infra\terraform\shared-eastus</code> (after apply/import)</td></tr>
-      <tr><td>3</td><td><strong>Multi-provider, one language</strong></td><td>Azure + Entra ID + (optionally) Databricks jobs, GitHub, AWS in one HCL codebase. Bicep is Azure-only.</td><td><code>main.tf</code> already loads <code>azurerm</code> + <code>azuread</code> providers together</td></tr>
-      <tr><td>4</td><td><strong>Precise destroy</strong></td><td><code>terraform destroy</code> removes exactly what is in state — nothing more. Bicep teardown = delete the whole RG.</td><td><code>terraform destroy</code> (NEVER on <code>rg-shared-class1</code> — sandbox only)</td></tr>
-      <tr><td>5</td><td><strong>Import existing resources</strong></td><td>Adopt portal-clicked or Bicep-built resources into code management without recreating them.</td><td><code>terraform import azurerm_storage_account.shared &lt;resource-id&gt;</code> (desk guide §E)</td></tr>
-      <tr><td>6</td><td><strong>Provider lock file</strong></td><td><code>.terraform.lock.hcl</code> pins provider versions — every machine resolves identical plugins. Bicep CLI versions float.</td><td>Committed at <code>infra\terraform\shared-eastus\.terraform.lock.hcl</code></td></tr>
-      <tr><td>7</td><td><strong>Rich HCL loops &amp; validation</strong></td><td><code>for_each</code>, <code>validation</code> blocks, functions. Our 4 medallion containers are one <code>for_each</code>; region is locked to <code>eastus</code> by a validation rule.</td><td>See <code>azurerm_storage_container.medallion</code> + <code>var.location</code> validation in <code>main.tf</code></td></tr>
-      <tr><td>8</td><td><strong>Module registry ecosystem</strong></td><td>Thousands of community modules on <a href="https://registry.terraform.io" target="_blank" rel="noopener">registry.terraform.io</a>; Bicep’s registry is younger and smaller.</td><td><code>terraform init</code> pulls signed providers automatically</td></tr>
-      <tr><td>9</td><td><strong>Job-market standard</strong></td><td>Terraform is the most-asked IaC skill in data/platform engineering interviews across clouds.</td><td>Practise: <code>infra-walkthrough.cmd --phase 1t</code></td></tr>
+      <tr><td>1</td><td><strong>Plan before apply</strong></td><td>Approve create/change/destroy before Azure is touched</td><td>T5 — <code>provision-shared-tf.cmd --plan-only</code></td></tr>
+      <tr><td>2</td><td><strong>State / drift</strong></td><td>State remembers managed resources; portal clicks show as drift</td><td>T6 — re-run plan after apply/import</td></tr>
+      <tr><td>3</td><td><strong>Multi-provider</strong></td><td>Azure + Entra (+ other clouds) in one HCL language</td><td>T2 — open <code>main.tf</code> providers block</td></tr>
+      <tr><td>4</td><td><strong>Precise destroy</strong></td><td>Destroy only what is in state (sandbox only)</td><td><code>terraform destroy</code> — NEVER on shared class RG</td></tr>
+      <tr><td>5</td><td><strong>Import</strong></td><td>Adopt existing Bicep/portal resources into state</td><td>Desk guide §E (trainer-led)</td></tr>
+      <tr><td>6</td><td><strong>Lock file</strong></td><td>Pin provider versions across every laptop/agent</td><td>T3 — <code>terraform init</code> + open <code>.terraform.lock.hcl</code></td></tr>
+      <tr><td>7</td><td><strong>for_each + validation</strong></td><td>Loops and fail-fast variable rules in HCL</td><td>T4 + T8</td></tr>
+      <tr><td>8</td><td><strong>Registry</strong></td><td>Signed providers from registry.terraform.io</td><td>T3 — <code>terraform init</code></td></tr>
+      <tr><td>9</td><td><strong>Interview skill</strong></td><td>Most-asked cross-cloud IaC language</td><td>Whole ladder T0–T9</td></tr>
     </tbody>
   </table>
-  <p><strong>Fairness note (when Bicep wins):</strong> no state file to protect or lose, day-0 support for new Azure features, native <code>az</code> tooling, no extra install. That is why the class default stays <code>provision-shared.cmd</code> and Terraform is the industry twin.</p>
+  <p><strong>When Bicep wins:</strong> no state to lose, day-0 Azure features, native <code>az</code>, no extra install.
+  Class default remains <code>provision-shared.cmd</code>; Terraform is the industry twin.</p>
 
-  <h3>Side-by-side files</h3>
+  <h3>Side-by-side files (same case)</h3>
   <table>
-    <thead><tr><th>Concern</th><th>Bicep path</th><th>Terraform path</th></tr></thead>
+    <thead><tr><th>Concern</th><th>Bicep</th><th>Terraform</th><th>Student command</th></tr></thead>
     <tbody>
-      <tr><td>Shared eastus estate</td><td><code>infra/shared-eastus.bicep</code></td><td><code>infra/terraform/shared-eastus/main.tf</code></td></tr>
-      <tr><td>SQL westus (optional)</td><td><code>infra/shared-sql-westus.bicep</code></td><td><code>infra/terraform/shared-sql-westus/main.tf</code></td></tr>
-      <tr><td>Driver</td><td><code>provision-shared.cmd</code></td><td><code>provision-shared-tf.cmd</code></td></tr>
-      <tr><td>Walkthrough phase</td><td><code>infra-walkthrough.cmd --phase 1</code></td><td><code>infra-walkthrough.cmd --phase 1t</code></td></tr>
+      <tr><td>Shared eastus</td><td><code>infra/shared-eastus.bicep</code></td><td><code>infra/terraform/shared-eastus/main.tf</code></td><td>T2 notepad / T5 plan</td></tr>
+      <tr><td>SQL westus</td><td><code>infra/shared-sql-westus.bicep</code></td><td><code>infra/terraform/shared-sql-westus/main.tf</code></td><td>T4 validate SQL twin</td></tr>
+      <tr><td>Driver</td><td><code>provision-shared.cmd</code></td><td><code>provision-shared-tf.cmd</code></td><td>T5 / T7</td></tr>
+      <tr><td>Walkthrough</td><td><code>--phase 1</code></td><td><code>--phase 1t</code></td><td>prefer T5 plan-only in class</td></tr>
     </tbody>
   </table>
 
-  <h3>Safe first command</h3>
-  <pre>provision-shared-tf.cmd --plan-only</pre>
-  <p>Shows create/change/destroy without applying. Live class names need <code>name_hash=qgr7mj</code> (default in the Python driver) so TF matches Bicep’s <code>uniqueString</code> suffix — Azure’s hash ≠ Terraform’s <code>sha1</code>.</p>
+  <h3>One-block “run the whole TF theory demo” (safe)</h3>
+  <div class="cmd">cd D:\azure
+winget install Hashicorp.Terraform --accept-source-agreements --accept-package-agreements
+az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be
+.\provision-shared-tf.cmd --plan-only
+<span class="c"># Then open Portal → rg-shared-class1 and confirm names match the plan outputs</span></div>
 
   <h3>Flow</h3>
   <pre class="mermaid">
 flowchart LR
   A[.env + az login] --> B{IaC choice}
   B -->|Bicep| C[provision-shared.cmd]
-  B -->|Terraform| D[provision-shared-tf.cmd]
+  B -->|Terraform| D[provision-shared-tf.cmd --plan-only]
   C --> E[ARM / Azure resources]
   D --> E
   E --> F[release.cmd app layers]
@@ -1293,6 +1462,7 @@ flowchart LR
   </ol>
   <h3>Repo docs (markdown twins)</h3>
   <ol>
+    <li><a href="BICEP-TERRAFORM-SHARED-ESTATE.md">BICEP-TERRAFORM-SHARED-ESTATE.md</a> — Bicep ↔ TF map + benefits</li>
     <li><a href="INFRA-WALKTHROUGH-20H.md">INFRA-WALKTHROUGH-20H.md</a> — full 20h text</li>
     <li><a href="CICD-INCREMENTAL-RELEASE.md">CICD-INCREMENTAL-RELEASE.md</a> — check-in / release</li>
     <li><a href="TRAINER-NOTES.md">TRAINER-NOTES.md</a> · <a href="GOVERNANCE-DEPLOY.md">GOVERNANCE-DEPLOY.md</a></li>
@@ -1304,6 +1474,7 @@ flowchart LR
   <ol>
     <li><code>infra-walkthrough.cmd</code> · <code>release.cmd</code> · <code>release-medallion-governance.cmd</code></li>
     <li><code>scripts/provision_shared.py</code> · <code>infra/shared-eastus.bicep</code></li>
+    <li><code>scripts/provision_shared_tf.py</code> · <code>infra/terraform/shared-eastus/main.tf</code> · <code>provision-shared-tf.cmd</code></li>
     <li><code>scripts/deploy_shared_lab.py</code> · <code>shared-adf-lab/scripts/run_shared_adf.py</code></li>
     <li><code>scripts/release_medallion_governance.py</code></li>
   </ol>
@@ -1314,7 +1485,7 @@ flowchart LR
 
 <footer>
   <p>FinLedger training — open this HTML in a browser for class. Markdown sources stay in git for edits; regenerate/update this HTML when the guides change.</p>
-  <p>Start commands: <code>.\infra-walkthrough.cmd --list</code> · <code>.\release.cmd</code></p>
+  <p>Start commands: <code>.\infra-walkthrough.cmd --list</code> · <code>.\provision-shared-tf.cmd --plan-only</code> · <code>.\release.cmd</code></p>
 </footer>
 
 </body>
