@@ -199,11 +199,13 @@ def load_config() -> SharedAdfConfig:
     if not owner_email:
         raise SystemExit(f"OWNER_EMAIL required in {ENV_FILE}")
     if learner != SHARED_LEARNER:
-        raise SystemExit(
-            f"This lab targets the shared estate only. Set LEARNER={SHARED_LEARNER} in .env"
+        # This lab only ever targets rg-shared-class1, so a personal LEARNER in
+        # .env is harmless — warn and continue instead of blocking the phase.
+        print(
+            f"WARN  LEARNER={learner!r} in .env — this lab always targets the shared "
+            f"estate ({SHARED_RG}); continuing as LEARNER={SHARED_LEARNER}."
         )
-    if not LEARNER_RE.match(learner):
-        raise SystemExit("LEARNER must be 2–10 lowercase alphanumeric characters.")
+        learner = SHARED_LEARNER
 
     return SharedAdfConfig(
         subscription_id=subscription_id,

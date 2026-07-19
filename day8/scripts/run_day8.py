@@ -73,9 +73,18 @@ def main() -> int:
   print_pyspark_foundation()
 
   if not args.skip_spark:
+    import shutil
+
     print()
     print("--- Local PySpark transforms ---")
-    run_transforms(SESSION_ROOT)
+    if shutil.which("java"):
+      run_transforms(SESSION_ROOT)
+    else:
+      # Java is only needed for the LOCAL Spark demo; notebooks run on
+      # Databricks clusters which have their own JVM. Skip, don't fail.
+      print("SKIP  Java 11+ not found on this PC - local Spark demo skipped.")
+      print("      Install Java (e.g. https://adoptium.net) and re-run, or")
+      print("      just run the Day 8 notebooks in Databricks (JVM included).")
 
   if not args.skip_tests:
     print()

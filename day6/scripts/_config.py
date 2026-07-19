@@ -13,7 +13,8 @@ SESSION_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SESSION_ROOT.parent
 ENV_FILE = REPO_ROOT / ".env"
 
-ALLOWED_LOCATIONS = frozenset({"uksouth", "ukwest"})
+# eastus = documented exception: shared class estate rg-shared-class1 lives there.
+ALLOWED_LOCATIONS = frozenset({"uksouth", "ukwest", "eastus"})
 LEARNER_RE = re.compile(r"^[a-z0-9]{2,10}$")
 
 
