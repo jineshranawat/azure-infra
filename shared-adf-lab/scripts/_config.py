@@ -225,6 +225,51 @@ def _azure_ad_databricks_token(*, allow_browser_login: bool = True) -> str:
     return token
 
 
+def resolve_databricks_cluster(host: str, token: str, configured_id: str) -> str:
+    """Return a cluster id that actually exists in the workspace.
+
+    The default/configured cluster can be deleted between classes; instead of a
+    404 at job-create time, validate it and pick any live all-purpose cluster.
+    Returns "" when the workspace has no all-purpose cluster (callers fall back
+    to a job cluster).
+    """
+    base = host.rstrip("/")
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        if configured_id:
+            got = requests.get(
+                f"{base}/api/2.0/clusters/get",
+                headers=headers,
+                params={"cluster_id": configured_id},
+                timeout=30,
+            )
+            if got.status_code < 300:
+                return configured_id
+            print(
+                f"WARN  Databricks cluster {configured_id} does not exist any more - "
+                "looking for another all-purpose cluster..."
+            )
+        listing = requests.get(
+            f"{base}/api/2.0/clusters/list", headers=headers, timeout=30
+        )
+        clusters = [
+            c
+            for c in listing.json().get("clusters", [])
+            if c.get("cluster_source") in ("UI", "API")
+        ]
+    except requests.RequestException:
+        return configured_id  # network blip — let the real call surface the error
+    running = [c for c in clusters if c.get("state") == "RUNNING"]
+    pick = (running or clusters)[0] if (running or clusters) else None
+    if pick:
+        print(
+            f"INFO  Using cluster '{pick.get('cluster_name')}' ({pick['cluster_id']}) instead."
+        )
+        return pick["cluster_id"]
+    print("WARN  No all-purpose cluster in workspace - jobs will use a job cluster.")
+    return ""
+
+
 def resolve_databricks_token(host: str, configured_token: str) -> str:
     """Prefer a working PAT; otherwise transparently refresh through Azure CLI."""
     token = configured_token.strip().strip('"').strip("'")
@@ -280,6 +325,9 @@ def load_config() -> SharedAdfConfig:
         learner = SHARED_LEARNER
     if databricks_host:
         databricks_token = resolve_databricks_token(databricks_host, databricks_token)
+        databricks_cluster_id = resolve_databricks_cluster(
+            databricks_host, databricks_token, databricks_cluster_id
+        )
 
     return SharedAdfConfig(
         subscription_id=subscription_id,

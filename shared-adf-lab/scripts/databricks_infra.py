@@ -114,6 +114,51 @@ def _list_jobs(host: str, token: str) -> list[dict[str, Any]]:
     return resp.json().get("jobs", [])
 
 
+# Cheapest single-node job cluster — used only when the workspace has no
+# all-purpose cluster; spins up per run, terminates automatically (guardrail 6).
+JOB_CLUSTER_SPEC = {
+    "spark_version": "15.4.x-scala2.12",
+    "node_type_id": "Standard_DS3_v2",
+    "num_workers": 0,
+    "spark_conf": {
+        "spark.databricks.cluster.profile": "singleNode",
+        "spark.master": "local[*]",
+    },
+    "custom_tags": {"ResourceClass": "SingleNode", "course": "shared-adf-lab"},
+}
+
+
+def _cluster_exists(host: str, token: str, cluster_id: str) -> bool:
+    if not cluster_id:
+        return False
+    resp = requests.get(
+        f"{host}/api/2.0/clusters/get",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"cluster_id": cluster_id},
+        timeout=30,
+    )
+    return resp.status_code < 300
+
+
+def _job_task(cluster: str) -> dict[str, Any]:
+    task: dict[str, Any] = {
+        "task_key": "integration_task",
+        "notebook_task": {
+            "notebook_path": JOB_NOTEBOOK,
+            "base_parameters": {
+                "run_id": "default",
+                "triggered_by": "databricks-job-deploy",
+                "job_note": "created-by-databricks_infra",
+            },
+        },
+    }
+    if cluster:
+        task["existing_cluster_id"] = cluster
+    else:
+        task["new_cluster"] = JOB_CLUSTER_SPEC
+    return task
+
+
 def ensure_integration_job(
     cfg: SharedAdfConfig,
     estate: SharedEstate,
@@ -123,33 +168,44 @@ def ensure_integration_job(
     """Create or reuse Databricks job for ADF Job activity (Preview). Returns job_id."""
     host, token = _resolve_host_token(cfg, estate)
     cluster = cluster_id or cfg.databricks_cluster_id
-    if not cluster:
-        raise RuntimeError("DATABRICKS_CLUSTER_ID not set")
+    if cluster and not _cluster_exists(host, token, cluster):
+        logger.warning(
+            "Cluster %s no longer exists — job will use a single-node job cluster instead.",
+            cluster,
+        )
+        cluster = ""
 
     for job in _list_jobs(host, token):
         settings = job.get("settings", {})
         if settings.get("name") == JOB_NAME:
             job_id = int(job["job_id"])
+            tasks = settings.get("tasks") or []
+            stale = tasks and tasks[0].get("existing_cluster_id") and not _cluster_exists(
+                host, token, tasks[0]["existing_cluster_id"]
+            )
+            if stale:
+                logger.warning(
+                    "Job '%s' points at a deleted cluster — repointing (id=%s)",
+                    JOB_NAME,
+                    job_id,
+                )
+                reset = requests.post(
+                    f"{host}/api/2.1/jobs/update",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={"job_id": job_id, "new_settings": {"tasks": [_job_task(cluster)]}},
+                    timeout=60,
+                )
+                if reset.status_code >= 300:
+                    logger.warning(
+                        "jobs/update failed: %s %s", reset.status_code, reset.text[:200]
+                    )
             logger.info("Databricks job '%s' already exists (id=%s)", JOB_NAME, job_id)
             return job_id
 
     payload = {
         "name": JOB_NAME,
         "tags": {"course": "shared-adf-lab", "integration": "adf-job-preview"},
-        "tasks": [
-            {
-                "task_key": "integration_task",
-                "existing_cluster_id": cluster,
-                "notebook_task": {
-                    "notebook_path": JOB_NOTEBOOK,
-                    "base_parameters": {
-                        "run_id": "default",
-                        "triggered_by": "databricks-job-deploy",
-                        "job_note": "created-by-databricks_infra",
-                    },
-                },
-            }
-        ],
+        "tasks": [_job_task(cluster)],
     }
     url = f"{host}/api/2.1/jobs/create"
     resp = requests.post(
