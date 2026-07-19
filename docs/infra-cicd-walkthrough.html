@@ -1033,19 +1033,20 @@ git push class main</div>
   <h2>B. Phase map — every child script</h2>
   <p>Master entry: <code>infra-walkthrough.cmd</code></p>
   <table>
-    <thead><tr><th>#</th><th>Child command(s)</th><th>What appears</th></tr></thead>
+    <thead><tr><th>#</th><th>Child command(s)</th><th>What this phase does (description)</th><th>What appears</th></tr></thead>
     <tbody>
-      <tr><td>0</td><td>venv + <code>az</code> check</td><td>Toolbox ready</td></tr>
-      <tr><td>1</td><td><code>provision-shared.cmd</code> → <code>provision_shared.py</code> → <code>shared-eastus.bicep</code></td><td>RG, KV, Storage, ADF, Databricks</td></tr>
-      <tr><td>2</td><td><code>deploy-shared-lab.cmd</code></td><td>Bronze, <code>finledger</code> secrets, notebooks</td></tr>
-      <tr><td>3</td><td><code>deploy-shared-adf-lab.cmd</code></td><td>Pipelines + SQL westus</td></tr>
-      <tr><td>4</td><td><code>shared-adf-lab\orchestrate.cmd --setup-databricks-integration</code></td><td>ADF can start jobs</td></tr>
-      <tr><td>5–7</td><td><code>day6</code> / <code>day7</code> / <code>day8\orchestrate.cmd</code></td><td>Python → lake → PySpark</td></tr>
-      <tr><td>8</td><td><code>day9\orchestrate.cmd --deploy</code></td><td><code>/Shared/day9/*</code></td></tr>
-      <tr><td>9</td><td><code>release-medallion-governance.cmd</code></td><td>Build → deploy → ADF → job</td></tr>
-      <tr><td>10</td><td><code>cost-dashboard.cmd</code> + cost notebook deploy</td><td>Bill + metrics</td></tr>
-      <tr><td>11</td><td><code>deploy_*_lab.py</code> helpers</td><td>EH, system tables, perf, DAG</td></tr>
-      <tr><td>12</td><td><code>orchestrate.cmd</code></td><td><em>Different</em> personal RG — careful</td></tr>
+      <tr><td>0</td><td>venv + <code>az</code> check</td><td><strong>Bootstrap.</strong> Creates/repairs the <code>.venv</code>, installs Python requirements, and reminds you to <code>az login</code>. Nothing is deployed — it only makes the toolbox usable so every later phase has Python + Azure CLI ready. Safe to re-run anytime.</td><td>Toolbox ready</td></tr>
+      <tr><td>1</td><td><code>provision-shared.cmd</code> → <code>provision_shared.py</code> → <code>shared-eastus.bicep</code></td><td><strong>Provision the shared estate (Bicep).</strong> Deploys the core Azure resources with an ARM <em>Incremental</em> deployment: Resource Group, Key Vault, ADLS Gen2 storage, Data Factory, Databricks workspace. Idempotent — re-running updates in place, never builds a second copy. Add <code>--plan-only</code> to preview via <code>what-if</code>.</td><td>RG, KV, Storage, ADF, Databricks</td></tr>
+      <tr><td>1t</td><td><code>provision-shared-tf.cmd</code> → <code>provision_shared_tf.py</code> → <code>terraform/shared-eastus</code></td><td><strong>Same estate via Terraform (twin).</strong> The Terraform equivalent of phase 1 over the <em>same</em> Azure resources. Auto-imports any resources already built by Bicep into Terraform state, then runs a <code>plan</code> guarded by a destroy-gate that aborts if the plan would delete/recreate anything. Teaching twin — run Bicep OR Terraform, not both against the same RG at once.</td><td>plan (no destroy) / apply</td></tr>
+      <tr><td>2</td><td><code>deploy-shared-lab.cmd</code></td><td><strong>Seed the lab (Databricks + storage).</strong> Uploads the sample bronze CSV, creates the <code>finledger</code> secret scope + secrets, and imports the session-3 notebooks into <code>/Shared</code>. Auth is self-healing: uses <code>DATABRICKS_TOKEN</code> from <code>.env</code> if valid, otherwise falls back to an Azure AD token from <code>az login</code>; host + storage key auto-detected if omitted.</td><td>Bronze, <code>finledger</code> secrets, notebooks</td></tr>
+      <tr><td>3</td><td><code>deploy-shared-adf-lab.cmd</code></td><td><strong>Deploy the ADF lab + SQL.</strong> Creates the SQL Basic server/DB in westus (watermarks/ledger) and imports the ADF linked services, datasets and pipelines. This is the "manager timetable" that later orchestrates copy + notebook activities.</td><td>Pipelines + SQL westus</td></tr>
+      <tr><td>4</td><td><code>shared-adf-lab\orchestrate.cmd --setup-databricks-integration</code></td><td><strong>Wire ADF → Databricks.</strong> Configures the linked service / credentials so ADF pipelines can launch Databricks notebook jobs. After this, the "manager" is allowed to start work in the "kitchen".</td><td>ADF can start jobs</td></tr>
+      <tr><td>5–7</td><td><code>day6</code> / <code>day7</code> / <code>day8\orchestrate.cmd</code></td><td><strong>Progressive labs.</strong> Day 6 = plain Python into the lake; Day 7 = lake ingestion patterns; Day 8 = PySpark transforms. Each builds on the previous shelf of the medallion and can be run independently.</td><td>Python → lake → PySpark</td></tr>
+      <tr><td>8</td><td><code>day9\orchestrate.cmd --deploy</code></td><td><strong>Publish Day-9 notebooks.</strong> Builds and imports the Day-9 teaching notebooks (Delta, time travel, merge, medallion e2e, cost, system tables…) into <code>/Shared/day9/*</code> using overwrite — re-release never creates <code>… (1)</code> duplicates.</td><td><code>/Shared/day9/*</code></td></tr>
+      <tr><td>9</td><td><code>release-medallion-governance.cmd</code></td><td><strong>Full medallion CI/CD.</strong> One conveyor: build notebooks → deploy to Databricks → deploy ADF governance pipelines → (optionally) run one job. This is the end-to-end "cook one dinner" release used to demo the whole pipeline.</td><td>Build → deploy → ADF → job</td></tr>
+      <tr><td>10</td><td><code>cost-dashboard.cmd</code> + cost notebook deploy</td><td><strong>Cost visibility.</strong> Pulls month-to-date spend and metrics and deploys the cost-management notebook so the class can see the bill and the DBU/VM cost model live.</td><td>Bill + metrics</td></tr>
+      <tr><td>11</td><td><code>deploy_*_lab.py</code> helpers</td><td><strong>Specialised labs.</strong> Optional add-on labs: Event Hubs streaming, system tables, performance tuning, and Spark DAG problems. Deploy only the ones a given class needs.</td><td>EH, system tables, perf, DAG</td></tr>
+      <tr><td>12</td><td><code>orchestrate.cmd</code></td><td><strong>Personal (Class-1) estate — careful.</strong> Targets a <em>different, personal</em> Resource Group, not the shared one. Teardown here is safe; teardown of the shared RG mid-class is never allowed.</td><td><em>Different</em> personal RG — careful</td></tr>
     </tbody>
   </table>
 

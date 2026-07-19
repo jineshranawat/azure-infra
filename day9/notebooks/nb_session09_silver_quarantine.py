@@ -47,7 +47,8 @@
 # =============================================================================
 # WHAT: Load sample_transactions.csv from abfss://bronze/...
 # WHY:  Session 9+ writes silver/gold — we always start from the same bronze.
-# HOW:  Try (1) storage key in spark.conf, (2) RBAC passthrough, (3) driver SDK.
+# HOW:  (1) RBAC  (2) account key on classic only  (3) driver SDK
+# TIP:  Serverless rejects fs.azure.account.key — do NOT set it first.
 # =============================================================================
 
 SECRET_SCOPE = "finledger"  # Key Vault–backed scope created by deploy-shared-lab.cmd
@@ -55,39 +56,48 @@ SECRET_SCOPE = "finledger"  # Key Vault–backed scope created by deploy-shared-
 # Storage account name — shared class estate (stsharedqgr7mj)
 STORAGE_ACCOUNT = dbutils.secrets.get(scope=SECRET_SCOPE, key="storage-account").strip()
 
-# Storage key — used only when classic cluster allows spark.conf account keys
+# Storage key — classic clusters / driver SDK only (never first on Serverless)
 _storage_key = dbutils.secrets.get(scope=SECRET_SCOPE, key="storage-key").strip()
 
 # Pipeline run folder — matches bronze/loaded/run=session3-lab/
 RUN_ID = "session3-lab"
 
 
+def _unset_account_key(account: str) -> None:
+    """Clear poisoned Hadoop key config so later RBAC/DBFS paths can work."""
+    conf_key = f"fs.azure.account.key.{account}.dfs.core.windows.net"
+    try:
+        spark.conf.unset(conf_key)
+    except Exception:
+        pass
+
+
 def _read_bronze_transactions(spark, account: str, key: str, run_id: str):
-    """Read bronze CSV; fallback chain for Serverless / Spark Connect."""
-    # abfss = ADLS Gen2 hierarchical path (container @ account .dfs.core.windows.net / path)
+    """Read bronze CSV; Serverless-safe order (RBAC → key → SDK)."""
     path = (
         f"abfss://bronze@{account}.dfs.core.windows.net"
         f"/loaded/run={run_id}/sample_transactions.csv"
     )
 
-    # --- Auth method 1: classic cluster — set account key in Spark Hadoop config ---
-    try:
-        spark.conf.set(f"fs.azure.account.key.{account}.dfs.core.windows.net", key)
-        frame = spark.read.option("header", True).option("inferSchema", True).csv(path)
-        frame.limit(1).count()  # tiny ACTION to prove read works
-        return frame, path, "storage_key_spark_conf"
-    except Exception:
-        pass  # Serverless blocks spark.conf.set for account keys — try next method
-
-    # --- Auth method 2: Azure credential passthrough (no key in notebook) ---
+    # --- 1) RBAC / credential passthrough (do NOT set account key) ---
     try:
         frame = spark.read.option("header", True).option("inferSchema", True).csv(path)
         frame.limit(1).count()
         return frame, path, "azure_rbac_passthrough"
-    except Exception:
-        pass
+    except Exception as exc1:
+        print("  RBAC bronze read failed:", str(exc1)[:140])
 
-    # --- Auth method 3: driver SDK (small training CSV — OK for lab) ---
+    # --- 2) Classic cluster — storage account key (poisons Serverless — unset on fail) ---
+    try:
+        spark.conf.set(f"fs.azure.account.key.{account}.dfs.core.windows.net", key)
+        frame = spark.read.option("header", True).option("inferSchema", True).csv(path)
+        frame.limit(1).count()
+        return frame, path, "storage_key_spark_conf"
+    except Exception as exc2:
+        print("  Account-key bronze read failed:", str(exc2)[:140])
+        _unset_account_key(account)
+
+    # --- 3) Driver SDK (small training CSV — OK for lab; no Spark ADLS conf) ---
     from io import StringIO
     import pandas as pd
     try:
@@ -122,7 +132,7 @@ df = bronze  # alias used in later cells
 print("Storage     :", STORAGE_ACCOUNT)
 print("Bronze path :", BRONZE_PATH)
 print("Auth mode   :", BRONZE_AUTH_MODE)
-print("Bronze rows :", bronze.count())  # ACTION — triggers cluster read
+print("Bronze rows :", bronze.count())  # ACTION — in-memory if driver_sdk
 
 # COMMAND ----------
 
