@@ -159,11 +159,14 @@ Ensure `.env` has `CLASS_OWNER_EMAIL` or `OWNER_EMAIL`.
 ### D.2 Deploy with **Bicep** (original lab path)
 
 ```cmd
+.\provision-shared.cmd --plan-only
 .\provision-shared.cmd
 .\infra-walkthrough.cmd --phase 1
 ```
 
 Child: `scripts\provision_shared.py` → `az deployment group create --mode Incremental --template-file infra\shared-eastus.bicep`
+
+`--plan-only` on the **Bicep** driver runs ARM **what-if** (added 19 Jul 2026) — the Bicep twin of `terraform plan`. Both drivers now answer the same flag; a learner who types `--plan-only` on either path gets a safe preview instead of `unrecognized arguments`.
 
 ### D.3 Deploy with **Terraform** (twin path)
 

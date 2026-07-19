@@ -150,6 +150,41 @@ def _ensure_resource_group(az: str, owner_email: str) -> None:
     )
 
 
+def _what_if(az: str, owner_email: str, principal_id: str, principal_type: str) -> None:
+    """ARM what-if = Bicep's answer to `terraform plan` (preview, no changes)."""
+    logger.info("what-if preview of shared-eastus.bicep (no changes will be applied)")
+    result = subprocess.run(
+        [
+            az,
+            "deployment",
+            "group",
+            "what-if",
+            "--resource-group",
+            SHARED_RG,
+            "--name",
+            "shared-eastus-whatif",
+            "--mode",
+            "Incremental",
+            "--template-file",
+            str(SHARED_BICEP),
+            "--parameters",
+            f"location={SHARED_LOCATION}",
+            f"learner={SHARED_LEARNER}",
+            f"ownerEmail={owner_email}",
+            f"principalObjectId={principal_id}",
+            f"principalType={principal_type}",
+            f"budgetStartDate={_budget_start_date()}",
+            "deployBudget=false",
+        ],
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit("what-if failed — see output above.")
+    print()
+    print("Plan only (ARM what-if) — no changes applied. Re-run without --plan-only to deploy.")
+
+
 def _deploy(az: str, owner_email: str, principal_id: str, principal_type: str) -> dict:
     logger.info("Deploying shared-eastus.bicep (storage + ADF + Databricks)")
     result = subprocess.run(
@@ -220,6 +255,7 @@ def provision(
     owner_email: str,
     *,
     verbose: bool = False,
+    plan_only: bool = False,
 ) -> dict:
     _configure_logging(verbose)
     if not LEARNER_RE.match(SHARED_LEARNER):
@@ -229,6 +265,19 @@ def provision(
     _ensure_subscription(az, subscription_id)
     principal_id, principal_type = _get_principal(az)
     logger.info("Principal %s (%s)", principal_id, principal_type)
+
+    if plan_only:
+        exists = _run(
+            az, ["group", "exists", "--name", SHARED_RG, "-o", "tsv"], capture=True
+        ).stdout.strip().lower() == "true"
+        if not exists:
+            raise SystemExit(
+                f"Resource group {SHARED_RG} does not exist yet — what-if needs it.\n"
+                "Run without --plan-only for the first deploy."
+            )
+        _what_if(az, owner_email, principal_id, principal_type)
+        return {}
+
     _ensure_resource_group(az, owner_email)
     outputs = _deploy(az, owner_email, principal_id, principal_type)
     _print_summary(subscription_id, outputs)
@@ -247,6 +296,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=os.environ.get("OWNER_EMAIL") or os.environ.get("CLASS_OWNER_EMAIL", ""),
         help="Owner email for tags and budget alerts.",
     )
+    parser.add_argument(
+        "--plan-only",
+        action="store_true",
+        help="Preview via ARM what-if — Bicep's equivalent of `terraform plan` (no changes).",
+    )
     parser.add_argument("--verbose", action="store_true")
     return parser.parse_args(argv)
 
@@ -262,7 +316,12 @@ def main(argv: list[str] | None = None) -> int:
             "  infra-walkthrough.cmd --phase 1"
         )
     try:
-        provision(args.subscription_id, args.owner_email, verbose=args.verbose)
+        provision(
+            args.subscription_id,
+            args.owner_email,
+            verbose=args.verbose,
+            plan_only=args.plan_only,
+        )
     except SystemExit:
         raise
     except Exception:

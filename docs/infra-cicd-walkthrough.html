@@ -115,6 +115,7 @@
 <nav class="sticky-bar" aria-label="Quick jumps">
   <a href="#terraform">Terraform theory → run</a>
   <a href="#tf-lineage">TF code lineage</a>
+  <a href="#repo-flows">All workflows (diagrams)</a>
   <a href="#all-commands">All commands (detail)</a>
   <a href="#theory">Theory + diagrams</a>
   <a href="#release-table">Release table</a>
@@ -132,6 +133,7 @@
   <a href="#terraform">Terraform theory → run (T0–T9)</a>
   <a class="sub" href="#tf-lineage">Code lineage (cmd → py → .tf)</a>
   <a class="sub" href="#tf-summary">What the code does (summary)</a>
+  <a href="#repo-flows">Every workflow — diagrams</a>
   <a href="#start">Start commands</a>
   <a href="#all-commands">All commands + detail theory</a>
   <a class="sub" href="#cmd-prereq">0. Prerequisites</a>
@@ -1333,6 +1335,12 @@ terraform validate</div>
   <p><strong>Verify:</strong> <code>Success! The configuration is valid.</code></p>
 
   <h4>T5 — plan = show create/change/destroy BEFORE Azure changes (Benefit: plan before apply)</h4>
+  <div class="callout">
+    <strong>Common mix-up:</strong> <code>--plan-only</code> works on <em>both</em> drivers now, but they are different files:
+    <code>provision-shared-tf.cmd --plan-only</code> = <code>terraform plan</code>;
+    <code>provision-shared.cmd --plan-only</code> = ARM <code>what-if</code> (Bicep twin).
+    Running a flag from one tool on the other used to print <em>unrecognized arguments</em>.
+  </div>
   <p>
     <strong>Theory:</strong> This is Terraform’s killer feature vs click-ops and vs optional Bicep <code>what-if</code>.
     Plan answers: what will be added, changed, or destroyed? Students approve in their head; nothing is applied yet.
@@ -1616,6 +1624,148 @@ flowchart LR
     Azure builds or updates <code>rg-shared-class1</code>. Bicep does the same job through
     <code>provision-shared.cmd</code> + <code>shared-eastus.bicep</code> instead.
   </div>
+</section>
+
+<section id="repo-flows">
+  <h2>Every workflow — file-by-file diagrams</h2>
+  <p class="lead">
+    One diagram per entry command. Read each left-to-right: <strong>what you type → which files wake up →
+    what changes in Azure/Databricks</strong>. Legend: rectangles = files in this repo, rounded = Azure/Databricks.
+  </p>
+
+  <h3>Master map — all entry points</h3>
+  <pre class="mermaid">
+flowchart TD
+  subgraph You type ONE of these
+    W[infra-walkthrough.cmd --phase N]
+    R[release.cmd ACTION]
+  end
+  W -->|1| P1[provision-shared.cmd]
+  W -->|1t| P1T[provision-shared-tf.cmd]
+  W -->|2| P2[deploy-shared-lab.cmd]
+  W -->|3| P3[deploy-shared-adf-lab.cmd]
+  W -->|4| P4[shared-adf-lab/orchestrate.cmd --setup-databricks-integration]
+  W -->|5-8| P5[day6/7/8/9 orchestrate.cmd]
+  W -->|9| P9[release-medallion-governance.cmd]
+  W -->|10| P10[cost-dashboard.cmd]
+  W -->|12| P12[orchestrate.cmd personal]
+  R -->|databricks| P5
+  R -->|adf| P4B[shared-adf-lab/orchestrate.cmd --skip-sql]
+  R -->|adf-full| P3
+  R -->|medallion / medallion-deploy| P9
+  </pre>
+
+  <h3>W1 — Shared estate via Bicep (<code>provision-shared.cmd</code>)</h3>
+  <pre class="mermaid">
+flowchart LR
+  A[provision-shared.cmd] --> B[ensure .venv + pip]
+  B --> C[scripts/provision_shared.py]
+  C --> D[_load_dotenv .env]
+  D --> E[az account set + get principal]
+  E --> F{--plan-only?}
+  F -->|yes| G[az deployment group WHAT-IF] --> H([Preview printed - Azure unchanged])
+  F -->|no| I[az group create rg-shared-class1]
+  I --> J[az deployment group create Incremental]
+  J --> K[infra/shared-eastus.bicep]
+  K --> L([ARM builds/updates KV, ADLS, ADF, Databricks])
+  </pre>
+  <div class="cmd">.\provision-shared.cmd --plan-only
+<span class="c"># NEW: ARM what-if preview — Bicep twin of `terraform plan` (no changes)</span>
+.\provision-shared.cmd</div>
+
+  <h3>W1t — Shared estate via Terraform (<code>provision-shared-tf.cmd</code>)</h3>
+  <pre class="mermaid">
+flowchart LR
+  A[provision-shared-tf.cmd] --> B[ensure .venv + pip]
+  B --> C[scripts/provision_shared_tf.py]
+  C --> D[.env + az principal + az account set]
+  D --> E[terraform init in infra/terraform/shared-eastus]
+  E --> F{--plan-only?}
+  F -->|yes| G[terraform plan] --> H([Preview printed - Azure unchanged])
+  F -->|no| I[_import_existing: adopt Bicep-built resources]
+  I --> J[destroy-gate: abort if plan deletes]
+  J --> K[terraform apply saved plan]
+  K --> L[main.tf resources]
+  L --> M([ARM builds/updates same estate])
+  </pre>
+
+  <h3>W2 — Lab assets into Databricks (<code>deploy-shared-lab.cmd</code>)</h3>
+  <pre class="mermaid">
+flowchart LR
+  A[deploy-shared-lab.cmd] --> B[scripts/deploy_shared_lab.py]
+  B --> C[.env DATABRICKS_HOST/TOKEN]
+  C --> D[upload bronze samples to ADLS]
+  D --> E[ensure secret scope finledger]
+  E --> F([import notebooks to /Shared/day7-day8 + /Shared/day9 - overwrite])
+  </pre>
+
+  <h3>W3 / W4 — Shared ADF lab (<code>deploy-shared-adf-lab.cmd</code> → <code>shared-adf-lab/orchestrate.cmd</code>)</h3>
+  <pre class="mermaid">
+flowchart LR
+  A[deploy-shared-adf-lab.cmd] --> B[shared-adf-lab/orchestrate.cmd]
+  B --> C[shared-adf-lab/scripts/run_shared_adf.py]
+  C --> D{flags}
+  D -->|full| E[SQL westus Bicep + firewall + bootstrap]
+  D -->|--skip-sql| F[pipelines + linked services only]
+  D -->|--setup-databricks-integration| G[ADF ↔ Databricks link]
+  E --> H([adf-shared-qgr7mj updated])
+  F --> H
+  G --> H
+  </pre>
+
+  <h3>W8 — Day 9 build + deploy (<code>day9\orchestrate.cmd --deploy</code>)</h3>
+  <pre class="mermaid">
+flowchart LR
+  A[day9/orchestrate.cmd --deploy] --> B[day9 build scripts]
+  B --> C[notebook .py sources → .ipynb]
+  C --> D([workspace import overwrite to /Shared/day9])
+  </pre>
+
+  <h3>W9 — Medallion governance release (<code>release-medallion-governance.cmd</code>)</h3>
+  <pre class="mermaid">
+flowchart LR
+  A[release-medallion-governance.cmd] --> B[scripts/release_medallion_governance.py]
+  B --> C[build medallion notebooks]
+  C --> D[deploy to Databricks /Shared]
+  D --> E[deploy ADF governance pipelines]
+  E --> F{--skip-run?}
+  F -->|yes| G([Deployed only - no DBU spend])
+  F -->|no| H([Trigger pipeline run - costs DBUs])
+  </pre>
+
+  <h3>W10 — Cost dashboard (<code>cost-dashboard.cmd</code>)</h3>
+  <pre class="mermaid">
+flowchart LR
+  A[cost-dashboard.cmd] --> B[scripts/cost_dashboard.py]
+  B --> C[Cost Management API - MTD spend]
+  C --> D[Azure Monitor metrics - storage/ADF]
+  D --> E([HTML report in docs/cost-dashboard-out])
+  </pre>
+
+  <h3>W12 — Personal Class-1 estate (<code>orchestrate.cmd</code> — different estate!)</h3>
+  <pre class="mermaid">
+flowchart LR
+  A[orchestrate.cmd] --> B[orchestrate.ps1 Bypass]
+  B --> C[orchestrate.py]
+  C --> D[.env LEARNER + subscription]
+  D --> E[infra/main.bicep uksouth]
+  E --> F([rg-LEARNER-class1 personal estate])
+  </pre>
+
+  <h3>Release hub (<code>release.cmd ACTION</code>) — what each action calls</h3>
+  <table>
+    <thead><tr><th>Action</th><th>Chain</th><th>Touches</th></tr></thead>
+    <tbody>
+      <tr><td><code>databricks</code></td><td><code>day9\orchestrate.cmd --deploy</code> + <code>deploy-shared-lab.cmd</code></td><td>Notebooks only</td></tr>
+      <tr><td><code>adf</code></td><td><code>shared-adf-lab\orchestrate.cmd --skip-sql</code></td><td>ADF pipelines/LS only</td></tr>
+      <tr><td><code>adf-full</code></td><td><code>deploy-shared-adf-lab.cmd</code></td><td>SQL + firewall + ADF</td></tr>
+      <tr><td><code>medallion-deploy</code></td><td><code>release-medallion-governance.cmd --skip-run</code></td><td>Notebooks + ADF, no run</td></tr>
+      <tr><td><code>medallion</code></td><td><code>release-medallion-governance.cmd</code></td><td>Same + triggers run (DBUs)</td></tr>
+      <tr><td><code>verify</code></td><td>venv python checks</td><td>Read-only</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Rule of thumb:</strong> IaC commands (W1/W1t) change the <em>building</em>; release commands change the
+  <em>recipes</em>. Git <code>main</code> is the source of truth for both.</p>
 </section>
 
 <section id="citations" class="cite">
