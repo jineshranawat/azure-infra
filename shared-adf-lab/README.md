@@ -2,6 +2,9 @@
 
 **Goal:** One shared Data Factory (`adf-shared-*` in **eastus**) with **12 small pipelines** that teach every ADF building block — including **Databricks notebook triggers**, **Azure SQL in westus** (cross-region linked service), and **SQL metadata-driven orchestration**.
 
+**ADF Monitoring deep dive (defect investigation, 100h syllabus — separate projector page):**  
+[docs/adf-monitoring-deep-dive.html](../docs/adf-monitoring-deep-dive.html) · [ADF-MONITORING-DEEP-DIVE.md](../docs/ADF-MONITORING-DEEP-DIVE.md)
+
 **Single entry point (Windows):**
 
 ```text

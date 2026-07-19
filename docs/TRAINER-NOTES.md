@@ -2,7 +2,7 @@
 
 Master guide for trainers delivering Class 1 + platform services. Learners use **`orchestrate.cmd`** only; you use this document to teach, demo, and troubleshoot.
 
-**Related docs:** [CLASS-GUIDE.md](CLASS-GUIDE.md) | [WORKFLOW-AND-CODE.md](WORKFLOW-AND-CODE.md) | [GOVERNANCE-DEPLOY.md](GOVERNANCE-DEPLOY.md) | [CICD-INCREMENTAL-RELEASE.md](CICD-INCREMENTAL-RELEASE.md) | [BICEP-TERRAFORM-SHARED-ESTATE.md](BICEP-TERRAFORM-SHARED-ESTATE.md) | [README](../README.md) | **[COVERAGE-MAP.md](../COVERAGE-MAP.md)** | **[INFRA-WALKTHROUGH-20H.md](INFRA-WALKTHROUGH-20H.md)** (`infra-walkthrough.cmd` · phase `1t` = Terraform)
+**Related docs:** [CLASS-GUIDE.md](CLASS-GUIDE.md) | [WORKFLOW-AND-CODE.md](WORKFLOW-AND-CODE.md) | [GOVERNANCE-DEPLOY.md](GOVERNANCE-DEPLOY.md) | [CICD-INCREMENTAL-RELEASE.md](CICD-INCREMENTAL-RELEASE.md) | [BICEP-TERRAFORM-SHARED-ESTATE.md](BICEP-TERRAFORM-SHARED-ESTATE.md) | **[adf-monitoring-deep-dive.html](adf-monitoring-deep-dive.html)** (ADF Monitor / defect investigation) | [README](../README.md) | **[COVERAGE-MAP.md](../COVERAGE-MAP.md)** | **[INFRA-WALKTHROUGH-20H.md](INFRA-WALKTHROUGH-20H.md)** (`infra-walkthrough.cmd` · phase `1t` = Terraform)
 
 **Platform:** Windows only. **Start here:** [README §1 — run guide, failures & AI chat](../README.md#1-how-to-run-on-windows-step-by-step).
 

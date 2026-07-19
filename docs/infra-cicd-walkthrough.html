@@ -126,6 +126,7 @@
   <a href="#enterprise">Enterprise pattern</a>
   <a href="#files">File map</a>
   <a href="#citations">Citations</a>
+  <a href="adf-monitoring-deep-dive.html">ADF Monitoring (100h)</a>
 </nav>
 
 <div class="layout">
@@ -311,7 +312,10 @@ winget install Hashicorp.Terraform --accept-source-agreements --accept-package-a
 <span class="c"># → shared-adf-lab\orchestrate.cmd</span>
 <span class="c"># → shared-adf-lab\scripts\run_shared_adf.py</span>
 <span class="c"># → may deploy infra\shared-sql-westus.bicep</span></div>
-  <p><strong>Verify:</strong> ADF Studio → Author → pipelines <code>pl_*</code> / <code>pl_gov_*</code>; Azure SQL server exists.</p>
+  <p><strong>Verify:</strong> ADF Studio → Author → pipelines <code>pl_*</code> / <code>pl_gov_*</code>; Azure SQL server exists.
+  After any run fails or succeeds, teach Monitor from the dedicated page:
+  <a href="adf-monitoring-deep-dive.html"><strong>ADF Monitoring deep dive (100h)</strong></a>
+  — pipeline/activity runs, retries, error catalog, defect playbook.</p>
 
   <h4>Phase 4 — ADF calls Databricks</h4>
   <p>

@@ -4,6 +4,7 @@
 
 > **Tomorrow’s infra + CI/CD session (projector):**  
 > **[docs/infra-cicd-walkthrough.html](docs/infra-cicd-walkthrough.html)** — open in browser  
+> **ADF Monitoring (defect investigation, 100h syllabus):** [docs/adf-monitoring-deep-dive.html](docs/adf-monitoring-deep-dive.html)  
 > **Bicep ↔ Terraform:** [docs/BICEP-TERRAFORM-SHARED-ESTATE.md](docs/BICEP-TERRAFORM-SHARED-ESTATE.md) · `.\provision-shared-tf.cmd`  
 > Markdown twins: [INFRA-WALKTHROUGH-20H.md](docs/INFRA-WALKTHROUGH-20H.md) · [CICD-INCREMENTAL-RELEASE.md](docs/CICD-INCREMENTAL-RELEASE.md)  
 > Commands: `.\infra-walkthrough.cmd --list` · `.\release.cmd` · `.\release.cmd medallion-deploy`

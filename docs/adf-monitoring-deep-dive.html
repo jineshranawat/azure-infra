@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinLedger — ADF Monitoring Deep Dive (defect investigation)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});});</script>
+<style>
+  :root{
+    --ink:#0b1f2a; --ink-2:#123041; --paper:#f7f4ef; --card:#fffdf9;
+    --line:#d8d0c4; --muted:#5c6b73; --accent:#0e7c6b; --accent-2:#c45c26;
+    --code-bg:#0d2430; --code-ink:#d5e8e2; --warn-bg:#fff4e5; --danger:#8b1e1e; --ok:#1b6b3a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Source Serif 4",Georgia,serif;background:var(--paper);color:var(--ink);line-height:1.65}
+  h1,h2,h3,h4,.toc-title{font-family:"Space Grotesk",system-ui,sans-serif}
+  code,pre,.mono,.cmd{font-family:"JetBrains Mono",Consolas,monospace}
+  a{color:var(--accent)} a:hover{color:var(--accent-2)}
+  .hero{
+    background:
+      radial-gradient(ellipse 70% 50% at 90% 0%, rgba(196,92,38,.25), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 10% 100%, rgba(14,124,107,.22), transparent 50%),
+      linear-gradient(160deg,#07151d 0%,#0b1f2a 50%,#123041 100%);
+    color:#eef6f3;padding:3rem 1.5rem 2.4rem;border-bottom:4px solid var(--accent-2);
+  }
+  .hero-inner{max-width:1100px;margin:0 auto}
+  .brand{font-size:clamp(1.9rem,3.8vw,2.6rem);font-weight:700;color:#fff;margin:0 0 .35rem}
+  .hero h1{font-size:clamp(1.25rem,2.4vw,1.75rem);font-weight:600;color:#f0c9a8;margin:0 0 1rem;max-width:40ch}
+  .hero p{max-width:68ch;color:#c5d5d0;margin-bottom:1rem}
+  .chips{display:flex;flex-wrap:wrap;gap:.45rem}
+  .chip{font-size:.7rem;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(240,201,168,.45);padding:.3rem .65rem;color:#f0c9a8}
+  .sticky-bar{position:sticky;top:0;z-index:20;background:rgba(247,244,239,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:.5rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center}
+  .sticky-bar a{font-family:"Space Grotesk",sans-serif;font-size:.78rem;text-decoration:none;border:1px solid var(--line);padding:.28rem .55rem;background:var(--card);color:var(--ink)}
+  .sticky-bar a:hover{border-color:var(--accent);color:var(--accent)}
+  .layout{max-width:1100px;margin:0 auto;padding:1.5rem;display:grid;grid-template-columns:250px 1fr;gap:1.5rem}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}}
+  .toc{position:sticky;top:3.2rem;align-self:start;background:var(--card);border:1px solid var(--line);padding:1rem;font-size:.88rem;max-height:calc(100vh - 4rem);overflow:auto}
+  .toc-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.5rem}
+  .toc a{display:block;padding:.25rem 0;color:var(--ink-2);text-decoration:none}
+  .toc a:hover{color:var(--accent)}
+  .toc .sub{padding-left:.7rem;font-size:.82rem;color:var(--muted)}
+  main section{background:var(--card);border:1px solid var(--line);padding:1.35rem 1.45rem;margin-bottom:1.15rem}
+  main h2{font-size:1.3rem;margin:0 0 .7rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent-2)}
+  main h3{font-size:1.05rem;margin:1.15rem 0 .45rem;color:var(--ink-2)}
+  main h4{font-family:"Space Grotesk",sans-serif;font-size:.95rem;margin:.9rem 0 .35rem}
+  main p,main li{margin:.4rem 0}
+  main ul,main ol{margin:.35rem 0 .7rem 1.2rem}
+  table{width:100%;border-collapse:collapse;font-size:.86rem;margin:.75rem 0 1rem}
+  th,td{border:1px solid var(--line);padding:.4rem .5rem;vertical-align:top;text-align:left}
+  th{background:#f3e8df;font-family:"Space Grotesk",sans-serif;font-size:.74rem}
+  tr:hover td{background:#faf6f1}
+  .cmd{background:var(--code-bg);color:var(--code-ink);padding:.85rem 1rem;overflow-x:auto;font-size:.82rem;margin:.65rem 0 1rem;line-height:1.5;white-space:pre}
+  .cmd .c{color:#6a8f88}
+  .callout{background:#e8f2ef;border-left:4px solid var(--accent);padding:.75rem 1rem;margin:1rem 0}
+  .callout.warn{background:var(--warn-bg);border-left-color:var(--accent-2)}
+  .callout.danger{background:#fce8e8;border-left-color:var(--danger)}
+  .analogy{font-style:italic;color:var(--muted);border-left:3px solid #c4b8a5;padding-left:.75rem;margin:.55rem 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  @media(max-width:700px){.grid2{grid-template-columns:1fr}}
+  .card-mini{border:1px solid var(--line);padding:.8rem;background:#fbfaf7}
+  .card-mini h4{margin:0 0 .35rem}
+  .badge{display:inline-block;font-family:"Space Grotesk",sans-serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.04em;background:var(--accent-2);color:#fff;padding:.12rem .4rem;margin-right:.2rem}
+  .badge.ok{background:var(--ok)} .badge.job{background:#6b3d8a}
+  .status{font-weight:600}
+  .status.s{color:var(--ok)} .status.f{color:var(--danger)} .status.r{color:var(--accent-2)} .status.q{color:var(--muted)}
+  footer{max-width:1100px;margin:0 auto 2.5rem;padding:0 1.5rem;color:var(--muted);font-size:.86rem}
+  .hours{font-family:"Space Grotesk",sans-serif;font-size:.78rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="brand">FinLedger</p>
+    <h1>ADF Monitoring — deep dive for defect investigation</h1>
+    <p>
+      Separate classroom page for <strong>pipeline runs, activity runs, error messages, retries, and troubleshooting</strong>.
+      Built around factory <code class="mono">adf-shared-qgr7mj</code> and the shared-adf-lab pipelines.
+      Structured as a <strong>100+ hour</strong> practice curriculum: theory blocks, Studio workflows, CLI, and a defect playbook.
+    </p>
+    <div class="chips">
+      <span class="chip">Monitor blade</span>
+      <span class="chip">Pipeline vs activity runs</span>
+      <span class="chip">Retries</span>
+      <span class="chip">Error catalog</span>
+      <span class="chip">pl_01 · pl_07 · pl_gov_06</span>
+      <span class="chip">100h syllabus</span>
+    </div>
+  </div>
+</header>
+
+<nav class="sticky-bar" aria-label="Quick jumps">
+  <a href="infra-cicd-walkthrough.html">← Infra / CI/CD hub</a>
+  <a href="#why">Why Monitor</a>
+  <a href="#objects">Run objects</a>
+  <a href="#studio">Studio tour</a>
+  <a href="#plan-debug">Debug vs Trigger</a>
+  <a href="#retries">Retries</a>
+  <a href="#playbook">Defect playbook</a>
+  <a href="#errors">Error catalog</a>
+  <a href="#cli">az CLI</a>
+  <a href="#syllabus">100h syllabus</a>
+</nav>
+
+<div class="layout">
+<aside class="toc">
+  <div class="toc-title">Contents</div>
+  <a href="#why">0. Why this page exists</a>
+  <a href="#objects">1. Pipeline / activity / trigger runs</a>
+  <a href="#lifecycle">2. Status lifecycle</a>
+  <a href="#studio">3. Studio Monitor tour</a>
+  <a href="#read">4. Input · Output · Error</a>
+  <a href="#plan-debug">5. Debug vs Trigger now</a>
+  <a href="#parent">6. Parent / child runs</a>
+  <a href="#retries">7. Retries (policy + orchestrator)</a>
+  <a href="#userprops">8. User properties</a>
+  <a href="#playbook">9. Defect investigation playbook</a>
+  <a href="#errors">10. FinLedger error catalog</a>
+  <a href="#cli">11. az CLI monitoring</a>
+  <a href="#workflows">12. Workflow diagrams</a>
+  <a href="#lab-map">13. Which pipeline teaches what</a>
+  <a href="#syllabus">14. 100+ hour syllabus</a>
+  <a href="#links">15. Lab guide links</a>
+  <a href="#citations">Citations</a>
+</aside>
+
+<main>
+
+<!-- ========== 0 WHY ========== -->
+<section id="why">
+  <h2>0. Why ADF Monitoring is a key skill</h2>
+  <p class="hours">Classroom weight: ~8–12 hours theory + forever in production</p>
+  <p>
+    Authoring a pipeline is half the job. <strong>Defect investigation</strong> is the other half:
+    a failing Copy, a Databricks 3204, a wrong folder path, a watermark that never advances —
+    all surface first in <strong>Monitor</strong>. Enterprises hire for people who can open a failed run,
+    read <em>which activity</em> failed, extract the error JSON, decide retry vs fix-and-redeploy, and prove green.
+  </p>
+  <p class="analogy">
+    Analogy: Author = writing the restaurant recipe. Monitor = the CCTV + ticket printer in the kitchen —
+    every order (pipeline run), every station (activity), every burnt dish (error), every “try again in 30s” (retry).
+  </p>
+  <div class="callout">
+    <strong>Class factory:</strong> <code>adf-shared-qgr7mj</code> · RG <code>rg-shared-class1</code> · eastus<br>
+    <strong>Open Studio:</strong>
+    <a href="https://adf.azure.com/en/authoring?factory=%2Fsubscriptions%2Fa64c0dd2-3a31-4604-bde3-3d40c7d5e8be%2FresourceGroups%2Frg-shared-class1%2Fproviders%2FMicrosoft.DataFactory%2Ffactories%2Fadf-shared-qgr7mj" target="_blank" rel="noopener">ADF Studio deep link</a>
+    → left rail <strong>Monitor</strong>.
+  </div>
+  <div class="cmd"><span class="c"># Deploy / refresh pipelines first if needed</span>
+cd D:\azure
+.\release.cmd adf
+<span class="c"># or full SQL+ADF:</span>
+.\deploy-shared-adf-lab.cmd
+
+<span class="c"># Trigger a known-good demo from CLI</span>
+cd shared-adf-lab
+.\orchestrate.cmd --run-pipeline pl_01_bronze_copy</div>
+</section>
+
+<!-- ========== 1 OBJECTS ========== -->
+<section id="objects">
+  <h2>1. Three objects you must never confuse</h2>
+  <p class="hours">~4 hours until this is muscle memory</p>
+  <table>
+    <thead><tr><th>Object</th><th>What it is</th><th>Where in Monitor</th><th>FinLedger example</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Pipeline run</strong></td>
+        <td>One execution of a whole pipeline (GUID <code>runId</code>). Has overall status, start/end, parameters.</td>
+        <td>Monitor → <em>Pipeline runs</em></td>
+        <td>One click Trigger now on <code>pl_01_bronze_copy</code></td>
+      </tr>
+      <tr>
+        <td><strong>Activity run</strong></td>
+        <td>One execution of one activity inside that pipeline (Copy, Notebook, If, ForEach iteration, …).</td>
+        <td>Open a pipeline run → activity list / Gantt</td>
+        <td>The Copy activity that wrote to bronze</td>
+      </tr>
+      <tr>
+        <td><strong>Trigger run</strong></td>
+        <td>One fire of a schedule / tumbling / event trigger that <em>started</em> a pipeline run.</td>
+        <td>Monitor → <em>Trigger runs</em></td>
+        <td><code>pl_trig_01_tumbling_window_bronze</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <pre class="mermaid">
+flowchart TD
+  T[Trigger run - optional] -->|starts| P[Pipeline run - runId GUID]
+  P --> A1[Activity run: Get Metadata]
+  P --> A2[Activity run: If Condition]
+  P --> A3[Activity run: Copy]
+  P --> A4[Activity run: Databricks Notebook]
+  A3 -->|On failure| E[Error JSON on activity]
+  A3 -->|policy retry| A3r[Activity run attempt 2]
+  </pre>
+  <div class="callout warn">
+    A <strong>Succeeded</strong> pipeline can still have skipped activities. A <strong>Failed</strong> pipeline always has
+    at least one failed (or cancelled) activity that stopped the happy path — open that activity first, not the pipeline header alone.
+  </div>
+</section>
+
+<!-- ========== 2 LIFECYCLE ========== -->
+<section id="lifecycle">
+  <h2>2. Status lifecycle (pipeline + activity)</h2>
+  <p class="hours">~3 hours + drill with live runs</p>
+  <table>
+    <thead><tr><th>Status</th><th>Meaning</th><th>What you do</th></tr></thead>
+    <tbody>
+      <tr><td class="status q">Queued</td><td>Accepted; waiting for IR / concurrency slot</td><td>Wait; check Integration Runtime health if stuck</td></tr>
+      <tr><td class="status r">InProgress</td><td>Activities executing</td><td>Watch Gantt; open long-running Copy / Notebook</td></tr>
+      <tr><td class="status s">Succeeded</td><td>Pipeline completed happy path</td><td>Verify data landed (Portal storage / Databricks)</td></tr>
+      <tr><td class="status f">Failed</td><td>Unhandled failure after retries exhausted</td><td>Open failed activity → Error → playbook §9</td></tr>
+      <tr><td class="status r">Canceling / Cancelled</td><td>User or API cancelled</td><td>Re-trigger if intentional; else find who cancelled</td></tr>
+      <tr><td>TimedOut</td><td>Hit activity or pipeline timeout</td><td>Increase timeout or fix hang (cluster, lock)</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Activity vs pipeline:</strong> Pipeline status rolls up activity outcomes. With <code>if</code> / <code>switch</code> /
+  <code>foreach</code>, some activities never run — that is not a failure.</p>
+</section>
+
+<!-- ========== 3 STUDIO ========== -->
+<section id="studio">
+  <h2>3. Studio Monitor blade — exact click path</h2>
+  <p class="hours">~6 hours guided lab</p>
+  <ol>
+    <li>Open ADF Studio for <code>adf-shared-qgr7mj</code> (deep link above).</li>
+    <li>Left rail → <strong>Monitor</strong> (gauge icon).</li>
+    <li><strong>Pipeline runs</strong> — default last 24h. Filter by pipeline name (<code>pl_01</code>), status Failed, time range.</li>
+    <li>Click a run row → detail: parameters, variables, duration, <strong>Activity runs</strong> list + Gantt.</li>
+    <li>Click a failed activity → tabs: <strong>Input</strong> · <strong>Output</strong> · <strong>Error</strong> · (sometimes) <strong>User properties</strong>.</li>
+    <li>Optional: <strong>Trigger runs</strong>, <strong>Integration runtimes</strong>, <strong>Data flow debug</strong> (if using mapping DFs).</li>
+  </ol>
+  <div class="grid2">
+    <div class="card-mini">
+      <h4>What to screenshot for trainers</h4>
+      <ul>
+        <li>Pipeline run header (name, status, runId)</li>
+        <li>Failed activity name + Error message first line</li>
+        <li>Output JSON snippet (rows copied / notebook run URL)</li>
+      </ul>
+    </div>
+    <div class="card-mini">
+      <h4>What NOT to paste in chat</h4>
+      <ul>
+        <li>PATs / connection strings from linked services</li>
+        <li>Full secret values in activity Input</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 4 READ ========== -->
+<section id="read">
+  <h2>4. Reading Input · Output · Error (the defect goldmine)</h2>
+  <p class="hours">~10 hours until fluent</p>
+  <table>
+    <thead><tr><th>Tab</th><th>Concept</th><th>What you look for</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Input</strong></td>
+        <td>Resolved activity payload <em>after</em> expressions evaluated</td>
+        <td>Wrong path? Wrong notebook path? Empty ForEach items? Bad watermark value?</td>
+      </tr>
+      <tr>
+        <td><strong>Output</strong></td>
+        <td>Success payload or partial diagnostics</td>
+        <td>Copy: <code>rowsCopied</code>, <code>dataWritten</code>. Notebook: job/run URLs. Get Metadata: <code>exists</code>, <code>childItems</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>Error</strong></td>
+        <td>Failure code + message + (often) failureType</td>
+        <td>First searchable sentence; errorCode; whether UserError vs SystemError</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <strong>Teachable pipeline:</strong> <code>pl_ex_13_user_properties_monitor</code> —
+    see <a href="../shared-adf-lab/docs/adf_user_properties_guide.md">adf_user_properties_guide.md</a>.
+    For variables: <a href="../shared-adf-lab/docs/debug_print_variables_guide.md">debug_print_variables_guide.md</a>.
+  </div>
+  <h4>Copy activity Output — fields that matter</h4>
+  <ul>
+    <li><code>rowsRead</code> / <code>rowsCopied</code> — zero often means filter or empty source, not always “failure”</li>
+    <li><code>effectiveIntegrationRuntime</code> — AutoResolveCluster vs SHIR</li>
+    <li><code>usedDataIntegrationUnits</code> / duration — cost &amp; perf clues</li>
+  </ul>
+</section>
+
+<!-- ========== 5 DEBUG VS TRIGGER ========== -->
+<section id="plan-debug">
+  <h2>5. Debug vs Trigger now vs publish (concept block)</h2>
+  <p class="hours">~5 hours</p>
+  <table>
+    <thead><tr><th>Action</th><th>Where</th><th>Uses</th><th>Shows in Monitor?</th><th>Class rule</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Debug</strong></td>
+        <td>Author canvas</td>
+        <td>Unpublished draft on canvas</td>
+        <td>Yes — Debug runs (session)</td>
+        <td>Iterate while editing expressions</td>
+      </tr>
+      <tr>
+        <td><strong>Trigger now</strong></td>
+        <td>Author → pipeline → Add trigger → Trigger now</td>
+        <td><em>Published</em> (or live git mode) definition</td>
+        <td>Yes — Pipeline runs</td>
+        <td>Prove the deployed recipe</td>
+      </tr>
+      <tr>
+        <td><strong>CLI run</strong></td>
+        <td><code>orchestrate.cmd --run-pipeline</code></td>
+        <td>Whatever is currently in the factory (SDK deploy)</td>
+        <td>Yes — Pipeline runs</td>
+        <td>Demo from projector without clicking Studio</td>
+      </tr>
+      <tr>
+        <td><strong>Scheduled / event trigger</strong></td>
+        <td>Triggers blade</td>
+        <td>Published pipeline + trigger</td>
+        <td>Trigger runs + Pipeline runs</td>
+        <td><code>pl_trig_*</code> labs</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout warn">
+    Classic defect: “I Debug’d green but Trigger now fails.” Cause: Debug used canvas draft; Trigger now used last
+    <strong>published / deployed</strong> JSON. FinLedger class deploys via SDK (<code>release.cmd adf</code>) — re-deploy after Author edits, or edit only via code.
+  </div>
+  <pre class="mermaid">
+flowchart LR
+  Edit[Edit pipeline JSON / Author] --> Deploy[release.cmd adf / orchestrate.cmd]
+  Deploy --> Factory[adf-shared-qgr7mj definition]
+  Factory --> TN[Trigger now / CLI run]
+  TN --> Mon[Monitor Pipeline runs]
+  Edit -.->|Debug only|Dbg[Debug session]
+  Dbg --> Mon
+  </pre>
+</section>
+
+<!-- ========== 6 PARENT CHILD ========== -->
+<section id="parent">
+  <h2>6. Parent / child pipeline runs</h2>
+  <p class="hours">~6 hours</p>
+  <p>
+    Activities of type <strong>Execute Pipeline</strong> spawn a <em>child</em> pipeline run.
+    Parents in class: <code>pl_10_parent_chain</code>, <code>pl_gov_06_master_medallion_governance</code>,
+    <code>pl_db_10</code> pattern.
+  </p>
+  <ol>
+    <li>Open parent run in Monitor.</li>
+    <li>Find Execute Pipeline activity → Output contains child <code>pipelineRunId</code>.</li>
+    <li>Click through to child run (or filter Pipeline runs by that id / name).</li>
+    <li>Debug the <em>child’s</em> failed activity — parent error is often only “child failed.”</li>
+  </ol>
+  <pre class="mermaid">
+flowchart TD
+  P[pl_gov_06_master Pipeline run] --> E1[Execute Pipeline: gov child A]
+  P --> E2[Execute Pipeline: gov child B]
+  E1 --> C1[Child pipeline run A]
+  E2 --> C2[Child pipeline run B]
+  C1 --> FA[Failed activity inside A]
+  FA --> ERR[Read Error on child activity]
+  </pre>
+</section>
+
+<!-- ========== 7 RETRIES ========== -->
+<section id="retries">
+  <h2>7. Retries — activity policy vs orchestrator rounds</h2>
+  <p class="hours">~8 hours</p>
+  <h3>7.1 Activity-level policy (inside the pipeline)</h3>
+  <p>
+    Most FinLedger activities ship with
+    <code>ActivityPolicy(retry=1, retry_interval_in_seconds=30)</code>
+    in <code>shared-adf-lab/scripts/adf_pipelines.py</code> (and siblings).
+  </p>
+  <table>
+    <thead><tr><th>Setting</th><th>Meaning</th><th>Class default</th></tr></thead>
+    <tbody>
+      <tr><td><code>retry</code></td><td>Extra attempts after first failure</td><td><code>1</code> → up to 2 tries total</td></tr>
+      <tr><td><code>retryIntervalInSeconds</code></td><td>Wait between attempts</td><td><code>30</code></td></tr>
+      <tr><td><code>timeout</code></td><td>Max duration for the activity</td><td>Often <code>0.01:00:00</code> (1h) on long steps</td></tr>
+    </tbody>
+  </table>
+  <p class="analogy">Retry = “the oven smoked — wait 30s and try that dish again” without rewriting the recipe.</p>
+  <div class="callout">
+    In Monitor you may see multiple activity attempts. Pipeline fails only after policy retries are exhausted
+    (unless you have On Failure paths that continue).
+  </div>
+  <h3>7.2 Orchestrator-level retry (CLI)</h3>
+  <p>Different concept: re-run <em>whole pipelines</em> that failed in a batch:</p>
+  <div class="cmd">cd D:\azure\shared-adf-lab
+.\orchestrate.cmd --run-all-until-success --max-rounds 3
+<span class="c"># README §K — loops failed pipelines up to 3 rounds</span></div>
+  <pre class="mermaid">
+flowchart TD
+  Fail[Activity fails] --> Pol{retry count left?}
+  Pol -->|yes| Wait[Wait retryInterval seconds]
+  Wait --> Retry[Run activity again]
+  Retry --> Fail
+  Pol -->|no| PipeFail[Pipeline run Failed]
+  PipeFail --> Human[Engineer reads Error]
+  Human --> Fix[Fix code / data / RBAC]
+  Fix --> Redeploy[release.cmd adf]
+  Redeploy --> Rerun[Trigger now / orchestrate --run-pipeline]
+  </pre>
+  <h3>7.3 When NOT to raise retry</h3>
+  <ul>
+    <li>Expression typos, wrong notebook path — will fail forever; fix definition.</li>
+    <li>403 / RBAC — fix role assignment, don’t hammer retries.</li>
+    <li>Transient 429 / cluster spin-up — retries help; keep interval ≥ 30s.</li>
+  </ul>
+</section>
+
+<!-- ========== 8 USER PROPS ========== -->
+<section id="userprops">
+  <h2>8. User properties — make Monitor searchable</h2>
+  <p class="hours">~4 hours</p>
+  <p>
+    User properties attach business keys (file date, batch id, learner) to a run so you can filter
+    without scrolling. Lab: <code>pl_ex_13_user_properties_monitor</code> +
+    <a href="../shared-adf-lab/docs/adf_user_properties_guide.md">guide</a>.
+  </p>
+  <div class="cmd">cd D:\azure\shared-adf-lab
+.\orchestrate.cmd --run-pipeline pl_ex_13_user_properties_monitor
+<span class="c"># Then Monitor → open run → User properties column / detail</span></div>
+</section>
+
+<!-- ========== 9 PLAYBOOK ========== -->
+<section id="playbook">
+  <h2>9. Defect investigation playbook (use every time)</h2>
+  <p class="hours">~15 hours drills — this is the core of the 100h practice</p>
+  <p class="badge">Print this</p>
+  <ol>
+    <li><strong>Reproduce</strong> — note pipeline name, trigger type (Debug / Trigger now / CLI), approximate time UTC.</li>
+    <li><strong>Locate</strong> — Monitor → Pipeline runs → filter name + Failed.</li>
+    <li><strong>Identify failing activity</strong> — first red node on Gantt / list (not necessarily the last).</li>
+    <li><strong>Read Error</strong> — copy <code>errorCode</code> + first sentence of message.</li>
+    <li><strong>Read Input</strong> — confirm expressions resolved as you intended (paths, notebook, SQL).</li>
+    <li><strong>Classify</strong> — data missing · auth/RBAC · compute (Databricks cluster) · expression · timeout · dependency (child).</li>
+    <li><strong>Fix at source</strong> — storage data, RBAC, cluster, code in git → <code>release.cmd adf</code> or lab redeploy.</li>
+    <li><strong>Re-run</strong> — same pipeline; confirm Succeeded + Output rows / notebook OK.</li>
+    <li><strong>Document</strong> — one line in trainer notes: errorCode → root cause → fix (builds the catalog).</li>
+  </ol>
+  <pre class="mermaid">
+flowchart TD
+  S[Symptom: pipeline Failed] --> M[Monitor: open run]
+  M --> A[Find failed activity]
+  A --> E[Read Error + errorCode]
+  E --> I[Read Input - resolved values]
+  I --> C{Classify}
+  C -->|RBAC / 403| R[Fix role / firewall]
+  C -->|Path / expression| X[Fix pipeline JSON in git]
+  C -->|Databricks| D[Cluster / notebook / PAT]
+  C -->|SQL| Q[Firewall / login / query]
+  C -->|Child failed| Ch[Open child run - repeat]
+  R --> RD[Redeploy if definition changed]
+  X --> RD
+  D --> RD
+  Q --> RD
+  Ch --> RD
+  RD --> RR[Re-run pipeline]
+  RR --> V{Succeeded?}
+  V -->|yes| Done[Verify data]
+  V -->|no| M
+  </pre>
+</section>
+
+<!-- ========== 10 ERROR CATALOG ========== -->
+<section id="errors">
+  <h2>10. FinLedger error catalog (Monitor → fix)</h2>
+  <p class="hours">~20 hours across the course as errors appear</p>
+  <table>
+    <thead><tr><th>You see (Error / symptom)</th><th>Likely cause</th><th>Fix / command</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Copy 403 / AuthorizationFailure on ADLS</td>
+        <td>ADF MSI or user lacks Blob Data Contributor on <code>stsharedqgr7mj</code></td>
+        <td>Portal IAM on storage; or re-run shared provision so RBAC exists; see README §J</td>
+      </tr>
+      <tr>
+        <td>Databricks error 3204 / cannot access cluster</td>
+        <td>Cluster stopped, wrong cluster id, or PAT expired</td>
+        <td>Start cluster in workspace; refresh <code>DATABRICKS_TOKEN</code> in <code>.env</code>; re-run
+          <code>orchestrate.cmd --setup-databricks-integration</code></td>
+      </tr>
+      <tr>
+        <td>Notebook 404 / path not found</td>
+        <td>Notebook not imported to expected <code>/Shared/…</code> path</td>
+        <td><code>deploy-shared-lab.cmd</code> or day9 deploy; confirm Input notebook path</td>
+      </tr>
+      <tr>
+        <td>SQL connection / firewall</td>
+        <td>Client IP not allowed on westus SQL; or bad password in KV</td>
+        <td><code>release.cmd adf-full</code> or SQL firewall rule; check KV secret</td>
+      </tr>
+      <tr>
+        <td>SkuNotAvailable / capacity</td>
+        <td>Region SKU pressure (rare on shared)</td>
+        <td>Trainer: retry later; documented in lab README</td>
+      </tr>
+      <tr>
+        <td>Get Metadata <code>exists: false</code> then If skips Copy</td>
+        <td>Folder/file missing in bronze — often Succeeded pipeline with no copy</td>
+        <td>Upload sample via <code>deploy-shared-lab.cmd</code>; not always a “failure”</td>
+      </tr>
+      <tr>
+        <td>Parent Failed, child Failed</td>
+        <td>Execute Pipeline bubbled child error</td>
+        <td>Open child runId from parent Output; debug child activity</td>
+      </tr>
+      <tr>
+        <td>Debug OK, Trigger now Failed</td>
+        <td>Unpublished / stale factory definition</td>
+        <td><code>.\release.cmd adf</code> then Trigger now again</td>
+      </tr>
+      <tr>
+        <td>Activity TimedOut</td>
+        <td>Cluster spin-up or large Copy exceeded timeout</td>
+        <td>Start cluster first; raise timeout in code; split ForEach</td>
+      </tr>
+      <tr>
+        <td>UserError vs SystemError</td>
+        <td>UserError = your config/data; SystemError = platform blip</td>
+        <td>UserError → fix definition; SystemError → retry / open Azure status</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Deeper write-ups: <code>shared-adf-lab/README.md</code> §J ·
+    <code>docs/pipeline_code_walkthrough.md</code> Part 7 ·
+    <code>docs/databricks_integration_catalog.md</code> Part H.</p>
+</section>
+
+<!-- ========== 11 CLI ========== -->
+<section id="cli">
+  <h2>11. az CLI — monitor without clicking (advanced)</h2>
+  <p class="hours">~6 hours</p>
+  <div class="cmd"><span class="c"># List recent pipeline runs (last day)</span>
+az datafactory pipeline-run query-by-factory ^
+  --factory-name adf-shared-qgr7mj ^
+  --resource-group rg-shared-class1 ^
+  --last-updated-after 2026-07-18T00:00:00Z ^
+  --last-updated-before 2026-07-20T00:00:00Z ^
+  -o table
+
+<span class="c"># Activity runs for one pipeline runId</span>
+az datafactory activity-run query-by-pipeline-run ^
+  --factory-name adf-shared-qgr7mj ^
+  --resource-group rg-shared-class1 ^
+  --run-id REPLACE_WITH_RUN_ID ^
+  --last-updated-after 2026-07-18T00:00:00Z ^
+  --last-updated-before 2026-07-20T00:00:00Z ^
+  -o json
+
+<span class="c"># Class wrapper — create run + wait</span>
+cd D:\azure\shared-adf-lab
+.\orchestrate.cmd --run-pipeline pl_07_databricks_notebook</div>
+  <p>
+    Python twin: <code>wait_for_pipeline_run()</code> in <code>shared-adf-lab/scripts/adf_pipelines.py</code>
+    polls until Succeeded/Failed — same idea as watching Monitor.
+  </p>
+</section>
+
+<!-- ========== 12 WORKFLOWS ========== -->
+<section id="workflows">
+  <h2>12. End-to-end monitoring workflows (diagrams)</h2>
+
+  <h3>12.1 Happy path — Trigger → Monitor → verify data</h3>
+  <pre class="mermaid">
+flowchart LR
+  A[release.cmd adf] --> B[Factory has latest pipelines]
+  B --> C[Trigger now pl_01_bronze_copy]
+  C --> D[Monitor: Pipeline run InProgress]
+  D --> E[Activity Copy Succeeded]
+  E --> F[Pipeline Succeeded]
+  F --> G[Portal: bronze container has file]
+  </pre>
+
+  <h3>12.2 Failure path — minute-by-minute</h3>
+  <pre class="mermaid">
+flowchart TD
+  T0[0:00 Trigger now] --> T1[0:01 Monitor shows InProgress]
+  T1 --> T2[0:02 Activity fails - red]
+  T2 --> T3[0:02-0:32 ActivityPolicy retry wait 30s]
+  T3 --> T4[0:32 Second attempt fails]
+  T4 --> T5[0:32 Pipeline Failed]
+  T5 --> T6[Open Error tab - copy errorCode]
+  T6 --> T7[Open Input - check path]
+  T7 --> T8[Classify + fix in git / Azure]
+  T8 --> T9[release.cmd adf if definition changed]
+  T9 --> T10[Trigger now again - expect Succeeded]
+  </pre>
+
+  <h3>12.3 Databricks notebook activity failure</h3>
+  <pre class="mermaid">
+flowchart LR
+  P[pl_07 / pl_db_* run] --> N[Notebook activity Failed]
+  N --> E[Error 3204 or notebook 404]
+  E --> C{Which?}
+  C -->|3204| CL[Start / fix cluster + PAT]
+  C -->|404| NB[deploy-shared-lab.cmd notebooks]
+  CL --> R[Re-run pipeline]
+  NB --> R
+  </pre>
+</section>
+
+<!-- ========== 13 LAB MAP ========== -->
+<section id="lab-map">
+  <h2>13. Which pipeline teaches which Monitor skill</h2>
+  <table>
+    <thead><tr><th>Pipeline</th><th>Monitor skill</th></tr></thead>
+    <tbody>
+      <tr><td><code>pl_01_bronze_copy</code></td><td>Basic Succeeded run + Copy Output rows</td></tr>
+      <tr><td><code>pl_02_get_metadata</code> / <code>pl_03_if_then_copy</code></td><td>Skipped vs run activities; Input <code>exists</code></td></tr>
+      <tr><td><code>pl_04_foreach_dates</code></td><td>ForEach iterations in activity list</td></tr>
+      <tr><td><code>pl_06_wait_then_copy</code></td><td>Wait duration on Gantt; retry mindset</td></tr>
+      <tr><td><code>pl_07_databricks_notebook</code></td><td>Notebook Output URLs; cluster errors</td></tr>
+      <tr><td><code>pl_10_parent_chain</code></td><td>Parent/child run navigation</td></tr>
+      <tr><td><code>pl_ex_13_user_properties_monitor</code></td><td>User properties filtering</td></tr>
+      <tr><td><code>pl_trig_01</code> / <code>02</code></td><td>Trigger runs blade</td></tr>
+      <tr><td><code>pl_gov_06_master_…</code></td><td>Complex parent + multiple children</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== 14 SYLLABUS ========== -->
+<section id="syllabus">
+  <h2>14. 100+ hour syllabus — Monitoring &amp; defect investigation</h2>
+  <p>
+    Use as a trainer timetable. Hours are <em>learner hands-on</em> including re-runs and portal verification —
+    not lecture-only. Pair with <a href="infra-cicd-walkthrough.html">infra-cicd-walkthrough.html</a> phases 3–4 and 9.
+  </p>
+  <table>
+    <thead><tr><th>Module</th><th>Hours</th><th>Focus</th><th>Exit criteria</th></tr></thead>
+    <tbody>
+      <tr><td>M0 Studio literacy</td><td>4</td><td>Author vs Monitor; open factory deep link</td><td>Can find Pipeline runs without help</td></tr>
+      <tr><td>M1 Run objects</td><td>4</td><td>§1–2 statuses; Gantt reading</td><td>Explain pipeline vs activity vs trigger</td></tr>
+      <tr><td>M2 Happy path drills</td><td>8</td><td>Run pl_01–pl_06; screenshot Output</td><td>5 green runs documented</td></tr>
+      <tr><td>M3 Input/Output/Error</td><td>10</td><td>§4 deep reading; variables guide</td><td>Predict Input before opening</td></tr>
+      <tr><td>M4 Debug vs publish</td><td>6</td><td>§5 classic trap lab</td><td>Explain Debug≠Trigger now</td></tr>
+      <tr><td>M5 Databricks failures</td><td>12</td><td>pl_07 + pl_db_*; 3204/404 drills</td><td>Recover a failed notebook activity solo</td></tr>
+      <tr><td>M6 SQL / Copy 403</td><td>8</td><td>RBAC + firewall defects</td><td>Fix 403 with IAM evidence</td></tr>
+      <tr><td>M7 Parent/child</td><td>8</td><td>pl_10, pl_gov_06</td><td>Trace child runId from parent</td></tr>
+      <tr><td>M8 Retries &amp; timeouts</td><td>8</td><td>§7 policy + orchestrator rounds</td><td>Tune retry vs fix root cause</td></tr>
+      <tr><td>M9 User properties &amp; filters</td><td>4</td><td>pl_ex_13</td><td>Filter Monitor by property</td></tr>
+      <tr><td>M10 Triggers</td><td>6</td><td>Trigger runs blade; tumbling/event</td><td>Correlate trigger→pipeline run</td></tr>
+      <tr><td>M11 CLI / SDK polling</td><td>6</td><td>§11 az + wait_for_pipeline_run</td><td>Query runs without Studio</td></tr>
+      <tr><td>M12 Defect playbook mastery</td><td>12</td><td>§9 timed drills (blind errors)</td><td>10 defects closed with write-ups</td></tr>
+      <tr><td>M13 Data flows monitor</td><td>6</td><td>pl_13+ DF debug / monitor</td><td>Read DF error in Monitor</td></tr>
+      <tr><td>M14 Cost &amp; IR awareness</td><td>4</td><td>DIU, duration, IR health</td><td>Spot expensive long Copy</td></tr>
+      <tr><td>M15 Capstone war-room</td><td>8</td><td>Multi-failure incident on shared factory</td><td>Team RCA presentation</td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>~114</strong></td><td colspan="2">Stretch with day6–9 + medallion releases</td></tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <strong>Daily drill (30–45 min):</strong> break one activity on purpose (wrong path) → deploy → fail → playbook → fix → green.
+    Muscle memory beats slides.
+  </div>
+</section>
+
+<!-- ========== 15 LINKS ========== -->
+<section id="links">
+  <h2>15. Lab guides (go deeper in markdown)</h2>
+  <ul>
+    <li><a href="../shared-adf-lab/README.md">shared-adf-lab/README.md</a> — deploy, Monitor, troubleshooting §J/K</li>
+    <li><a href="../shared-adf-lab/docs/pipeline_code_walkthrough.md">pipeline_code_walkthrough.md</a> — pl_01–12 + Part 7</li>
+    <li><a href="../shared-adf-lab/docs/debug_print_variables_guide.md">debug_print_variables_guide.md</a></li>
+    <li><a href="../shared-adf-lab/docs/adf_user_properties_guide.md">adf_user_properties_guide.md</a></li>
+    <li><a href="../shared-adf-lab/docs/databricks_integration_catalog.md">databricks_integration_catalog.md</a> — Part H</li>
+    <li><a href="../shared-adf-lab/docs/adf_triggers_guide.md">adf_triggers_guide.md</a></li>
+    <li><a href="../shared-adf-lab/docs/adf_purview_medallion_governance_guide.md">adf_purview_medallion_governance_guide.md</a> — child runs</li>
+    <li><a href="infra-cicd-walkthrough.html">infra-cicd-walkthrough.html</a> — release + infra hub</li>
+    <li><a href="CICD-INCREMENTAL-RELEASE.md">CICD-INCREMENTAL-RELEASE.md</a></li>
+  </ul>
+</section>
+
+<section id="citations" class="cite">
+  <h2>Citations</h2>
+  <ol>
+    <li><a href="https://learn.microsoft.com/en-us/azure/data-factory/monitor-visually" target="_blank" rel="noopener">Visually monitor Azure Data Factory</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/data-factory/monitor-programmatically" target="_blank" rel="noopener">Monitor programmatically</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/data-factory/concepts-pipelines-activities" target="_blank" rel="noopener">Pipelines and activities</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/data-factory/concepts-pipelines-activities#activity-policy" target="_blank" rel="noopener">Activity policy (timeout / retry)</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/cli/azure/datafactory" target="_blank" rel="noopener">az datafactory CLI</a></li>
+  </ol>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <p>FinLedger — ADF Monitoring deep dive. Separate from infra walkthrough on purpose so defect investigation can be taught full-days.</p>
+  <p>Start: open Studio → Monitor · or <code>cd shared-adf-lab &amp;&amp; .\orchestrate.cmd --run-pipeline pl_01_bronze_copy</code></p>
+</footer>
+
+</body>
+</html>
