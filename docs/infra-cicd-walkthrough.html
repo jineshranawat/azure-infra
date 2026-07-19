@@ -116,6 +116,7 @@
   <a href="#terraform">Terraform theory → run</a>
   <a href="#tf-lineage">TF code lineage</a>
   <a href="#repo-flows">All workflows (diagrams)</a>
+  <a href="#plan-concept">What plan means</a>
   <a href="#all-commands">All commands (detail)</a>
   <a href="#theory">Theory + diagrams</a>
   <a href="#release-table">Release table</a>
@@ -134,6 +135,9 @@
   <a class="sub" href="#tf-lineage">Code lineage (cmd → py → .tf)</a>
   <a class="sub" href="#tf-summary">What the code does (summary)</a>
   <a href="#repo-flows">Every workflow — diagrams</a>
+  <a class="sub" href="#plan-concept">What plan / what-if means</a>
+  <a class="sub" href="#flow-w1">W1 Bicep minute detail</a>
+  <a class="sub" href="#flow-w1t">W1t Terraform minute detail</a>
   <a href="#start">Start commands</a>
   <a href="#all-commands">All commands + detail theory</a>
   <a class="sub" href="#cmd-prereq">0. Prerequisites</a>
@@ -1627,11 +1631,58 @@ flowchart LR
 </section>
 
 <section id="repo-flows">
-  <h2>Every workflow — file-by-file diagrams</h2>
+  <h2>Every workflow — file-by-file diagrams + minute detail</h2>
   <p class="lead">
-    One diagram per entry command. Read each left-to-right: <strong>what you type → which files wake up →
-    what changes in Azure/Databricks</strong>. Legend: rectangles = files in this repo, rounded = Azure/Databricks.
+    One diagram per entry command, then <strong>concept blocks</strong> and the exact call chain
+    (which function / which CLI / which file). Legend: rectangles = files in this repo, rounded = Azure/Databricks.
   </p>
+
+  <!-- ========== PLAN CONCEPT (deep) ========== -->
+  <h3 id="plan-concept">What “plan” means — concept first, then the flag</h3>
+  <p class="analogy">
+    Analogy: before renovating a restaurant kitchen, the architect prints a <em>diff sheet</em> —
+    “keep this oven, replace that fridge, do not touch the dining room.” Plan = that sheet.
+    Apply / deploy = the builders start work. Plan alone = paper only; Azure stays untouched.
+  </p>
+  <div class="grid2">
+    <div class="card-mini">
+      <h4>Terraform plan</h4>
+      <p><strong>Command:</strong> <code>provision-shared-tf.cmd --plan-only</code></p>
+      <p><strong>Engine:</strong> <code>terraform plan</code> in <code>infra/terraform/shared-eastus/</code></p>
+      <p><strong>Compares:</strong> desired state in <code>main.tf</code> + vars ↔
+        (A) local <code>terraform.tfstate</code> and (B) live Azure via azurerm provider.</p>
+      <p><strong>Prints:</strong> <code>+ create</code> · <code>~ update</code> · <code>- destroy</code> ·
+        <code>-/+ replace</code> with counts like <code>Plan: 0 to add, 6 to change, 0 to destroy</code>.</p>
+      <p><strong>Does NOT:</strong> create, update, or delete any Azure resource. No state write for apply.</p>
+    </div>
+    <div class="card-mini">
+      <h4>Bicep / ARM what-if</h4>
+      <p><strong>Command:</strong> <code>provision-shared.cmd --plan-only</code></p>
+      <p><strong>Engine:</strong> <code>az deployment group what-if</code> + <code>infra/shared-eastus.bicep</code></p>
+      <p><strong>Compares:</strong> desired state in the Bicep template ↔ what ARM sees in the resource group
+        (no Terraform state file).</p>
+      <p><strong>Prints:</strong> symbols <code>~ Modify</code> · <code>- Delete</code> · <code>= Nochange</code> ·
+        <code>* Ignore</code> (resources in RG not in template — Incremental leaves them).</p>
+      <p><strong>Does NOT:</strong> apply the deployment. Ends with “Plan only — no changes applied.”</p>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Step inside a plan</th><th>What happens (concept)</th><th>What you see on screen</th></tr></thead>
+    <tbody>
+      <tr><td>1. Auth</td><td>Who am I? Same <code>az login</code> token for both paths</td><td>Silent, or az error if not logged in</td></tr>
+      <tr><td>2. Load desired state</td><td>Read <code>main.tf</code> or compile <code>.bicep</code> → ARM JSON</td><td>init / bicep compile warnings</td></tr>
+      <tr><td>3. Load current state</td><td>TF: state file + Azure refresh. Bicep: query RG resources</td><td>“Refreshing state…” / what-if scope line</td></tr>
+      <tr><td>4. Diff</td><td>Desired − Current = actions</td><td>Green +, yellow ~, red −</td></tr>
+      <tr><td>5. Stop</td><td>Human reviews; Azure unchanged</td><td>“Plan only — no changes applied”</td></tr>
+      <tr><td>6. (Later) Apply</td><td>Only if you re-run <em>without</em> <code>--plan-only</code></td><td>Resources created/updated</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn">
+    <strong>Empty TF state ≠ empty Azure.</strong> After Bicep built the house, a first Terraform plan may show
+    “14 to add” even though Portal already has the resources — because state is empty. That is why apply
+    auto-imports first. Plan-only never creates duplicates; apply-without-import used to error
+    (“already exists … needs to be imported”).
+  </div>
 
   <h3>Master map — all entry points</h3>
   <pre class="mermaid">
@@ -1655,39 +1706,174 @@ flowchart TD
   R -->|medallion / medallion-deploy| P9
   </pre>
 
-  <h3>W1 — Shared estate via Bicep (<code>provision-shared.cmd</code>)</h3>
+  <!-- ========== W1 DETAILED ========== -->
+  <h3 id="flow-w1">W1 — Shared estate via Bicep (<code>provision-shared.cmd</code>)</h3>
   <pre class="mermaid">
-flowchart LR
-  A[provision-shared.cmd] --> B[ensure .venv + pip]
-  B --> C[scripts/provision_shared.py]
-  C --> D[_load_dotenv .env]
-  D --> E[az account set + get principal]
-  E --> F{--plan-only?}
-  F -->|yes| G[az deployment group WHAT-IF] --> H([Preview printed - Azure unchanged])
-  F -->|no| I[az group create rg-shared-class1]
-  I --> J[az deployment group create Incremental]
-  J --> K[infra/shared-eastus.bicep]
-  K --> L([ARM builds/updates KV, ADLS, ADF, Databricks])
+flowchart TD
+  A[Human types provision-shared.cmd] --> B[provision-shared.cmd]
+  B --> B1[cd to repo root]
+  B1 --> B2{venv exists?}
+  B2 -->|no| B3[python -m venv + pip install -r requirements.txt]
+  B2 -->|yes| C
+  B3 --> C[".venv python scripts/provision_shared.py ARGS"]
+  C --> D[_load_dotenv reads .env]
+  D --> E[argparse: --plan-only / --owner-email / --subscription-id]
+  E --> F[_find_az]
+  F --> G[_ensure_subscription: az account set]
+  G --> H[_get_principal: az account show + signed-in-user / sp]
+  H --> I{args.plan_only?}
+  I -->|yes| J[_what_if]
+  J --> J1["az deployment group what-if --template-file shared-eastus.bicep"]
+  J1 --> J2([Print Modify/Nochange/Ignore - EXIT Azure unchanged])
+  I -->|no| K[_ensure_resource_group: az group create]
+  K --> L[_deploy]
+  L --> L1["az deployment group create --mode Incremental"]
+  L1 --> M[ARM compiles + applies infra/shared-eastus.bicep]
+  M --> N([rg-shared-class1: KV ADLS ADF Databricks])
+  N --> O[_print_summary portal link]
   </pre>
-  <div class="cmd">.\provision-shared.cmd --plan-only
-<span class="c"># NEW: ARM what-if preview — Bicep twin of `terraform plan` (no changes)</span>
-.\provision-shared.cmd</div>
 
-  <h3>W1t — Shared estate via Terraform (<code>provision-shared-tf.cmd</code>)</h3>
+  <h4>W1 concept blocks — each hop explained</h4>
+  <table>
+    <thead><tr><th>#</th><th>Who / file</th><th>Concept (why this hop exists)</th><th>Exact call / detail</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>provision-shared.cmd</code></td>
+        <td>Windows entry — learner never activates venv by hand (guardrail 1)</td>
+        <td><code>cd /d "%~dp0"</code> then optionally create <code>.venv</code>, then
+          <code>".venv\Scripts\python.exe" scripts\provision_shared.py %*</code>
+          (<code>%*</code> forwards <code>--plan-only</code>)</td></tr>
+      <tr><td>2</td><td><code>_load_dotenv()</code></td>
+        <td>Config as code: owner email + subscription live in <code>.env</code>, not typed every run</td>
+        <td>Reads lines <code>KEY=VALUE</code>; skips comments; does <em>not</em> overwrite vars already in the OS env</td></tr>
+      <tr><td>3</td><td><code>argparse</code></td>
+        <td>Flags are a contract. <code>--plan-only</code> now means “preview only”</td>
+        <td>Defaults: subscription from env / hard-coded class id; owner from <code>OWNER_EMAIL</code> or <code>CLASS_OWNER_EMAIL</code></td></tr>
+      <tr><td>4</td><td><code>_find_az</code> + <code>_ensure_subscription</code></td>
+        <td>Wrong subscription = wrong house plot — pin before any deploy</td>
+        <td><code>az account set --subscription a64c0dd2-…</code></td></tr>
+      <tr><td>5</td><td><code>_get_principal</code></td>
+        <td>RBAC needs an Entra object ID (user or SP) for Key Vault / storage roles in Bicep</td>
+        <td><code>az account show</code> → if SP: <code>az ad sp show</code>; else <code>az ad signed-in-user show --query id</code></td></tr>
+      <tr><td>6a</td><td><code>_what_if</code> (plan path)</td>
+        <td><strong>Plan concept:</strong> ask ARM “if I deployed this Incremental template now, what would change?”</td>
+        <td><code>az deployment group what-if --resource-group rg-shared-class1 --template-file infra\shared-eastus.bicep --parameters location=eastus learner=shared ownerEmail=… principalObjectId=… deployBudget=false</code>
+          → print preview → <strong>return</strong> (no <code>create</code>)</td></tr>
+      <tr><td>6b</td><td><code>_ensure_resource_group</code> (apply path)</td>
+        <td>Bicep <code>targetScope = resourceGroup</code> needs the RG to exist first</td>
+        <td><code>az group exists</code> then <code>az group create --name rg-shared-class1 --location eastus --tags …</code> (idempotent)</td></tr>
+      <tr><td>7</td><td><code>_deploy</code></td>
+        <td>Incremental = renovate in place; do not delete neighbours not in the template</td>
+        <td><code>az deployment group create --name shared-eastus --mode Incremental --template-file infra\shared-eastus.bicep … -o json</code></td></tr>
+      <tr><td>8</td><td><code>shared-eastus.bicep</code></td>
+        <td>Desired state: KV, ADLS+containers+lifecycle, RBAC, ADF+LS, Databricks Premium</td>
+        <td>ARM expands Bicep → REST creates/updates; <code>uniqueString</code> → hash <code>qgr7mj</code> on live estate</td></tr>
+      <tr><td>9</td><td><code>_print_summary</code></td>
+        <td>Human verification — names + portal deep link</td>
+        <td>Logs storage / KV / ADF / Databricks names</td></tr>
+    </tbody>
+  </table>
+  <div class="cmd">.\provision-shared.cmd --plan-only
+<span class="c"># Minute 0–1: .cmd → python → .env → az account set → principal</span>
+<span class="c"># Minute 1–N: az deployment group what-if → symbols on screen → EXIT</span>
+.\provision-shared.cmd
+<span class="c"># Same through principal, then az group create + deployment group create (real changes)</span></div>
+
+  <!-- ========== W1t DETAILED ========== -->
+  <h3 id="flow-w1t">W1t — Shared estate via Terraform (<code>provision-shared-tf.cmd</code>)</h3>
   <pre class="mermaid">
-flowchart LR
-  A[provision-shared-tf.cmd] --> B[ensure .venv + pip]
-  B --> C[scripts/provision_shared_tf.py]
-  C --> D[.env + az principal + az account set]
-  D --> E[terraform init in infra/terraform/shared-eastus]
-  E --> F{--plan-only?}
-  F -->|yes| G[terraform plan] --> H([Preview printed - Azure unchanged])
-  F -->|no| I[_import_existing: adopt Bicep-built resources]
-  I --> J[destroy-gate: abort if plan deletes]
-  J --> K[terraform apply saved plan]
-  K --> L[main.tf resources]
-  L --> M([ARM builds/updates same estate])
+flowchart TD
+  A[Human types provision-shared-tf.cmd] --> B[provision-shared-tf.cmd]
+  B --> B1[ensure .venv]
+  B1 --> C[".venv python scripts/provision_shared_tf.py"]
+  C --> D[UTF-8 stdout + _load_dotenv]
+  D --> E[argparse --plan-only --auto-approve --name-hash]
+  E --> F[_find_az + _find_terraform]
+  F --> G[_principal]
+  G --> H[az account set]
+  H --> I["ARM_USE_CLI=true"]
+  I --> J["terraform init cwd=infra/terraform/shared-eastus"]
+  J --> K{--plan-only?}
+  K -->|yes| L["terraform plan -var=..."]
+  L --> L2([Print +/~/- summary - EXIT Azure unchanged])
+  K -->|no| M[_import_existing]
+  M --> M1[az group/resource show for each expected ID]
+  M1 --> M2["terraform import ADDRESS ID if not in state"]
+  M2 --> N[_plan_is_destructive]
+  N --> N1["terraform plan -out=tfplan.autoguard"]
+  N1 --> N2["terraform show -json → scan for delete"]
+  N2 --> N3{any delete?}
+  N3 -->|yes| N4([ABORT - print addresses])
+  N3 -->|no| O["terraform apply tfplan.autoguard"]
+  O --> P[main.tf → azurerm provider → ARM]
+  P --> Q["terraform output -json"]
+  Q --> R([Print SHARED ESTATE COMPLETE])
   </pre>
+
+  <h4>W1t concept blocks — each hop explained</h4>
+  <table>
+    <thead><tr><th>#</th><th>Who / file</th><th>Concept</th><th>Exact call / detail</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>provision-shared-tf.cmd</code></td>
+        <td>Same thin launcher pattern as Bicep twin</td>
+        <td>venv bootstrap → <code>scripts\provision_shared_tf.py %*</code></td></tr>
+      <tr><td>2</td><td><code>_load_dotenv</code> + argparse</td>
+        <td><code>name_hash</code> default <code>qgr7mj</code> forces same names as live Bicep estate</td>
+        <td><code>-var=name_hash=qgr7mj -var=owner_email=… -var=principal_object_id=…</code> on every TF command</td></tr>
+      <tr><td>3</td><td><code>ARM_USE_CLI=true</code></td>
+        <td>azurerm provider reuses <code>az login</code> — no separate SPN required for class</td>
+        <td>Set in <code>env</code> passed to every <code>subprocess</code> TF call</td></tr>
+      <tr><td>4</td><td><code>terraform init</code></td>
+        <td>Download/pin providers (<code>azurerm</code> 3.117.x, <code>azuread</code>) using <code>.terraform.lock.hcl</code></td>
+        <td>Working directory <strong>must</strong> be <code>infra\terraform\shared-eastus</code></td></tr>
+      <tr><td>5a</td><td><code>terraform plan</code> (plan path)</td>
+        <td><strong>Plan concept:</strong> refresh Azure + state, compute graph of actions, print, stop</td>
+        <td><code>terraform plan -input=false -var=subscription_id=… -var=name_hash=qgr7mj …</code>
+          → exit 0. Never calls apply. Never writes applied state.</td></tr>
+      <tr><td>5b</td><td>What plan <em>reads</em></td>
+        <td>Desired = <code>main.tf</code> resources + locals. Current = state addresses + live Azure attributes</td>
+        <td>You see “Refreshing state… azurerm_storage_account.shared” then the action list</td></tr>
+      <tr><td>5c</td><td>What plan <em>means</em> by symbols</td>
+        <td><code>+</code> create new · <code>~</code> update in place · <code>-</code> destroy · <code>-/+</code> replace (destroy then create)</td>
+        <td>Classroom: any <code>-</code> or <code>-/+</code> on shared RG is a red flag — destroy-gate blocks apply</td></tr>
+      <tr><td>6</td><td><code>_import_existing</code> (apply only)</td>
+        <td>Adopt Bicep/portal resources into state so apply does not try to create duplicates</td>
+        <td>For each missing address: <code>az resource show --ids …</code> then
+          <code>terraform import -input=false -var=… ADDRESS RESOURCE_ID</code>
+          (containers use blob URL; role IDs rebuilt with proper-case scope)</td></tr>
+      <tr><td>7</td><td><code>_plan_is_destructive</code></td>
+        <td>Safety gate: never auto-apply a plan that deletes on the shared estate</td>
+        <td><code>plan -out=tfplan.autoguard</code> → <code>show -json</code> → if any action list contains <code>delete</code> → print ABORT → return 1</td></tr>
+      <tr><td>8</td><td><code>terraform apply</code></td>
+        <td>Execute the <em>exact</em> saved plan file (no re-diff surprises)</td>
+        <td>With <code>--auto-approve</code>: <code>terraform apply -input=false tfplan.autoguard</code>
+          then delete the plan file</td></tr>
+      <tr><td>9</td><td><code>main.tf</code> resources</td>
+        <td>Provider translates HCL → Azure REST; ARM is still the builder</td>
+        <td>RG → KV → storage+containers+lifecycle → RBAC → ADF+LS → Databricks → outputs</td></tr>
+      <tr><td>10</td><td><code>terraform output -json</code></td>
+        <td>Machine-readable names for humans / later scripts</td>
+        <td>Printed as SHARED ESTATE — TERRAFORM APPLY COMPLETE</td></tr>
+    </tbody>
+  </table>
+  <div class="cmd">.\provision-shared-tf.cmd --plan-only
+<span class="c"># Call chain: .cmd → provision_shared_tf.py → init → plan → STOP</span>
+.\provision-shared-tf.cmd --auto-approve
+<span class="c"># Call chain: .cmd → py → init → import* → plan+gate → apply → output</span>
+<span class="c"># *import only for resources present in Azure but missing from local state</span></div>
+
+  <h4>Side-by-side: same minute on Bicep vs Terraform</h4>
+  <table>
+    <thead><tr><th>Minute</th><th>Bicep <code>--plan-only</code></th><th>Terraform <code>--plan-only</code></th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>Launch <code>provision-shared.cmd</code></td><td>Launch <code>provision-shared-tf.cmd</code></td></tr>
+      <tr><td>0.1</td><td>venv + <code>provision_shared.py</code></td><td>venv + <code>provision_shared_tf.py</code></td></tr>
+      <tr><td>0.2</td><td><code>.env</code> + az principal</td><td><code>.env</code> + az principal + find terraform binary</td></tr>
+      <tr><td>0.5</td><td>—</td><td><code>terraform init</code> (providers)</td></tr>
+      <tr><td>1+</td><td><code>az deployment group what-if</code> + <code>shared-eastus.bicep</code></td>
+        <td><code>terraform plan</code> + <code>main.tf</code></td></tr>
+      <tr><td>End</td><td>Azure unchanged</td><td>Azure unchanged</td></tr>
+    </tbody>
+  </table>
 
   <h3>W2 — Lab assets into Databricks (<code>deploy-shared-lab.cmd</code>)</h3>
   <pre class="mermaid">
@@ -1698,6 +1884,11 @@ flowchart LR
   D --> E[ensure secret scope finledger]
   E --> F([import notebooks to /Shared/day7-day8 + /Shared/day9 - overwrite])
   </pre>
+  <div class="card-mini">
+    <h4>Concept</h4>
+    <p>Infra (W1) built empty shelves. This workflow puts <em>furniture</em> on them: sample files, secret scope, notebooks.
+    Overwrite = same workspace path every time (no “notebook (1)” duplicates). Uses Databricks REST with token from <code>.env</code> — not Bicep/TF.</p>
+  </div>
 
   <h3>W3 / W4 — Shared ADF lab (<code>deploy-shared-adf-lab.cmd</code> → <code>shared-adf-lab/orchestrate.cmd</code>)</h3>
   <pre class="mermaid">
@@ -1712,6 +1903,11 @@ flowchart LR
   F --> H
   G --> H
   </pre>
+  <div class="card-mini">
+    <h4>Concept</h4>
+    <p><code>release.cmd adf</code> uses <code>--skip-sql</code> (fast incremental). Full path recreates SQL Basic / firewall when needed.
+    Phase 4 only wires ADF to Databricks (linked service / job) — does not rebuild the factory.</p>
+  </div>
 
   <h3>W8 — Day 9 build + deploy (<code>day9\orchestrate.cmd --deploy</code>)</h3>
   <pre class="mermaid">
@@ -1732,6 +1928,11 @@ flowchart LR
   F -->|yes| G([Deployed only - no DBU spend])
   F -->|no| H([Trigger pipeline run - costs DBUs])
   </pre>
+  <div class="card-mini">
+    <h4>Concept — deploy vs run</h4>
+    <p><strong>Deploy</strong> = put new recipe books on the shelf (safe, cheap).
+    <strong>Run</strong> = turn the ovens on (DBU meter). Class default: <code>medallion-deploy</code> / <code>--skip-run</code>.</p>
+  </div>
 
   <h3>W10 — Cost dashboard (<code>cost-dashboard.cmd</code>)</h3>
   <pre class="mermaid">
@@ -1751,6 +1952,9 @@ flowchart LR
   D --> E[infra/main.bicep uksouth]
   E --> F([rg-LEARNER-class1 personal estate])
   </pre>
+  <div class="callout danger">
+    Do not confuse with <code>rg-shared-class1</code>. Personal Class-1 is uksouth / per-learner. Shared estate is eastus / cohort.
+  </div>
 
   <h3>Release hub (<code>release.cmd ACTION</code>) — what each action calls</h3>
   <table>
@@ -1765,7 +1969,7 @@ flowchart LR
     </tbody>
   </table>
   <p><strong>Rule of thumb:</strong> IaC commands (W1/W1t) change the <em>building</em>; release commands change the
-  <em>recipes</em>. Git <code>main</code> is the source of truth for both.</p>
+  <em>recipes</em>. Git <code>main</code> is the source of truth for both. Always <code>--plan-only</code> / what-if before a real apply in class.</p>
 </section>
 
 <section id="citations" class="cite">
