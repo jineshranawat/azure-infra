@@ -241,14 +241,23 @@ def _resolve_token(file_env: dict[str, str], host: str) -> tuple[str, str]:
     return aad, "aad"
 
 
-def _resolve_storage_key(file_env: dict[str, str]) -> str:
-    key = _normalize_secret(
-        file_env.get("STORAGE_ACCOUNT_KEY") or os.environ.get("STORAGE_ACCOUNT_KEY", "")
+def _storage_key_works(az: str, key: str) -> bool:
+    """Cheap probe: can this account key list the bronze container?"""
+    result = subprocess.run(
+        [
+            az, "storage", "container", "exists",
+            "--account-name", STORAGE_ACCOUNT,
+            "--account-key", key,
+            "--name", "bronze",
+            "-o", "json",
+        ],
+        capture_output=True,
+        text=True,
     )
-    if key:
-        return key
-    az = _find_az()
-    logger.info("STORAGE_ACCOUNT_KEY not in .env — fetching key1 from Azure CLI…")
+    return result.returncode == 0
+
+
+def _fetch_storage_key_from_cli(az: str) -> str:
     key = subprocess.check_output(
         [
             az,
@@ -272,6 +281,34 @@ def _resolve_storage_key(file_env: dict[str, str]) -> str:
             f"Could not read storage key for {STORAGE_ACCOUNT}. "
             "Set STORAGE_ACCOUNT_KEY in .env or ensure az has access to the RG."
         )
+    return key
+
+
+def _resolve_storage_key(file_env: dict[str, str]) -> str:
+    az = _find_az()
+    key = _normalize_secret(
+        file_env.get("STORAGE_ACCOUNT_KEY") or os.environ.get("STORAGE_ACCOUNT_KEY", "")
+    )
+    if key:
+        if _storage_key_works(az, key):
+            logger.info("Storage auth: STORAGE_ACCOUNT_KEY from .env — OK")
+            return key
+        logger.warning(
+            "STORAGE_ACCOUNT_KEY in .env was rejected (stale/rotated key). "
+            "Fetching current key1 from Azure CLI…"
+        )
+    else:
+        logger.info("STORAGE_ACCOUNT_KEY not in .env — fetching key1 from Azure CLI…")
+    key = _fetch_storage_key_from_cli(az)
+    if not _storage_key_works(az, key):
+        raise SystemExit(
+            f"Fetched key1 for {STORAGE_ACCOUNT} but the storage API still rejects it.\n"
+            "Checklist:\n"
+            "  1) az login (account with access to rg-shared-class1)\n"
+            f"  2) az account set --subscription {SHARED_SUB}\n"
+            "  3) Remove any stale STORAGE_ACCOUNT_KEY line from .env and re-run\n"
+        )
+    logger.info("Storage auth: fresh key1 via Azure CLI — OK")
     return key
 
 
