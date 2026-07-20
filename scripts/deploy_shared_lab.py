@@ -26,6 +26,9 @@ SHARED_SUB = "a64c0dd2-3a31-4604-bde3-3d40c7d5e8be"
 SHARED_RG = "rg-shared-class1"
 STORAGE_ACCOUNT = "stsharedqgr7mj"
 WORKSPACE = "dbw-shared-qgr7mj"
+# Known shared-class workspace URL — avoids `az databricks` extension install prompts
+# that hang student terminals (preview-extension warning).
+SHARED_DATABRICKS_HOST = "https://adb-7405613791235979.19.azuredatabricks.net"
 NOTEBOOK_SRC = REPO_ROOT / "day8" / "notebooks" / "nb_master_pyspark_complete.py"
 SAMPLE_CSV = REPO_ROOT / "day8" / "data" / "sample_transactions.csv"
 RETURNS_CSV = REPO_ROOT / "shared-adf-lab" / "data" / "returns_raw.csv"
@@ -313,56 +316,32 @@ def _resolve_storage_key(file_env: dict[str, str]) -> str:
 
 
 def _resolve_host(file_env: dict[str, str]) -> str:
-    """Prefer shared workspace from Azure CLI when .env host is missing or wrong."""
+    """Resolve Databricks host for the shared class estate.
+
+    Prefer the known shared URL so students never hit interactive
+    `az databricks` extension / preview prompts that look like a hang.
+    """
     configured = _normalize_secret(
         os.environ.get("DATABRICKS_HOST") or file_env.get("DATABRICKS_HOST", "")
     ).rstrip("/")
     if configured and not configured.startswith("http"):
         configured = f"https://{configured}"
 
-    az = _find_az()
-    try:
-        data = json.loads(
-            subprocess.check_output(
-                [
-                    az,
-                    "databricks",
-                    "workspace",
-                    "show",
-                    "-g",
-                    SHARED_RG,
-                    "-n",
-                    WORKSPACE,
-                    "-o",
-                    "json",
-                ],
-                text=True,
-            )
-        )
-        raw = (data.get("workspaceUrl") or "").strip()
-        shared = f"https://{raw}" if raw and not raw.startswith("http") else raw
-    except Exception as exc:
-        logger.warning("Could not auto-detect shared Databricks host (%s)", exc)
-        if configured:
-            return configured
-        raise SystemExit(
-            f"DATABRICKS_HOST missing and could not read workspace {WORKSPACE}."
-        ) from exc
+    shared = SHARED_DATABRICKS_HOST.rstrip("/")
 
-    if not shared:
-        if configured:
-            return configured
-        raise SystemExit(f"Empty workspaceUrl for {WORKSPACE}")
-
-    if configured and configured.rstrip("/") != shared.rstrip("/"):
+    if configured and configured.rstrip("/") != shared:
         logger.warning(
             "DATABRICKS_HOST in .env (%s) is NOT shared workspace %s — using %s",
             configured,
             WORKSPACE,
             shared,
         )
-        return shared
-    return configured or shared
+    elif configured:
+        logger.info("Databricks host: %s (from .env, matches shared)", shared)
+    else:
+        logger.info("DATABRICKS_HOST not in .env — using shared workspace %s", shared)
+
+    return shared
 
 
 def _upload_bronze(file_env: dict[str, str], storage_key: str) -> None:
