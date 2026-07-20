@@ -77,7 +77,36 @@ def _find_az() -> str:
 def _run(az: str, args: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
     cmd = [az, *args]
     logger.debug("exec: %s", " ".join(cmd))
-    return subprocess.run(cmd, text=True, capture_output=capture, check=True)
+    result = subprocess.run(cmd, text=True, capture_output=True, check=False)
+    if result.returncode != 0:
+        err = f"{result.stderr or ''}{result.stdout or ''}"
+        low = err.lower()
+        if (
+            "aadsts50076" in low
+            or "multi-factor" in low
+            or "interactionrequired" in low
+            or "claims-challenge" in low
+            or "basic_action" in low
+        ):
+            raise SystemExit(
+                "Azure CLI needs a fresh interactive login with MFA.\n"
+                "Your previous session expired or Conditional Access requires MFA again.\n\n"
+                "Run these, complete the browser MFA prompt, then re-run the phase:\n"
+                "  az logout\n"
+                "  az login\n"
+                "  az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be\n"
+                "  infra-walkthrough.cmd --phase 1\n"
+            )
+        if not capture and err.strip():
+            sys.stderr.write(err)
+            if not err.endswith("\n"):
+                sys.stderr.write("\n")
+        raise subprocess.CalledProcessError(
+            result.returncode, cmd, output=result.stdout, stderr=result.stderr
+        )
+    if not capture and result.stdout:
+        sys.stdout.write(result.stdout)
+    return result
 
 
 def _budget_start_date() -> str:
@@ -130,9 +159,12 @@ def _ensure_resource_group(az: str, owner_email: str) -> None:
         capture=True,
     ).stdout.strip().lower() == "true"
     if exists:
-        logger.info("Resource group %s already present — incremental update", SHARED_RG)
-    else:
-        logger.info("Creating resource group %s in %s", SHARED_RG, SHARED_LOCATION)
+        # Do NOT re-run `az group create` just to refresh tags — that write often
+        # triggers MFA / Conditional Access mid-phase for students who already
+        # have the shared RG. Incremental Bicep deploy handles the rest.
+        logger.info("Resource group %s already present — skipping create/tag update", SHARED_RG)
+        return
+    logger.info("Creating resource group %s in %s", SHARED_RG, SHARED_LOCATION)
     _run(
         az,
         [
