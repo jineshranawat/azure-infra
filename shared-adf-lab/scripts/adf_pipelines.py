@@ -202,6 +202,30 @@ def _databricks_domain(cfg: SharedAdfConfig, estate: SharedEstate) -> str:
     return f"https://{show.stdout.strip()}"
 
 
+def _put_linked_service(
+    adf: DataFactoryManagementClient,
+    rg: str,
+    factory: str,
+    name: str,
+    properties: dict[str, Any],
+) -> None:
+    """Upsert linked service with an explicit ``type`` in the payload.
+
+    Some azure-mgmt-datafactory / Python combinations drop the polymorphic
+    discriminator when serializing AzureBlobFSLinkedService models, which
+    yields: Invalid linked service payload, the 'type' nested in payload is null.
+    A plain dict with ``type`` set is reliable across SDK versions.
+    """
+    if not properties.get("type"):
+        raise ValueError(f"Linked service {name} payload missing required 'type'")
+    adf.linked_services.create_or_update(
+        rg,
+        factory,
+        name,
+        {"properties": properties},
+    )
+
+
 def deploy_linked_services(
     cfg: SharedAdfConfig,
     estate: SharedEstate,
@@ -212,16 +236,16 @@ def deploy_linked_services(
     dfs_url = estate.dfs_endpoint
 
     # ADLS — MSI (overwrites Bicep placeholder without MSI)
-    adf.linked_services.create_or_update(
+    _put_linked_service(
+        adf,
         rg,
         factory,
         LS_ADLS,
-        LinkedServiceResource(
-            properties=AzureBlobFSLinkedService(
-                url=dfs_url,
-                description="ADLS Gen2 — shared FinLedger lake (eastus)",
-            )
-        ),
+        {
+            "type": "AzureBlobFS",
+            "description": "ADLS Gen2 — shared FinLedger lake (eastus)",
+            "typeProperties": {"url": dfs_url},
+        },
     )
     logger.info("Linked service %s", LS_ADLS)
 
@@ -231,28 +255,33 @@ def deploy_linked_services(
     domain = _databricks_domain(cfg, estate)
     # Use the shared all-purpose cluster — avoids eastus DS3_v2 stockouts from
     # spinning up a new job cluster on every ADF notebook activity.
-    dbx_props: dict[str, Any] = {
+    dbx_type_props: dict[str, Any] = {
         "domain": domain,
-        "existing_cluster_id": cfg.databricks_cluster_id,
-        "description": (
-            "Shared class Databricks — ADF notebook activities on existing cluster "
-            f"({cfg.databricks_cluster_id})"
-        ),
+        "existingClusterId": cfg.databricks_cluster_id,
     }
     if cfg.databricks_token:
-        dbx_props["access_token"] = SecureString(value=cfg.databricks_token)
+        dbx_type_props["accessToken"] = {
+            "type": "SecureString",
+            "value": cfg.databricks_token,
+        }
     else:
-        dbx_props["authentication"] = "MSI"
-        dbx_props["workspace_resource_id"] = _databricks_workspace_resource_id(
+        dbx_type_props["authentication"] = "MSI"
+        dbx_type_props["workspaceResourceId"] = _databricks_workspace_resource_id(
             cfg, estate.databricks_workspace
         )
-    adf.linked_services.create_or_update(
+    _put_linked_service(
+        adf,
         rg,
         factory,
         LS_DATABRICKS,
-        LinkedServiceResource(
-            properties=AzureDatabricksLinkedService(**dbx_props)
-        ),
+        {
+            "type": "AzureDatabricks",
+            "description": (
+                "Shared class Databricks — ADF notebook activities on existing cluster "
+                f"({cfg.databricks_cluster_id})"
+            ),
+            "typeProperties": dbx_type_props,
+        },
     )
     logger.info(
         "Linked service %s → %s (%s)",
@@ -269,16 +298,21 @@ def deploy_linked_services(
             f"Password={sql.admin_password};"
             "Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
         )
-        adf.linked_services.create_or_update(
+        _put_linked_service(
+            adf,
             rg,
             factory,
             LS_AZURE_SQL,
-            LinkedServiceResource(
-                properties=AzureSqlDatabaseLinkedService(
-                    connection_string=SecureString(value=conn),
-                    description=f"Azure SQL westus — {sql.fqdn}",
-                )
-            ),
+            {
+                "type": "AzureSqlDatabase",
+                "description": f"Azure SQL westus — {sql.fqdn}",
+                "typeProperties": {
+                    "connectionString": {
+                        "type": "SecureString",
+                        "value": conn,
+                    }
+                },
+            },
         )
         logger.info("Linked service %s → %s", LS_AZURE_SQL, sql.fqdn)
 
