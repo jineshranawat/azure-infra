@@ -298,10 +298,13 @@ exit /b %ERRORLEVEL%
 call :banner 10 "Cost and ops - read the utility meters"
 call cost-dashboard.cmd
 if exist "%PY%" (
+  echo Ensuring finledger cost secrets + deploying cost notebook...
   "%PY%" scripts\ensure_cost_lab_secrets.py
+  if errorlevel 1 echo WARN ensure_cost_lab_secrets failed — continuing ^(dashboard already OK^)
   "%PY%" scripts\deploy_cost_management_lab.py
+  if errorlevel 1 echo WARN deploy_cost_management_lab failed — open docs\cost-dashboard-out\index.html
 )
-exit /b %ERRORLEVEL%
+exit /b 0
 
 :p11
 call :banner 11 "Optional stretch labs (soft - continue on failure)"

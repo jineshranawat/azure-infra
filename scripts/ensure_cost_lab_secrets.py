@@ -4,20 +4,27 @@
 Lets the cost-management notebook call Azure Cost Management REST live.
 Idempotent: PUT overwrites the same keys every run.
 
+Auth: same as phase 2 — valid PAT, else Azure AD via az login; shared host auto-corrected.
+
 Re-run: python scripts\\ensure_cost_lab_secrets.py
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import os
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCOPE = "finledger"
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
+from deploy_shared_lab import _load_env, _resolve_host, _resolve_token  # noqa: E402
+
+SCOPE = "finledger"
 KEY_MAP = {
     "azure-tenant-id": "AZURE_TENANT_ID",
     "azure-client-id": "AZURE_CLIENT_ID",
@@ -25,27 +32,15 @@ KEY_MAP = {
     "azure-subscription-id": "AZURE_SUBSCRIPTION_ID",
 }
 
-
-def _load_env() -> dict[str, str]:
-    env: dict[str, str] = {}
-    dotenv = REPO_ROOT / ".env"
-    if dotenv.is_file():
-        for line in dotenv.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, _, v = line.partition("=")
-                env[k.strip()] = v.strip()
-    return env
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     file_env = _load_env()
-    host = (os.environ.get("DATABRICKS_HOST") or file_env.get("DATABRICKS_HOST", "")).strip().rstrip("/")
-    token = (os.environ.get("DATABRICKS_TOKEN") or file_env.get("DATABRICKS_TOKEN", "")).strip()
-    if not host or not token:
-        raise SystemExit("DATABRICKS_HOST and DATABRICKS_TOKEN required (.env)")
-    if not host.startswith("http"):
-        host = "https://" + host
+    host = _resolve_host(file_env)
+    token, auth_src = _resolve_token(file_env, host)
+    logger.info("Databricks host: %s (auth=%s)", host, auth_src)
 
     ok = 0
     for secret_key, env_key in KEY_MAP.items():
