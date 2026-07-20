@@ -236,10 +236,14 @@ def main() -> int:
         raise SystemExit("Empty Event Hub connection string")
 
     file_env = _load_env()
-    token = (os.environ.get("DATABRICKS_TOKEN") or file_env.get("DATABRICKS_TOKEN", "")).strip()
-    if not token:
-        raise SystemExit("DATABRICKS_TOKEN required to store secrets")
-    host = _resolve_host(file_env, az)
+    # Reuse phase-2 auth (PAT → AAD) and shared host correction.
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from deploy_shared_lab import _resolve_host as _shared_host  # noqa: E402
+    from deploy_shared_lab import _resolve_token  # noqa: E402
+
+    host = _shared_host(file_env)
+    token, auth_src = _resolve_token(file_env, host)
+    logger.info("Databricks host: %s (auth=%s)", host, auth_src)
 
     scopes = _dbx_request(host, token, "GET", "/api/2.0/secrets/scopes/list").get("scopes", [])
     if SCOPE not in [s.get("name") for s in scopes]:
