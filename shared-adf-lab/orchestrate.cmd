@@ -26,8 +26,13 @@ if not exist "..\.venv\Scripts\python.exe" (
   ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt
   cd shared-adf-lab
 ) else (
-  REM Keep ADF SDK on 9.x — v10 breaks activity constructors used by this lab
-  "..\.venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q "azure-mgmt-datafactory>=9.0.0,<10.0.0"
+  REM Force ADF SDK 9.x — quiet pin often leaves v10 installed and phase 3 crashes on ForEach
+  echo Ensuring azure-mgmt-datafactory 9.3.0 ^(not v10^)...
+  "..\.venv\Scripts\python.exe" -m pip install --disable-pip-version-check --force-reinstall -q "azure-mgmt-datafactory==9.3.0"
+  if errorlevel 1 (
+    echo ERROR: could not install azure-mgmt-datafactory 9.3.0
+    exit /b 1
+  )
 )
 
 "..\.venv\Scripts\python.exe" scripts\run_shared_adf.py %*

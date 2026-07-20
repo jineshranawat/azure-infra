@@ -258,6 +258,12 @@ exit /b %ERRORLEVEL%
 
 :p3
 call :banner 3 "Shared ADF + SQL - hire the kitchen manager + ledger"
+echo Pinning ADF Python SDK 9.3.0 ^(v10 breaks ForEachActivity^)...
+"%PY%" -m pip install --disable-pip-version-check --force-reinstall -q "azure-mgmt-datafactory==9.3.0"
+if errorlevel 1 (
+  echo ERROR: pip could not install azure-mgmt-datafactory 9.3.0
+  exit /b 1
+)
 call deploy-shared-adf-lab.cmd
 exit /b %ERRORLEVEL%
 

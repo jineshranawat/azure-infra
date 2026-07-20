@@ -70,7 +70,10 @@ RETURNS_CSV = Path(__file__).resolve().parent.parent / "data" / "returns_raw.csv
 
 
 def _assert_adf_sdk() -> None:
-    """Class lab targets azure-mgmt-datafactory 9.x (v10 moved activity kwargs under type_properties)."""
+    """Ensure azure-mgmt-datafactory 9.x — v10 breaks ForEach/IfCondition constructors."""
+    import subprocess
+    import sys
+
     try:
         import azure.mgmt.datafactory as adf_pkg
     except Exception:
@@ -81,14 +84,34 @@ def _assert_adf_sdk() -> None:
         major = int(major_s)
     except ValueError:
         return
-    if major >= 10:
+    if major < 10:
+        logger.info("ADF SDK azure-mgmt-datafactory %s — OK", ver)
+        return
+
+    logger.warning(
+        "azure-mgmt-datafactory %s is too new (v10 breaks this lab). "
+        "Force-installing 9.3.0 …",
+        ver,
+    )
+    pin = "azure-mgmt-datafactory==9.3.0"
+    result = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "--force-reinstall", pin],
+        check=False,
+    )
+    if result.returncode != 0:
         raise SystemExit(
-            f"Unsupported azure-mgmt-datafactory {ver}.\n"
-            "This lab requires 9.x (v10 breaks ForEachActivity/IfCondition constructors).\n"
-            "Fix (from repo root):\n"
-            '  .venv\\Scripts\\python.exe -m pip install "azure-mgmt-datafactory>=9.0.0,<10.0.0"\n'
-            "Then re-run: deploy-shared-adf-lab.cmd   or   purview-demo.cmd\n"
+            f"Could not downgrade azure-mgmt-datafactory from {ver}.\n"
+            "Run manually from repo root:\n"
+            f'  .venv\\Scripts\\python.exe -m pip install --force-reinstall "{pin}"\n'
+            "Then re-run: infra-walkthrough.cmd --phase 3\n"
         )
+    raise SystemExit(
+        f"Downgraded azure-mgmt-datafactory {ver} → 9.3.0.\n"
+        "Please re-run the same command now (one-time):\n"
+        "  infra-walkthrough.cmd --phase 3\n"
+        "  or: deploy-shared-adf-lab.cmd\n"
+        "  or: purview-demo.cmd\n"
+    )
 
 
 def _upload_bronze_samples(cfg, estate) -> None:
