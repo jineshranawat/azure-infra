@@ -30,7 +30,7 @@
 | **Day 6** — Python for data engineers | `day6/` | [data-engineering-course.html](docs/data-engineering-course.html) S6 | 2 h | `day6\orchestrate.cmd` | [day6/MANUAL-LAB.md](day6/MANUAL-LAB.md) |
 | **Day 7** — Storage + read lake (PySpark) | `day7/` | [data-engineering-course.html](docs/data-engineering-course.html) S7 | 2 h | `day7\orchestrate.cmd` | [day7/MANUAL-LAB.md](day7/MANUAL-LAB.md) |
 | **Day 8** — PySpark transformations | `day8/` | [data-engineering-course.html](docs/data-engineering-course.html) S8 | 2 h | `day8\orchestrate.cmd` | [day8/MANUAL-LAB.md](day8/MANUAL-LAB.md) |
-| Session 4 — Purview | *planned* | Day 4 | — | — | — |
+| Session 4 — Purview | [docs/PURVIEW-TEACH-DEMO.md](docs/PURVIEW-TEACH-DEMO.md) + [purview-teach-demo.html](docs/purview-teach-demo.html) | Day 4 | `purview-demo.cmd` → `pl_gov_06` | [purview_portal_search_guide.md](shared-adf-lab/docs/purview_portal_search_guide.md) |
 | Session 5+ — Operate / Engineering | *planned* | Day 5–7 | — | — | — |
 
 ---

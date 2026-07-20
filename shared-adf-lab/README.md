@@ -221,6 +221,7 @@ Pipelines are organized in ADF folders `01-core-copy` … `13-governance-purview
 
 **Guide:** `docs/adf_purview_medallion_governance_guide.md`  
 **Purview portal search (what to type):** `docs/purview_portal_search_guide.md`  
+**Easy teach + one-command demo:** [`../docs/purview-teach-demo.html`](../docs/purview-teach-demo.html) · run from repo root: `purview-demo.cmd`
 **Syllabus gap analysis (ADF + Databricks):** [../docs/adf-databricks-syllabus-gap-analysis.md](../docs/adf-databricks-syllabus-gap-analysis.md)
 
 | Pipeline | What it teaches |
