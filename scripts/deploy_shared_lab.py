@@ -313,20 +313,56 @@ def _resolve_storage_key(file_env: dict[str, str]) -> str:
 
 
 def _resolve_host(file_env: dict[str, str]) -> str:
-    host = _normalize_secret(
+    """Prefer shared workspace from Azure CLI when .env host is missing or wrong."""
+    configured = _normalize_secret(
         os.environ.get("DATABRICKS_HOST") or file_env.get("DATABRICKS_HOST", "")
     ).rstrip("/")
-    if host:
-        return host if host.startswith("http") else f"https://{host}"
+    if configured and not configured.startswith("http"):
+        configured = f"https://{configured}"
+
     az = _find_az()
-    data = json.loads(
-        subprocess.check_output(
-            [az, "databricks", "workspace", "show", "-g", SHARED_RG, "-n", WORKSPACE, "-o", "json"],
-            text=True,
+    try:
+        data = json.loads(
+            subprocess.check_output(
+                [
+                    az,
+                    "databricks",
+                    "workspace",
+                    "show",
+                    "-g",
+                    SHARED_RG,
+                    "-n",
+                    WORKSPACE,
+                    "-o",
+                    "json",
+                ],
+                text=True,
+            )
         )
-    )
-    raw = data.get("workspaceUrl", "").strip()
-    return f"https://{raw}" if raw and not raw.startswith("http") else raw
+        raw = (data.get("workspaceUrl") or "").strip()
+        shared = f"https://{raw}" if raw and not raw.startswith("http") else raw
+    except Exception as exc:
+        logger.warning("Could not auto-detect shared Databricks host (%s)", exc)
+        if configured:
+            return configured
+        raise SystemExit(
+            f"DATABRICKS_HOST missing and could not read workspace {WORKSPACE}."
+        ) from exc
+
+    if not shared:
+        if configured:
+            return configured
+        raise SystemExit(f"Empty workspaceUrl for {WORKSPACE}")
+
+    if configured and configured.rstrip("/") != shared.rstrip("/"):
+        logger.warning(
+            "DATABRICKS_HOST in .env (%s) is NOT shared workspace %s — using %s",
+            configured,
+            WORKSPACE,
+            shared,
+        )
+        return shared
+    return configured or shared
 
 
 def _upload_bronze(file_env: dict[str, str], storage_key: str) -> None:

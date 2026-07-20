@@ -58,11 +58,21 @@ def main() -> int:
 
     if not args.skip_run:
         medallion_runner = REPO_ROOT / "scripts" / "run_medallion_governance_job.py"
-        if medallion_runner.is_file():
-            _run([sys.executable, str(medallion_runner)])
-        elif RUN_50.is_file():
-            logger.warning("Medallion job runner missing — falling back to run-50-problems.cmd")
-            _run(str(RUN_50))
+        try:
+            if medallion_runner.is_file():
+                _run([sys.executable, str(medallion_runner)])
+            elif RUN_50.is_file():
+                logger.warning("Medallion job runner missing — falling back to run-50-problems.cmd")
+                _run(str(RUN_50))
+        except subprocess.CalledProcessError as exc:
+            # Deploy already succeeded; job submit is optional for class (costs DBUs).
+            logger.warning(
+                "Medallion job submit failed (exit %s) — deploy is still OK.\n"
+                "Classroom tip: re-run with --skip-run to stop after deploy:\n"
+                "  release-medallion-governance.cmd --skip-run\n"
+                "Or: git pull, az login, fix DATABRICKS_HOST to shared workspace, then re-run.",
+                exc.returncode,
+            )
 
     print()
     print("=" * 70)

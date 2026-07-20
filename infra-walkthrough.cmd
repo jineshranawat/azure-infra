@@ -288,8 +288,10 @@ exit /b %ERRORLEVEL%
 
 :p9
 call :banner 9 "DevOps release - incremental medallion + governance"
-echo Flags you can pass after -- : --skip-run  --skip-deploy  --run-only
-call release-medallion-governance.cmd
+echo Classroom default: --skip-run (deploy notebooks + ADF; no DBU job submit).
+echo To also submit the Databricks job: release-medallion-governance.cmd
+echo Other flags: --skip-deploy  --run-only
+call release-medallion-governance.cmd --skip-run
 exit /b %ERRORLEVEL%
 
 :p10
