@@ -1,15 +1,10 @@
 @echo off
 REM =============================================================================
-REM FinLedger PURVIEW DEMO — one ready component for class
+REM FinLedger PURVIEW DEMO — deploy governance pipelines if missing, then run
 REM =============================================================================
-REM What it does:
-REM   1) Reminds trainer/learner of Purview teach points
-REM   2) Runs the ready governance pipeline pl_gov_06 (bronze→silver→gold + discovery)
-REM   3) Prints exactly what to click in the classic Purview portal
-REM
-REM Re-run safe. Requires: az login, shared estate, ADF lab already deployed (phase 3).
+REM Pipelines live in ADF folder: 13-governance-purview
+REM   pl_gov_01 … pl_gov_06  (there is NO pipeline literally named "Purview")
 REM Docs: docs\purview-teach-demo.html
-REM       shared-adf-lab\docs\purview_portal_search_guide.md
 REM =============================================================================
 setlocal EnableExtensions
 cd /d "%~dp0"
@@ -24,47 +19,45 @@ if not exist "%PY%" (
 echo.
 echo ========================================================================
 echo  PURVIEW DEMO — FinLedger shared class
-echo  Teach page: docs\purview-teach-demo.html
+echo  Detail HTML: docs\purview-teach-demo.html
 echo ========================================================================
 echo.
-echo  WHAT YOU ARE DEMOING
-echo    Purview = Google for your data estate ^(catalog + lineage^)
-echo    Demo component = ADF pipeline pl_gov_06_master_medallion_governance
+echo  WHERE THE PIPELINES ARE (ADF Studio)
+echo    Factory : adf-shared-qgr7mj
+echo    Author  -^> Pipelines -^> folder 13-governance-purview
+echo    Names   : pl_gov_01 … pl_gov_06
+echo    Demo    : pl_gov_06_master_medallion_governance
 echo.
-echo  BEFORE YOU CLICK RUN ^(trainer checklist^)
-echo    1. Classic Purview portal — turn OFF "New Microsoft Purview portal"
-echo    2. ADF Manage -^> Microsoft Purview = Connected
-echo    3. Data Curator on root collection for MI: adf-shared-qgr7mj
-echo.
-echo  Search terms AFTER the run ^(classic catalog search^):
-echo    stsharedqgr7mj
-echo    sample_transactions
-echo    loaded
-echo    cleaned
-echo    aggregates
-echo.
-echo  Open Lineage tab on an asset — ADF appears as a PROCESS node.
-echo  Do NOT search for factory name "adf-shared-qgr7mj" as a catalog asset.
-echo.
-echo ------------------------------------------------------------------------
-echo  Running ready demo pipeline: pl_gov_06_master_medallion_governance
-echo ------------------------------------------------------------------------
+echo  If that folder is missing: this script will re-deploy ADF lab (skip SQL).
 echo.
 
+echo ------------------------------------------------------------------------
+echo  [1/2] Ensuring governance pipelines are deployed (idempotent)...
+echo ------------------------------------------------------------------------
+call shared-adf-lab\orchestrate.cmd --skip-sql --skip-notebook
+if errorlevel 1 (
+  echo WARN ADF deploy had issues — trying run anyway if pipelines already exist.
+)
+
+echo.
+echo ------------------------------------------------------------------------
+echo  [2/2] Running master demo: pl_gov_06_master_medallion_governance
+echo ------------------------------------------------------------------------
 call shared-adf-lab\orchestrate.cmd --run-only --run-pipeline pl_gov_06_master_medallion_governance
 set "RC=%ERRORLEVEL%"
 
 echo.
 echo ========================================================================
-echo  PURVIEW DEMO — NEXT CLICKS ^(5-30 min for lineage sync^)
+echo  NEXT CLICKS
 echo ========================================================================
-echo  1. Azure Portal -^> search pviewrohan4hnv7s -^> Open Purview Studio
-echo  2. Toggle OFF "New Microsoft Purview portal" ^(classic^)
-echo  3. Data catalog -^> Search: sample_transactions  OR  stsharedqgr7mj
-echo  4. Open asset -^> Lineage tab -^> show bronze -^> silver -^> gold edges
-echo  5. ADF Studio Monitor -^> pl_gov_06 Succeeded ^(same story^)
+echo  ADF Studio:
+echo    Author -^> Pipelines -^> 13-governance-purview -^> pl_gov_06
+echo    Monitor -^> confirm Succeeded + child runs 01-05
 echo.
-echo  Full teach page: docs\purview-teach-demo.html
-echo  Portal guide:    shared-adf-lab\docs\purview_portal_search_guide.md
+echo  Purview (classic — New portal OFF):
+echo    Search catalog: sample_transactions   OR   stsharedqgr7mj
+echo    Open asset -^> Lineage tab  (wait 5-30 min after first run)
+echo.
+echo  Full detail: docs\purview-teach-demo.html
 echo ========================================================================
 exit /b %RC%

@@ -3,125 +3,354 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>FinLedger — Purview teach + demo</title>
+<title>FinLedger — Purview detailed steps + ADF pipelines</title>
 <style>
-  :root { --bg:#0f1419; --card:#1a2332; --text:#e7ecf3; --muted:#9aa8bc; --accent:#3d9cf0; --ok:#3ecf8e; --warn:#f0b429; }
+  :root { --bg:#0f1419; --card:#1a2332; --text:#e7ecf3; --muted:#9aa8bc; --accent:#3d9cf0; --ok:#3ecf8e; --warn:#f0b429; --bad:#f07178; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--text); line-height:1.55; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.55; }
   header { padding:2rem 1.5rem; background:linear-gradient(135deg,#132337,#1a3a4a); border-bottom:1px solid #2a3a4e; }
-  header h1 { margin:0 0 .4rem; font-size:1.75rem; }
-  header p { margin:0; color:var(--muted); max-width:52rem; }
-  main { max-width:52rem; margin:0 auto; padding:1.5rem; }
-  h2 { color:var(--accent); margin-top:2rem; border-bottom:1px solid #2a3a4e; padding-bottom:.35rem; }
-  h3 { margin-top:1.25rem; }
+  header h1 { margin:0 0 .4rem; font-size:1.85rem; }
+  header p { margin:0; color:var(--muted); max-width:58rem; }
+  nav.toc { background:var(--card); border-bottom:1px solid #2a3a4e; padding:.75rem 1.5rem; position:sticky; top:0; z-index:5; }
+  nav.toc a { color:var(--accent); margin-right:1rem; font-size:.9rem; text-decoration:none; }
+  main { max-width:58rem; margin:0 auto; padding:1.5rem; }
+  h2 { color:var(--accent); margin-top:2.25rem; border-bottom:1px solid #2a3a4e; padding-bottom:.4rem; scroll-margin-top:3.5rem; }
+  h3 { margin-top:1.4rem; color:#c5d4e8; }
+  h4 { margin:.9rem 0 .35rem; color:#9ec5ea; }
   .card { background:var(--card); border:1px solid #2a3a4e; border-radius:10px; padding:1rem 1.2rem; margin:1rem 0; }
-  .cmd { background:#0b1016; border:1px solid #2a3a4e; border-radius:8px; padding:.85rem 1rem; font-family:Consolas,monospace; font-size:.92rem; overflow-x:auto; white-space:pre-wrap; }
-  table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:.95rem; }
+  .card.warn { border-color:#6a5420; background:#241e10; }
+  .card.ok { border-color:#1e5c40; background:#10241a; }
+  .card.bad { border-color:#6a3038; background:#241014; }
+  .cmd { background:#0b1016; border:1px solid #2a3a4e; border-radius:8px; padding:.85rem 1rem; font-family:Consolas,monospace; font-size:.9rem; overflow-x:auto; white-space:pre-wrap; }
+  table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:.93rem; }
   th, td { border:1px solid #2a3a4e; padding:.55rem .7rem; text-align:left; vertical-align:top; }
   th { background:#132337; }
   .ok { color:var(--ok); font-weight:600; }
   .warn { color:var(--warn); font-weight:600; }
+  .bad { color:var(--bad); font-weight:600; }
   .analogy { color:#b8c7d9; font-style:italic; }
-  ol.demo li { margin:.45rem 0; }
+  ol.steps > li { margin:.7rem 0; padding-left:.25rem; }
+  ol.steps > li::marker { font-weight:700; color:var(--accent); }
+  .step-box { background:#0b1016; border-left:3px solid var(--accent); padding:.65rem .9rem; margin:.4rem 0 .8rem; border-radius:0 8px 8px 0; }
+  .flow { background:#0b1016; border-radius:8px; padding:1rem; font-family:Consolas,monospace; font-size:.85rem; white-space:pre; overflow-x:auto; }
   a { color:var(--accent); }
-  .flow { background:#0b1016; border-radius:8px; padding:1rem; font-family:Consolas,monospace; font-size:.88rem; white-space:pre; overflow-x:auto; }
+  code { background:#0b1016; padding:.1rem .35rem; border-radius:4px; font-size:.9em; }
+  .pill { display:inline-block; background:#132337; border:1px solid #2a3a4e; border-radius:999px; padding:.15rem .55rem; font-size:.8rem; margin-right:.35rem; }
+  footer { max-width:58rem; margin:2rem auto; padding:1rem 1.5rem 3rem; color:var(--muted); font-size:.9rem; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Microsoft Purview — what to teach + one ready demo</h1>
-  <p>Easy class plan for FinLedger shared estate. One demo component: ADF pipeline <code>pl_gov_06_master_medallion_governance</code>. Run: <code>purview-demo.cmd</code></p>
+  <h1>Microsoft Purview — detailed steps + where the pipelines are</h1>
+  <p>
+    FinLedger shared class. Purview-related ADF pipelines live in folder
+    <strong>13-governance-purview</strong> and are named <code>pl_gov_01</code> … <code>pl_gov_06</code>.
+    If you cannot see them, they are not deployed yet — follow Section B.
+  </p>
 </header>
+
+<nav class="toc">
+  <a href="#why-missing">Why missing?</a>
+  <a href="#deploy">Deploy pipelines</a>
+  <a href="#find-adf">Find in ADF</a>
+  <a href="#pipelines">All pl_gov_*</a>
+  <a href="#run-demo">Run demo</a>
+  <a href="#purview-portal">Purview portal</a>
+  <a href="#teach">Teach script</a>
+  <a href="#troubleshoot">Troubleshoot</a>
+</nav>
+
 <main>
 
-<section>
-  <h2>1. What &amp; why (teach first — 10 minutes)</h2>
-  <div class="card">
-    <p><strong>Purview</strong> = searchable catalog of your data estate + <strong>lineage</strong> (how data flows).</p>
-    <p class="analogy">Analogy: Purview is Google for your data. ADF cooks the food; Purview is the recipe book that shows where each dish came from.</p>
+<!-- ========== A ========== -->
+<section id="why-missing">
+  <h2>A. Why you do not see any Purview pipeline</h2>
+  <div class="card bad">
+    <p><span class="bad">Common confusion:</span> There is <em>no</em> pipeline literally named “Purview”.
+    The Purview module is the set of pipelines whose names start with <code>pl_gov_</code>
+    inside ADF folder <code>13-governance-purview</code>.</p>
   </div>
   <table>
-    <thead><tr><th>Concept</th><th>Plain language</th><th>In this lab</th></tr></thead>
+    <thead><tr><th>What you expected</th><th>What actually exists</th></tr></thead>
     <tbody>
-      <tr><td><strong>Data Catalog</strong></td><td>Searchable index of files/tables</td><td>Search <code>stsharedqgr7mj</code>, <code>sample_transactions</code></td></tr>
-      <tr><td><strong>Data Map</strong></td><td>Inventory of sources + scans</td><td>Register ADLS / ADF connections</td></tr>
-      <tr><td><strong>Asset</strong></td><td>One thing in the catalog (a path/table)</td><td><code>bronze/loaded/…</code>, <code>silver/cleaned/…</code></td></tr>
-      <tr><td><strong>Lineage</strong></td><td>Graph: bronze → silver → gold</td><td>Asset → <em>Lineage</em> tab after ADF run</td></tr>
-      <tr><td><strong>Glossary</strong></td><td>Business terms (Medallion.Bronze)</td><td>Template JSON on ADLS audit/</td></tr>
-      <tr><td><strong>Classification</strong></td><td>Sensitivity / labels</td><td>User properties on Copy activities</td></tr>
-      <tr><td><strong>ADF ↔ Purview link</strong></td><td>Factory pushes lineage automatically</td><td><code>purview_link.py</code> + Data Curator role</td></tr>
+      <tr><td>A pipeline called “Purview”</td><td><code>pl_gov_05_purview_discovery_lineage</code> and master <code>pl_gov_06_…</code></td></tr>
+      <tr><td>Visible under Author → Pipelines root</td><td>Inside folder <strong>13-governance-purview</strong> (expand the folder tree)</td></tr>
+      <tr><td>Appears after phase 1 only</td><td>Needs <strong>phase 3</strong> / ADF lab deploy (<code>deploy-shared-adf-lab.cmd</code>)</td></tr>
+      <tr><td>Shows in Purview portal as a pipeline asset</td><td>Shows as a <strong>process node on Lineage</strong> of a data path (e.g. <code>sample_transactions</code>)</td></tr>
     </tbody>
   </table>
-</section>
-
-<section>
-  <h2>2. One ready demo component</h2>
   <div class="card">
-    <p><span class="ok">Ready component:</span> <code>pl_gov_06_master_medallion_governance</code></p>
-    <p>Folder in ADF: <code>13-governance-purview</code>. Chains bronze land → silver cleanse → gold aggregate → catalog metadata → discovery/lineage.</p>
-    <div class="flow">bronze/incoming → bronze/loaded → silver/cleaned → silver/aggregates (gold layer)
-   pl_gov_01         pl_gov_02          pl_gov_03</div>
+    <p><strong>Factory:</strong> <code>adf-shared-qgr7mj</code> · <strong>RG:</strong> <code>rg-shared-class1</code></p>
+    <p><strong>Purview account:</strong> <code>pviewrohan4hnv7s</code> (often in <code>rg-rohan-class1</code>)</p>
   </div>
-  <h3>One command</h3>
-  <div class="cmd">purview-demo.cmd</div>
-  <p>Or:</p>
-  <div class="cmd">cd shared-adf-lab
-orchestrate.cmd --run-only --run-pipeline pl_gov_06_master_medallion_governance</div>
 </section>
 
-<section>
-  <h2>3. Trainer demo script (15 minutes)</h2>
-  <ol class="demo">
-    <li><strong>Theory</strong> — Purview = catalog + lineage (table above).</li>
-    <li><strong>Run demo</strong> — <code>purview-demo.cmd</code> from repo root (wait for Succeeded).</li>
-    <li><strong>ADF Monitor</strong> — open <code>pl_gov_06</code> → show child pipelines 01→05 Succeeded.</li>
-    <li><strong>Classic Purview</strong> — toggle <span class="warn">OFF</span> “New Microsoft Purview portal”.</li>
-    <li><strong>Search catalog</strong> — type <code>sample_transactions</code> or <code>stsharedqgr7mj</code> (not the factory name).</li>
-    <li><strong>Lineage tab</strong> — show ADF as a process node on the path (wait 5–30 min after first run if empty).</li>
-    <li><strong>Optional</strong> — show <code>audit/governance/</code> JSON on ADLS as the Databricks-side “manifest” story.</li>
+<!-- ========== B ========== -->
+<section id="deploy">
+  <h2>B. Deploy the Purview pipelines (if folder is empty)</h2>
+  <p>From the repo root on Windows:</p>
+  <div class="cmd">git pull
+az login
+infra-walkthrough.cmd --phase 3</div>
+  <p>Or only the ADF lab:</p>
+  <div class="cmd">deploy-shared-adf-lab.cmd</div>
+  <p>Or force governance deploy + run the demo:</p>
+  <div class="cmd">purview-demo.cmd</div>
+  <div class="card ok">
+    <p><span class="ok">Success signal in the terminal:</span> lines like
+    <code>Governance pipeline pl_gov_01_…</code> … <code>pl_gov_06_…</code>
+    and later <code>ADF … linked to Purview pview…</code>.</p>
+  </div>
+  <h3>Verify with Azure CLI (optional)</h3>
+  <div class="cmd">az datafactory pipeline list -g rg-shared-class1 --factory-name adf-shared-qgr7mj --query "[?contains(name,'pl_gov')].name" -o tsv</div>
+  <p>You should see six names. If the list is empty → re-run phase 3 / <code>deploy-shared-adf-lab.cmd</code>.</p>
+</section>
+
+<!-- ========== C ========== -->
+<section id="find-adf">
+  <h2>C. Find the pipelines in ADF Studio — click by click</h2>
+  <ol class="steps">
+    <li>
+      <strong>Open ADF Studio for the shared factory</strong>
+      <div class="step-box">
+        Azure Portal → search <code>adf-shared-qgr7mj</code> → open the Data Factory →
+        <strong>Launch Studio</strong><br/>
+        Or direct:
+        <a href="https://adf.azure.com/en/authoring?factory=%2Fsubscriptions%2Fa64c0dd2-3a31-4604-bde3-3d40c7d5e8be%2FresourceGroups%2Frg-shared-class1%2Fproviders%2FMicrosoft.DataFactory%2Ffactories%2Fadf-shared-qgr7mj" target="_blank" rel="noopener">Open ADF Authoring (adf-shared-qgr7mj)</a>
+      </div>
+    </li>
+    <li>
+      <strong>Left pencil icon = Author</strong>
+      <div class="step-box">Bottom-left or left rail → <strong>Author</strong> (pencil).</div>
+    </li>
+    <li>
+      <strong>Expand Pipelines → folder tree</strong>
+      <div class="step-box">
+        Under <strong>Pipelines</strong> you will see numbered folders:<br/>
+        <span class="pill">01-core-copy</span>
+        <span class="pill">…</span>
+        <span class="pill">13-governance-purview</span> ← <strong>this one</strong>
+      </div>
+    </li>
+    <li>
+      <strong>Open folder <code>13-governance-purview</code></strong>
+      <div class="step-box">
+        Click the chevron to expand. You must see these six pipelines:<br/>
+        <code>pl_gov_01_medallion_bronze_land</code><br/>
+        <code>pl_gov_02_medallion_silver_cleanse</code><br/>
+        <code>pl_gov_03_medallion_gold_aggregate</code><br/>
+        <code>pl_gov_04_governance_catalog_metadata</code><br/>
+        <code>pl_gov_05_purview_discovery_lineage</code><br/>
+        <code>pl_gov_06_master_medallion_governance</code> ← <strong>demo master</strong>
+      </div>
+    </li>
+    <li>
+      <strong>If the folder does not exist</strong>
+      <div class="step-box">
+        Use the pipeline search box at the top of Author and type <code>pl_gov</code>.
+        Still empty → Section B (deploy). Do not look under Databricks or Purview portal for these names.
+      </div>
+    </li>
+    <li>
+      <strong>Confirm Purview link on the factory</strong>
+      <div class="step-box">
+        ADF Studio → <strong>Manage</strong> (toolbox) → <strong>Microsoft Purview</strong> →
+        status should be <span class="ok">Connected</span> to <code>pviewrohan4hnv7s</code>.
+        If Disconnected → re-run phase 3 / <code>purview-demo.cmd</code> and grant Data Curator (Section F).
+      </div>
+    </li>
   </ol>
 </section>
 
-<section>
-  <h2>4. Critical gotchas (teach these)</h2>
+<!-- ========== D ========== -->
+<section id="pipelines">
+  <h2>D. Every Purview-related pipeline (what each does)</h2>
+  <div class="flow">pl_gov_06 (MASTER)
+  ├─ pl_gov_01  Bronze land (Copy incoming → loaded)
+  ├─ pl_gov_02  Silver cleanse (Mapping Data Flow)
+  ├─ pl_gov_03  Gold aggregate (Mapping Data Flow)
+  ├─ pl_gov_04  Catalog / glossary JSON (Lookup + variables)
+  └─ pl_gov_05  Purview discovery + lineage Copy (Get Metadata ×3)</div>
+
   <table>
-    <thead><tr><th>Mistake</th><th>Fix</th></tr></thead>
+    <thead><tr><th>Pipeline</th><th>Purview idea it teaches</th><th>What happens</th></tr></thead>
     <tbody>
-      <tr><td>New Purview portal ON</td><td><span class="warn">Turn OFF</span> — ADF lineage only in classic portal</td></tr>
-      <tr><td>Search <code>adf-shared-qgr7mj</code></td><td>Factory name is not a catalog asset — search paths instead</td></tr>
-      <tr><td>No lineage after run</td><td>Grant <strong>Data Curator</strong> to MI <code>adf-shared-qgr7mj</code> on Purview root collection; wait 5–30 min</td></tr>
-      <tr><td>ADF Manage → Purview Disconnected</td><td>Re-run phase 3 / <code>purview_link.py</code>; check account <code>pviewrohan4hnv7s</code></td></tr>
+      <tr>
+        <td><code>pl_gov_01_medallion_bronze_land</code></td>
+        <td>Data <strong>asset</strong> + classification tags</td>
+        <td>Copy bronze <code>incoming</code> → <code>loaded</code>; user properties mark medallion layer</td>
+      </tr>
+      <tr>
+        <td><code>pl_gov_02_medallion_silver_cleanse</code></td>
+        <td><strong>Lineage</strong> via Data Flow</td>
+        <td>Runs <code>df_01_bronze_cleanse</code> → silver cleaned</td>
+      </tr>
+      <tr>
+        <td><code>pl_gov_03_medallion_gold_aggregate</code></td>
+        <td><strong>Lineage</strong> to gold layer</td>
+        <td>Runs <code>df_02_channel_aggregate</code> → aggregates (gold layer path)</td>
+      </tr>
+      <tr>
+        <td><code>pl_gov_04_governance_catalog_metadata</code></td>
+        <td><strong>Glossary / catalog</strong> workflow</td>
+        <td>Reads <code>purview_catalog_template.json</code> from ADLS audit/</td>
+      </tr>
+      <tr>
+        <td><code>pl_gov_05_purview_discovery_lineage</code></td>
+        <td><strong>Scan / discovery</strong> + lineage edge</td>
+        <td>Get Metadata on bronze/silver/gold folders + Copy to reinforce lineage</td>
+      </tr>
+      <tr>
+        <td><code>pl_gov_06_master_medallion_governance</code></td>
+        <td><strong>End-to-end</strong> demo</td>
+        <td>Execute Pipeline chain 01→05. <strong>This is the one demo component.</strong></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="analogy">Analogy: <code>pl_gov_06</code> is the full dinner service. Purview is the guest book that records which kitchen station prepared each course.</p>
+</section>
+
+<!-- ========== E ========== -->
+<section id="run-demo">
+  <h2>E. Run the ready demo — detailed steps</h2>
+  <h3>Option 1 — one command (recommended)</h3>
+  <div class="cmd">cd C:\Azure\azure-infra-class
+git pull
+az login
+purview-demo.cmd</div>
+
+  <h3>Option 2 — from ADF Studio UI</h3>
+  <ol class="steps">
+    <li>Author → folder <code>13-governance-purview</code> → open <code>pl_gov_06_master_medallion_governance</code>.</li>
+    <li>Click <strong>Debug</strong> (or <strong>Add trigger</strong> → Trigger now).</li>
+    <li>Confirm parameters: <code>run_id=session3-lab</code> (defaults are fine).</li>
+    <li>Go to <strong>Monitor</strong> → Pipeline runs → wait until status <span class="ok">Succeeded</span>.</li>
+    <li>Click the run → expand Activity runs → you should see Execute Pipeline for 01, 02, 03, 04, 05.</li>
+  </ol>
+
+  <h3>Option 3 — CLI from shared-adf-lab</h3>
+  <div class="cmd">cd shared-adf-lab
+orchestrate.cmd --run-only --run-pipeline pl_gov_06_master_medallion_governance</div>
+
+  <div class="card warn">
+    <p><span class="warn">After Succeeded:</span> wait <strong>5–30 minutes</strong> before lineage appears in Purview.
+    ADF pushes lineage asynchronously.</p>
+  </div>
+</section>
+
+<!-- ========== F ========== -->
+<section id="purview-portal">
+  <h2>F. Purview portal — detailed clicks (classic only for ADF lineage)</h2>
+  <div class="card warn">
+    <p><span class="warn">CRITICAL:</span> Toggle <strong>OFF</strong> “New Microsoft Purview portal”.
+    ADF lineage does <em>not</em> show in the new portal.</p>
+  </div>
+
+  <h3>F1 — Open classic Purview</h3>
+  <ol class="steps">
+    <li>Azure Portal → search <code>pviewrohan4hnv7s</code> → <strong>Open Microsoft Purview governance portal</strong>.</li>
+    <li>Top of screen: ensure <strong>New Microsoft Purview portal = OFF</strong>.</li>
+    <li>You should be in classic Governance / Data Catalog experience.</li>
+  </ol>
+
+  <h3>F2 — One-time: grant ADF Data Curator (if lineage never appears)</h3>
+  <ol class="steps">
+    <li>Classic portal → <strong>Data map</strong> → <strong>Access control</strong> (or Collections → Root).</li>
+    <li><strong>Root collection</strong> → Role assignments → <strong>Add</strong>.</li>
+    <li>Role: <strong>Data Curator</strong>.</li>
+    <li>Member: managed identity / SPN named <code>adf-shared-qgr7mj</code>.</li>
+    <li>Save. Re-run <code>pl_gov_06</code> once.</li>
+  </ol>
+
+  <h3>F3 — Search the catalog (not global home search)</h3>
+  <ol class="steps">
+    <li><strong>Data catalog</strong> → Overview → use the <strong>Search catalog</strong> box.</li>
+    <li>Search these terms (one at a time):</li>
+  </ol>
+  <table>
+    <thead><tr><th>Search</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>stsharedqgr7mj</code></td><td>Storage account / lake assets</td></tr>
+      <tr><td><code>sample_transactions</code></td><td>Bronze CSV — best for Lineage tab</td></tr>
+      <tr><td><code>loaded</code></td><td>Bronze loaded folder</td></tr>
+      <tr><td><code>cleaned</code></td><td>Silver cleansed</td></tr>
+      <tr><td><code>aggregates</code></td><td>Gold aggregates path</td></tr>
+      <tr><td><code>adf-shared-qgr7mj</code></td><td class="bad">Usually ZERO results — not a catalog asset</td></tr>
+    </tbody>
+  </table>
+
+  <h3>F4 — Open Lineage</h3>
+  <ol class="steps">
+    <li>Open a result (e.g. sample_transactions or a loaded path).</li>
+    <li>Click the <strong>Lineage</strong> tab.</li>
+    <li>You should see edges / process nodes for ADF Copy or Data Flow activities after sync.</li>
+    <li>Compare names with ADF Monitor → <code>pl_gov_06</code> activity list (same story, two portals).</li>
+  </ol>
+
+  <h3>F5 — Optional: register + scan ADLS if search is empty</h3>
+  <ol class="steps">
+    <li>Data map → Sources → Register → Azure Data Lake Storage Gen2.</li>
+    <li>Account <code>stsharedqgr7mj</code> → New scan → containers <code>bronze</code>, <code>silver</code>, <code>audit</code> → Run.</li>
+    <li>Wait for scan complete → search again.</li>
+  </ol>
+</section>
+
+<!-- ========== G ========== -->
+<section id="teach">
+  <h2>G. What to teach in class (easy order)</h2>
+  <table>
+    <thead><tr><th>#</th><th>Minutes</th><th>Teach</th><th>Show</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>5</td><td>Purview = Google for data; lineage = who fed whom</td><td>This page Section A–D</td></tr>
+      <tr><td>2</td><td>3</td><td>Where pipelines live</td><td>ADF → <code>13-governance-purview</code></td></tr>
+      <tr><td>3</td><td>5</td><td>Run master demo</td><td><code>purview-demo.cmd</code> or Debug <code>pl_gov_06</code></td></tr>
+      <tr><td>4</td><td>5</td><td>Monitor child pipelines</td><td>ADF Monitor activity runs</td></tr>
+      <tr><td>5</td><td>10</td><td>Classic Purview search + Lineage</td><td>Search <code>sample_transactions</code></td></tr>
+      <tr><td>6</td><td>5</td><td>Gotchas</td><td>New portal OFF; don’t search factory name</td></tr>
+    </tbody>
+  </table>
+  <div class="card">
+    <p><strong>Student practice checklist</strong></p>
+    <ul>
+      <li>□ Can open folder <code>13-governance-purview</code> and name <code>pl_gov_06</code></li>
+      <li>□ Can explain why there is no pipeline literally called “Purview”</li>
+      <li>□ Can find Lineage tab after searching a path</li>
+      <li>□ Knows classic portal is required for ADF lineage</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========== H ========== -->
+<section id="troubleshoot">
+  <h2>H. Troubleshooting</h2>
+  <table>
+    <thead><tr><th>Symptom</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>No <code>13-governance-purview</code> folder</td><td><code>git pull</code> then <code>infra-walkthrough.cmd --phase 3</code> or <code>deploy-shared-adf-lab.cmd</code></td></tr>
+      <tr><td>Search <code>pl_gov</code> empty in ADF</td><td>Wrong factory — must be <code>adf-shared-qgr7mj</code>, not a personal factory</td></tr>
+      <tr><td>Purview Manage = Disconnected</td><td>Re-deploy governance / phase 3; set <code>PURVIEW_ACCOUNT_NAME=pviewrohan4hnv7s</code> in .env if needed</td></tr>
+      <tr><td>Lineage empty after run</td><td>Data Curator for <code>adf-shared-qgr7mj</code>; wait 5–30 min; classic portal OFF new UI</td></tr>
+      <tr><td>Searched factory name, zero hits</td><td>Expected — search <code>sample_transactions</code> / <code>stsharedqgr7mj</code> instead</td></tr>
+      <tr><td>New portal shows no ADF</td><td>Turn New portal <strong>OFF</strong></td></tr>
     </tbody>
   </table>
 </section>
 
 <section>
-  <h2>5. What students should practice</h2>
+  <h2>I. Related files in the repo</h2>
   <ul>
-    <li>Explain catalog vs lineage in one sentence each.</li>
-    <li>Run <code>purview-demo.cmd</code> (or watch trainer run it).</li>
-    <li>Find one asset by search and open the Lineage tab.</li>
-    <li>Point to the matching pipeline in ADF Monitor.</li>
+    <li><code>purview-demo.cmd</code> — one-command demo</li>
+    <li><code>shared-adf-lab/scripts/adf_governance.py</code> — creates all <code>pl_gov_*</code></li>
+    <li><code>shared-adf-lab/scripts/purview_link.py</code> — links factory to Purview</li>
+    <li><a href="../shared-adf-lab/docs/purview_portal_search_guide.md">purview_portal_search_guide.md</a></li>
+    <li><a href="../shared-adf-lab/docs/adf_purview_medallion_governance_guide.md">adf_purview_medallion_governance_guide.md</a></li>
   </ul>
-</section>
-
-<section>
-  <h2>6. Deeper docs (when you have more time)</h2>
-  <ul>
-    <li><a href="../shared-adf-lab/docs/purview_portal_search_guide.md">purview_portal_search_guide.md</a> — exact clicks + search terms</li>
-    <li><a href="../shared-adf-lab/docs/adf_purview_medallion_governance_guide.md">adf_purview_medallion_governance_guide.md</a> — all pl_gov_* concepts</li>
-    <li><a href="../session-2/adf-course/module-06-governance-cicd-ops/06-03-push-lineage-to-purview.md">06-03 Push lineage to Purview</a></li>
-  </ul>
-</section>
-
-<section>
-  <h2>7. Names for this class</h2>
-  <div class="card">
-    <p>Purview account: <code>pviewrohan4hnv7s</code> (often in <code>rg-rohan-class1</code>)</p>
-    <p>ADF: <code>adf-shared-qgr7mj</code> · Storage: <code>stsharedqgr7mj</code> · RG: <code>rg-shared-class1</code></p>
-  </div>
 </section>
 
 </main>
+<footer>
+  FinLedger shared estate · ADF <code>adf-shared-qgr7mj</code> · Purview <code>pviewrohan4hnv7s</code> ·
+  Folder <code>13-governance-purview</code>
+</footer>
 </body>
 </html>

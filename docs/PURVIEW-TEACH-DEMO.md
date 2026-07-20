@@ -1,30 +1,41 @@
-# Purview — what to teach + one ready demo
+# Purview — detailed teach + where the pipelines are
 
-**Teach page (HTML):** [purview-teach-demo.html](purview-teach-demo.html)  
-**One command:** `purview-demo.cmd` (repo root)
+**Open the HTML (full click-by-click):** [purview-teach-demo.html](purview-teach-demo.html)
 
-## Teach (easy)
+## Why you see “no Purview pipeline”
 
-| Concept | One-liner |
-|---------|-----------|
-| Purview | Google for your data estate (catalog + lineage) |
-| Catalog / asset | Searchable file/table/path |
-| Lineage | Graph: bronze → silver → gold |
-| ADF ↔ Purview | Factory pushes Copy/Data Flow lineage automatically |
+There is **no** pipeline named `Purview`. Look in ADF Studio:
 
-**Critical:** Classic Purview portal only for ADF lineage (turn **OFF** “New Microsoft Purview portal”). Search paths (`sample_transactions`, `stsharedqgr7mj`) — not the factory name.
+1. Factory **`adf-shared-qgr7mj`**
+2. **Author** → **Pipelines** → folder **`13-governance-purview`**
+3. Pipelines: `pl_gov_01` … `pl_gov_06`
 
-## Ready demo component
+If the folder is missing → deploy first:
 
-Pipeline: **`pl_gov_06_master_medallion_governance`** (ADF folder `13-governance-purview`)
+```cmd
+git pull
+infra-walkthrough.cmd --phase 3
+```
+
+## One-command demo
 
 ```cmd
 purview-demo.cmd
 ```
 
-Then: ADF Monitor → Succeeded → classic Purview → Search catalog → open asset → **Lineage** tab (wait 5–30 min if first sync).
+Deploys governance pipelines if needed, then runs **`pl_gov_06_master_medallion_governance`**.
 
-## Deeper guides
+## Quick pipeline map
 
-- [shared-adf-lab/docs/purview_portal_search_guide.md](../shared-adf-lab/docs/purview_portal_search_guide.md)
-- [shared-adf-lab/docs/adf_purview_medallion_governance_guide.md](../shared-adf-lab/docs/adf_purview_medallion_governance_guide.md)
+| Pipeline | Role |
+|----------|------|
+| `pl_gov_01` | Bronze Copy |
+| `pl_gov_02` | Silver Data Flow |
+| `pl_gov_03` | Gold Data Flow |
+| `pl_gov_04` | Catalog JSON |
+| `pl_gov_05` | Discovery + lineage |
+| `pl_gov_06` | **Master demo** (runs 01→05) |
+
+## Purview UI
+
+Classic portal only (New portal **OFF**) → Search `sample_transactions` → **Lineage** tab.
