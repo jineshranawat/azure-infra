@@ -25,6 +25,9 @@ if not exist "..\.venv\Scripts\python.exe" (
   )
   ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt
   cd shared-adf-lab
+) else (
+  REM Keep ADF SDK on 9.x — v10 breaks activity constructors used by this lab
+  "..\.venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q "azure-mgmt-datafactory>=9.0.0,<10.0.0"
 )
 
 "..\.venv\Scripts\python.exe" scripts\run_shared_adf.py %*

@@ -69,6 +69,28 @@ SAMPLE_CSV = Path(__file__).resolve().parent.parent.parent / "day8" / "data" / "
 RETURNS_CSV = Path(__file__).resolve().parent.parent / "data" / "returns_raw.csv"
 
 
+def _assert_adf_sdk() -> None:
+    """Class lab targets azure-mgmt-datafactory 9.x (v10 moved activity kwargs under type_properties)."""
+    try:
+        import azure.mgmt.datafactory as adf_pkg
+    except Exception:
+        return
+    ver = getattr(adf_pkg, "__version__", "0")
+    major_s = ver.split(".", 1)[0]
+    try:
+        major = int(major_s)
+    except ValueError:
+        return
+    if major >= 10:
+        raise SystemExit(
+            f"Unsupported azure-mgmt-datafactory {ver}.\n"
+            "This lab requires 9.x (v10 breaks ForEachActivity/IfCondition constructors).\n"
+            "Fix (from repo root):\n"
+            '  .venv\\Scripts\\python.exe -m pip install "azure-mgmt-datafactory>=9.0.0,<10.0.0"\n'
+            "Then re-run: deploy-shared-adf-lab.cmd   or   purview-demo.cmd\n"
+        )
+
+
 def _upload_bronze_samples(cfg, estate) -> None:
     """Upload sample CSV to incoming + loaded so copy pipelines have source data."""
     from azure.core.exceptions import HttpResponseError
@@ -603,6 +625,7 @@ def main() -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(levelname)s — %(message)s",
     )
+    _assert_adf_sdk()
 
     cfg = load_config()
 
