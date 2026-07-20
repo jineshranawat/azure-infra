@@ -105,7 +105,7 @@ Master entry: **`infra-walkthrough.cmd`**
 | **9** | `release-medallion-governance.cmd` → `scripts/release_medallion_governance.py` | Build → deploy → ADF governance → job |
 | **10** | `cost-dashboard.cmd` + cost notebook deploy | HTML bill + `/Shared/day9/cost_management_master` |
 | **11** | `ensure_eventhub_lab.py`, `deploy_*_lab.py`, … | Optional EH / system / perf / DAG |
-| **12** | `orchestrate.cmd` | **Different** personal RG (uksouth) |
+| **12** | `orchestrate.cmd` (guarded by `scripts/phase12_guard.py`) | **Different** personal RG (uksouth). **Skips** when `LEARNER=shared` or `LOCATION=eastus` — shared-class students stop after phase 11. |
 
 ### B.1 What we have created so far (shared estate inventory)
 

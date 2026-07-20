@@ -330,21 +330,15 @@ exit /b 0
 
 :p12
 call :banner 12 "ALTERNATE personal Class-1 (uksouth) - separate estate"
-echo This creates rg-^<learner^>-class1 — NOT the shared class estate.
+echo This creates rg-^<learner^>-class1 — NOT the shared class estate rg-shared-class1.
 echo.
-findstr /I /B /C:"LEARNER=shared" ".env" >nul 2>&1
-if not errorlevel 1 (
-  echo SKIP Phase 12 on this machine: LEARNER=shared is the SHARED class estate.
-  echo Phase 12 is for a personal Class-1 lab only.
+"%PY%" scripts\phase12_guard.py
+if "%ERRORLEVEL%"=="0" (
   echo.
-  echo To run Phase 12 on a personal laptop:
-  echo   1^) Set LEARNER=yourid  ^(2-10 lowercase letters/digits^)
-  echo   2^) Set LOCATION=uksouth
-  echo   3^) Re-run: infra-walkthrough.cmd --phase 12
-  echo.
-  echo Shared-class students: stop after phase 11 — you are done.
+  echo Phase 12 skipped safely ^(shared-class / wrong LOCATION^). Exit 0.
   exit /b 0
 )
+echo.
 echo Press Ctrl+C to cancel, or continue in 8 seconds...
 timeout /t 8
 call orchestrate.cmd
