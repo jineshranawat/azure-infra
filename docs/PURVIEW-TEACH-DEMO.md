@@ -1,41 +1,22 @@
-# Purview — detailed teach + where the pipelines are
+# Microsoft Purview — complete guide for new joiners
 
-**Open the HTML (full click-by-click):** [purview-teach-demo.html](purview-teach-demo.html)
+**Open the full HTML (recommended):** [purview-teach-demo.html](purview-teach-demo.html)
 
-## Why you see “no Purview pipeline”
+That page is written for day-1 joiners: restaurant analogies, every Purview concept, where `pl_gov_*` pipelines live, deploy/find/run/lineage steps, and links to the Microsoft Learn docs used to verify each step.
 
-There is **no** pipeline named `Purview`. Look in ADF Studio:
+## Quick facts
 
-1. Factory **`adf-shared-qgr7mj`**
-2. **Author** → **Pipelines** → folder **`13-governance-purview`**
-3. Pipelines: `pl_gov_01` … `pl_gov_06`
+| Item | Value |
+|------|--------|
+| Demo component | `pl_gov_06_master_medallion_governance` |
+| ADF folder | `13-governance-purview` |
+| One command | `purview-demo.cmd` |
+| Purview account | `pviewrohan4hnv7s` |
+| Factory | `adf-shared-qgr7mj` |
 
-If the folder is missing → deploy first:
+## Official sources used
 
-```cmd
-git pull
-infra-walkthrough.cmd --phase 3
-```
-
-## One-command demo
-
-```cmd
-purview-demo.cmd
-```
-
-Deploys governance pipelines if needed, then runs **`pl_gov_06_master_medallion_governance`**.
-
-## Quick pipeline map
-
-| Pipeline | Role |
-|----------|------|
-| `pl_gov_01` | Bronze Copy |
-| `pl_gov_02` | Silver Data Flow |
-| `pl_gov_03` | Gold Data Flow |
-| `pl_gov_04` | Catalog JSON |
-| `pl_gov_05` | Discovery + lineage |
-| `pl_gov_06` | **Master demo** (runs 01→05) |
-
-## Purview UI
-
-Classic portal only (New portal **OFF**) → Search `sample_transactions` → **Lineage** tab.
+- [Connect Data Factory to Purview](https://learn.microsoft.com/en-us/azure/data-factory/connect-data-factory-to-azure-purview)
+- [ADF lineage in Data Map](https://learn.microsoft.com/en-us/purview/data-map-lineage-azure-data-factory)
+- [Tutorial: Push lineage to Purview](https://learn.microsoft.com/en-us/azure/data-factory/tutorial-push-lineage-to-purview)
+- [Classic lineage user guide](https://learn.microsoft.com/en-us/purview/data-gov-classic-lineage-user-guide)
