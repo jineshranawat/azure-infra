@@ -271,24 +271,26 @@ def resolve_databricks_cluster(host: str, token: str, configured_id: str) -> str
 
 
 def resolve_databricks_token(host: str, configured_token: str) -> str:
-    """Prefer a working PAT; otherwise transparently refresh through Azure CLI."""
+    """Prefer Azure AD from az login; fall back to PAT. Stale PATs are the #1 class failure."""
+    try:
+        aad_token = _azure_ad_databricks_token()
+        if _databricks_token_works(host, aad_token):
+            print("INFO  Databricks authentication: fresh Azure AD token is valid.")
+            return aad_token
+        print("WARN  Azure AD token rejected — trying DATABRICKS_TOKEN from .env...")
+    except SystemExit as exc:
+        print(f"WARN  Azure AD unavailable ({str(exc).split(chr(10), 1)[0][:120]}) — trying PAT...")
+
     token = configured_token.strip().strip('"').strip("'")
     if token and _databricks_token_works(host, token):
         print("INFO  Databricks authentication: configured PAT is valid.")
         return token
-    if token:
-        print("WARN  Databricks PAT is invalid/expired - refreshing with Azure AD.")
-    else:
-        print("INFO  Databricks PAT not configured - using Azure AD.")
-    aad_token = _azure_ad_databricks_token()
-    if not _databricks_token_works(host, aad_token):
-        raise SystemExit(
-            "Azure AD login succeeded, but Databricks rejected the token. "
-            "Use the same account that has access to the workspace, or ask the trainer "
-            "to add the account under Databricks Admin > Users."
-        )
-    print("INFO  Databricks authentication: fresh Azure AD token is valid.")
-    return aad_token
+
+    raise SystemExit(
+        "Could not authenticate to Databricks (Azure AD and PAT both failed). "
+        "Run: git pull && az login && re-run the phase. "
+        "Use the same account that can open the shared Databricks workspace."
+    )
 
 
 def load_config() -> SharedAdfConfig:

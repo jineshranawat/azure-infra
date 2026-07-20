@@ -211,37 +211,44 @@ def _token_preflight(host: str, token: str) -> bool:
 
 
 def _resolve_token(file_env: dict[str, str], host: str) -> tuple[str, str]:
-    """Return (token, source_label). Prefer valid PAT from .env; else Azure AD via az login."""
+    """Return (token, source_label).
+
+    Prefer Azure AD from `az login` first — stale PATs in .env are the #1 class
+    failure (403 Invalid access token). Fall back to DATABRICKS_TOKEN only when
+    AAD is unavailable or rejected.
+    """
     az = _find_az()
+
+    # 1) Azure AD (az login) — primary for classroom
+    try:
+        aad = _aad_databricks_token(az)
+        if _token_preflight(host, aad):
+            logger.info("Databricks auth: Azure AD token via az login — OK")
+            return aad, "aad"
+        logger.warning(
+            "Azure AD token rejected by Databricks — trying DATABRICKS_TOKEN from .env…"
+        )
+    except SystemExit as exc:
+        logger.warning("Azure AD token unavailable (%s) — trying DATABRICKS_TOKEN…", str(exc).split("\n", 1)[0][:160])
+
+    # 2) PAT from .env / environment
     pat = _normalize_secret(
         file_env.get("DATABRICKS_TOKEN") or os.environ.get("DATABRICKS_TOKEN", "")
     )
-    if pat:
-        if _token_preflight(host, pat):
-            logger.info("Databricks auth: DATABRICKS_TOKEN from .env (PAT) — OK")
-            return pat, "pat"
-        logger.warning(
-            "DATABRICKS_TOKEN in .env was rejected (invalid/expired). "
-            "Falling back to Azure AD token from az login…"
-        )
-    else:
-        logger.info("DATABRICKS_TOKEN not set — using Azure AD token from az login…")
+    if pat and _token_preflight(host, pat):
+        logger.info("Databricks auth: DATABRICKS_TOKEN from .env (PAT) — OK")
+        return pat, "pat"
 
-    aad = _aad_databricks_token(az)
-    if not _token_preflight(host, aad):
-        raise SystemExit(
-            "Azure AD token also rejected by Databricks.\n"
-            "Checklist:\n"
-            f"  1) az account set --subscription {SHARED_SUB}\n"
-            "  2) az login (same work account that can open the workspace in browser)\n"
-            f"  3) Portal → {WORKSPACE} → Launch Workspace — confirm you can open it\n"
-            "  4) Trainer: add your user to the Databricks workspace (Admin → Users)\n"
-            "  5) Or put a fresh PAT in .env:\n"
-            "       DATABRICKS_TOKEN=dapi...   (no quotes, no spaces)\n"
-            f"       DATABRICKS_HOST=https://…  (optional; auto-detected from {WORKSPACE})\n"
-        )
-    logger.info("Databricks auth: Azure AD token via az login — OK")
-    return aad, "aad"
+    raise SystemExit(
+        "Could not authenticate to Databricks (Azure AD and PAT both failed).\n"
+        "Checklist:\n"
+        "  1) git pull\n"
+        "  2) az login   ← complete browser MFA; use the account that opens the workspace\n"
+        f"  3) az account set --subscription {SHARED_SUB}\n"
+        f"  4) Portal → {WORKSPACE} → Launch Workspace (confirm access)\n"
+        "  5) Optional: put a fresh PAT in .env as DATABRICKS_TOKEN=dapi... (no quotes)\n"
+        "     Or remove the DATABRICKS_TOKEN line so az login is used every time.\n"
+    )
 
 
 def _storage_key_works(az: str, key: str) -> bool:

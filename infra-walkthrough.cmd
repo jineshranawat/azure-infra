@@ -308,6 +308,8 @@ exit /b 0
 
 :p11
 call :banner 11 "Optional stretch labs (soft - continue on failure)"
+echo Auth: uses az login Azure AD token first (ignores stale DATABRICKS_TOKEN in .env).
+echo If you still see Invalid access token: git pull ^& az login ^& re-run --phase 11
 echo Event Hub lab...
 "%PY%" scripts\ensure_eventhub_lab.py
 if errorlevel 1 echo SKIP/WARN ensure_eventhub_lab
@@ -323,6 +325,7 @@ if errorlevel 1 echo SKIP/WARN perf lab
 if errorlevel 1 echo SKIP/WARN dag lab
 echo.
 echo Optional: run-50-problems.cmd  (submits cluster job - costs DBUs)
+echo Phase 11 finished (stretch labs are soft — warnings are OK).
 exit /b 0
 
 :p12
