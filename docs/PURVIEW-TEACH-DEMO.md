@@ -1,20 +1,22 @@
 # Microsoft Purview — complete guide for new joiners
 
-**Open the full HTML (recommended):** [purview-teach-demo.html](purview-teach-demo.html)
+**Open the full HTML:** [purview-teach-demo.html](purview-teach-demo.html)
 
-That page is written for day-1 joiners: restaurant analogies, every Purview concept, where `pl_gov_*` pipelines live, deploy/find/run/lineage steps, and links to the Microsoft Learn docs used to verify each step.
+## Do not miss — OUR lab steps (Section 0)
 
-## Quick facts
+After understanding concepts, every student must complete:
 
-| Item | Value |
-|------|--------|
-| Demo component | `pl_gov_06_master_medallion_governance` |
-| ADF folder | `13-governance-purview` |
-| One command | `purview-demo.cmd` |
-| Purview account | `pviewrohan4hnv7s` |
-| Factory | `adf-shared-qgr7mj` |
+1. `git pull` + `az login`
+2. Pin SDK: `pip install --force-reinstall azure-mgmt-datafactory==9.3.0`
+3. `infra-walkthrough.cmd --phase 3` (creates `13-governance-purview` / `pl_gov_*`)
+4. ADF UI: open folder **13-governance-purview** → `pl_gov_06`
+5. Manage → Microsoft Purview = **Connected** (+ Data Curator if needed)
+6. `purview-demo.cmd` → Monitor Succeeded
+7. Classic Purview → search `sample_transactions` → **Lineage** tab
+8. Optional: open `audit/governance/` on `stsharedqgr7mj`
+9. Exit ticket (analogy + folder + commands)
 
-## Official sources used
+## Official sources
 
 - [Connect Data Factory to Purview](https://learn.microsoft.com/en-us/azure/data-factory/connect-data-factory-to-azure-purview)
 - [ADF lineage in Data Map](https://learn.microsoft.com/en-us/purview/data-map-lineage-azure-data-factory)

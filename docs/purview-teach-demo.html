@@ -86,7 +86,21 @@
     color:var(--muted); font-size:.88rem;
   }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
-  @media (max-width:800px) { .grid2 { grid-template-columns:1fr; } nav.toc { position:static; } }
+  .lab-do {
+    border:2px solid #3ecf8e; background:linear-gradient(180deg,#10261c 0%,#162032 40%);
+    box-shadow:0 0 0 1px #1e5c40 inset;
+  }
+  .lab-do h2 { color:var(--ok); border-bottom-color:#2d6b4f; }
+  .checklist-step {
+    display:grid; grid-template-columns:2.2rem 1fr; gap:.55rem;
+    background:#080d14; border:1px solid var(--line); border-radius:10px;
+    padding:.85rem 1rem; margin:.65rem 0;
+  }
+  .checklist-step .n {
+    width:2rem; height:2rem; border-radius:50%; background:#1e5c40; color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.9rem;
+  }
+  nav.toc a.hot { color:var(--ok); font-weight:700; }
 </style>
 </head>
 <body>
@@ -94,8 +108,8 @@
 <header>
   <h1>Microsoft Purview — complete guide for new joiners</h1>
   <p class="lead">
-    Read this top to bottom. Every concept uses a plain-language analogy, then maps to the FinLedger shared lab,
-    then to verified Microsoft Learn steps. You do <strong>not</strong> need prior Purview experience.
+    Read the concepts first, then do <strong>our FinLedger lab steps</strong> (Section&nbsp;0 / “Do this in our lab”).
+    Every command and click below is for <em>this</em> class estate — nothing optional is left as a vague “try Purview”.
   </p>
   <div class="badge-row">
     <span class="badge">Audience: day-1 / new joiners</span>
@@ -106,6 +120,7 @@
 </header>
 
 <nav class="toc">
+  <a class="hot" href="#lab-do">0. DO THIS IN OUR LAB</a>
   <a href="#story">1. Story</a>
   <a href="#concepts">2. Concepts</a>
   <a href="#estate">3. Our estate</a>
@@ -123,7 +138,126 @@
 
 <main>
 
-<!-- ===================== 1 ===================== -->
+<!-- ===================== 0 LAB DO ===================== -->
+<section id="lab-do" class="card lab-do">
+  <h2 style="margin-top:0">0. Do this in OUR lab (after you understand — do not skip)</h2>
+  <p>
+    Concepts alone are not enough. Complete <strong>every checkbox</strong> below on the shared FinLedger estate.
+    Copy-paste commands from the repo root (e.g. <code>C:\Azure\azure-infra-class</code>).
+  </p>
+
+  <div class="checklist-step">
+    <div class="n">1</div>
+    <div>
+      <strong>Pull latest code + login</strong>
+      <div class="cmd">git pull
+az login
+az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be</div>
+      <div class="verify"><strong>Done when:</strong> <code>az account show</code> shows the training subscription.</div>
+    </div>
+  </div>
+
+  <div class="checklist-step">
+    <div class="n">2</div>
+    <div>
+      <strong>Pin ADF Python SDK 9.3.0</strong> (avoids ForEach / type-null errors)
+      <div class="cmd">.venv\Scripts\python.exe -m pip install --force-reinstall azure-mgmt-datafactory==9.3.0</div>
+      <div class="verify"><strong>Done when:</strong> print version is <code>9.3.0</code>:
+        <code>.venv\Scripts\python.exe -c "import azure.mgmt.datafactory as a; print(a.__version__)"</code></div>
+    </div>
+  </div>
+
+  <div class="checklist-step">
+    <div class="n">3</div>
+    <div>
+      <strong>Deploy ADF lab + governance pipelines</strong> (creates folder <code>13-governance-purview</code>)
+      <div class="cmd">infra-walkthrough.cmd --phase 3</div>
+      <p>Or: <code>deploy-shared-adf-lab.cmd</code></p>
+      <div class="verify"><strong>Done when:</strong> CLI lists six names:
+        <div class="cmd">az datafactory pipeline list -g rg-shared-class1 --factory-name adf-shared-qgr7mj --query "[?contains(name,'pl_gov')].name" -o tsv</div>
+        Expect <code>pl_gov_01</code> … <code>pl_gov_06</code>.
+      </div>
+    </div>
+  </div>
+
+  <div class="checklist-step">
+    <div class="n">4</div>
+    <div>
+      <strong>See the pipelines in OUR factory (UI)</strong>
+      <div class="step-box">
+        Open <a href="https://adf.azure.com/en/authoring?factory=%2Fsubscriptions%2Fa64c0dd2-3a31-4604-bde3-3d40c7d5e8be%2FresourceGroups%2Frg-shared-class1%2Fproviders%2FMicrosoft.DataFactory%2Ffactories%2Fadf-shared-qgr7mj" target="_blank" rel="noopener">adf-shared-qgr7mj</a>
+        → Author → Pipelines → folder <strong>13-governance-purview</strong>
+        → open <code>pl_gov_06_master_medallion_governance</code>.
+      </div>
+      <div class="verify"><strong>Done when:</strong> you can open all six <code>pl_gov_*</code> pipelines. There is <em>no</em> pipeline named “Purview”.</div>
+    </div>
+  </div>
+
+  <div class="checklist-step">
+    <div class="n">5</div>
+    <div>
+      <strong>Confirm ADF ↔ Purview link (OUR factory)</strong>
+      <div class="step-box">ADF Studio → Manage → Microsoft Purview → status <span class="ok">Connected</span> to <code>pviewrohan4hnv7s</code>.</div>
+      <p>If Disconnected: classic Purview → root collection → add <strong>Data Curator</strong> for MI <code>adf-shared-qgr7mj</code> → re-check Connected.</p>
+      <div class="verify"><strong>Done when:</strong> Manage shows Connected (Microsoft Learn requirement for lineage push).</div>
+    </div>
+  </div>
+
+  <div class="checklist-step">
+    <div class="n">6</div>
+    <div>
+      <strong>Run OUR demo component</strong> (master governance pipeline)
+      <div class="cmd">purview-demo.cmd</div>
+      <p>Same as: <code>shared-adf-lab\orchestrate.cmd --run-only --run-pipeline pl_gov_06_master_medallion_governance</code></p>
+      <p>Or UI: open <code>pl_gov_06</code> → Debug / Trigger now.</p>
+      <div class="verify"><strong>Done when:</strong> ADF Monitor → <code>pl_gov_06</code> = <span class="ok">Succeeded</span> and child Execute Pipeline 01–05 succeeded.</div>
+    </div>
+  </div>
+
+  <div class="checklist-step">
+    <div class="n">7</div>
+    <div>
+      <strong>See lineage in OUR Purview account</strong>
+      <div class="step-box">
+        Portal → <code>pviewrohan4hnv7s</code> → classic portal (<span class="warn">New portal OFF</span>)<br/>
+        Data catalog → Search: <code>sample_transactions</code> or <code>stsharedqgr7mj</code><br/>
+        Open asset → <strong>Lineage</strong> tab (wait 5–30 min after first run if empty).
+      </div>
+      <div class="verify"><strong>Done when:</strong> you can point to a process/edge and relate it to the ADF run you just did.</div>
+    </div>
+  </div>
+
+  <div class="checklist-step">
+    <div class="n">8</div>
+    <div>
+      <strong>Optional but recommended — ADLS governance files from OUR code</strong>
+      <div class="step-box">
+        Storage browser / Storage Explorer → account <code>stsharedqgr7mj</code> → container <code>audit</code> → folder <code>governance/</code><br/>
+        Look for catalog / manifest JSON produced by the lab (e.g. Purview catalog template / Databricks governance manifest after medallion release).
+      </div>
+      <div class="verify"><strong>Done when:</strong> you opened at least one JSON under <code>audit/governance/</code> and can say what it is for (glossary/catalog teaching).</div>
+    </div>
+  </div>
+
+  <div class="checklist-step">
+    <div class="n">9</div>
+    <div>
+      <strong>Exit ticket (write or say aloud)</strong>
+      <ul class="check">
+        <li>□ Purview in one sentence + restaurant analogy</li>
+        <li>□ Folder name: <code>13-governance-purview</code> · demo pipeline: <code>pl_gov_06</code></li>
+        <li>□ Why Data Curator on <code>adf-shared-qgr7mj</code> matters</li>
+        <li>□ Classic portal OFF new UI · search path not factory name</li>
+        <li>□ Commands you ran: phase 3 + <code>purview-demo.cmd</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="analogy" style="margin-top:1rem">
+    Analogy: Sections 1–2 teach the recipe book. Section 0 is you actually cooking tonight’s service in <em>our</em> kitchen — skip it and you only read the menu.
+  </p>
+</section>
+
 <section id="story">
   <h2>1. The big story (read this first)</h2>
 
@@ -148,9 +282,8 @@
     <p><span class="ok">What you will be able to do after this page:</span></p>
     <ul class="check">
       <li>Explain Purview in one sentence using the restaurant analogy</li>
+      <li>Complete <a href="#lab-do">Section 0 — Do this in OUR lab</a> (phase 3 + purview-demo.cmd + Lineage)</li>
       <li>Find folder <code>13-governance-purview</code> and name the six <code>pl_gov_*</code> pipelines</li>
-      <li>Run the master demo <code>pl_gov_06</code> (or <code>purview-demo.cmd</code>)</li>
-      <li>Open classic Purview, search a path, and open the Lineage tab</li>
       <li>Know why ADF must have <strong>Data Curator</strong> on the Purview root collection</li>
     </ul>
   </div>
@@ -503,12 +636,11 @@ infra-walkthrough.cmd --phase 3</div>
   <table>
     <thead><tr><th>Mins</th><th>Do</th><th>Say</th></tr></thead>
     <tbody>
-      <tr><td>8</td><td>Section 1–2</td><td>Restaurant analogy; Purview = guest book</td></tr>
-      <tr><td>5</td><td>Section 4–6</td><td>Show folder 13; no pipeline named Purview</td></tr>
+      <tr><td>8</td><td>Sections 1–2</td><td>Restaurant analogy; Purview = guest book</td></tr>
+      <tr><td>5</td><td>Sections 4–6</td><td>Show folder 13; no pipeline named Purview</td></tr>
       <tr><td>5</td><td>Section 7</td><td>Connected + Data Curator key</td></tr>
-      <tr><td>10</td><td>Section 8</td><td>Run purview-demo.cmd / Debug pl_gov_06</td></tr>
-      <tr><td>10</td><td>Section 9</td><td>Classic portal; search; Lineage tab</td></tr>
-      <tr><td>5</td><td>FAQ</td><td>New portal OFF; wait for sync; factory name search</td></tr>
+      <tr><td>20</td><td><strong>Section 0 hands-on</strong></td><td>Students run OUR steps 1–7 (phase 3 + demo + Lineage)</td></tr>
+      <tr><td>5</td><td>Section 0 step 9</td><td>Exit ticket — nothing left “optional”</td></tr>
     </tbody>
   </table>
   <div class="card ok">
