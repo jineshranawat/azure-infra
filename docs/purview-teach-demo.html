@@ -125,6 +125,7 @@
   <a href="#concepts">2. Concepts</a>
   <a href="#estate">3. Our estate</a>
   <a href="#pipelines">4. Pipelines</a>
+  <a class="hot" href="#governance">4b. AFTER DEMO — Governance</a>
   <a href="#deploy">5. Deploy</a>
   <a href="#find">6. Find in ADF</a>
   <a href="#connect">7. Connect ADF↔Purview</a>
@@ -198,7 +199,12 @@ az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be</div>
     <div>
       <strong>Confirm ADF ↔ Purview link (OUR factory)</strong>
       <div class="step-box">ADF Studio → Manage → Microsoft Purview → status <span class="ok">Connected</span> to <code>pviewrohan4hnv7s</code>.</div>
-      <p>If Disconnected: classic Purview → root collection → add <strong>Data Curator</strong> for MI <code>adf-shared-qgr7mj</code> → re-check Connected.</p>
+      <p><span class="warn">Do not</span> paste the Purview resource ID into the “Connect to a Purview account” side panel if you see
+        <code>Cannot read properties of undefined (reading 'variable')</code> — that is an ADF Studio UI bug.
+        Cancel → run <code>purview-demo.cmd</code> (or phase 3) so <code>purview_link.py</code> sets the link in code.</p>
+      <p>Correct resource ID (copy carefully — account ends with <code>…4hnv7s</code>, not <code>…4hnn7s</code>):</p>
+      <div class="cmd">/subscriptions/a64c0dd2-3a31-4604-bde3-3d40c7d5e8be/resourceGroups/rg-rohan-class1/providers/Microsoft.Purview/accounts/pviewrohan4hnv7s</div>
+      <p>If still Disconnected after code link: classic Purview → root collection → add <strong>Data Curator</strong> for MI <code>adf-shared-qgr7mj</code>.</p>
       <div class="verify"><strong>Done when:</strong> Manage shows Connected (Microsoft Learn requirement for lineage push).</div>
     </div>
   </div>
@@ -285,6 +291,7 @@ az account set --subscription a64c0dd2-3a31-4604-bde3-3d40c7d5e8be</div>
       <li>Complete <a href="#lab-do">Section 0 — Do this in OUR lab</a> (phase 3 + purview-demo.cmd + Lineage)</li>
       <li>Find folder <code>13-governance-purview</code> and name the six <code>pl_gov_*</code> pipelines</li>
       <li>Know why ADF must have <strong>Data Curator</strong> on the Purview root collection</li>
+      <li>After the demo: open <a href="#governance">Section 4b — Governance detailed</a> and answer the exit ticket</li>
     </ul>
   </div>
 </section>
@@ -452,6 +459,201 @@ silver/cleaned   --pl_gov_03 DF-->   silver/aggregates  (logical GOLD layer)</di
   ├─ Execute → pl_gov_03
   ├─ Execute → pl_gov_04
   └─ Execute → pl_gov_05</div>
+</section>
+
+<!-- ===================== 4b AFTER DEMO GOVERNANCE ===================== -->
+<section id="governance" class="card lab-do">
+  <h2 style="margin-top:0">4b. After the demo — what is the <em>governance</em> part? (detailed)</h2>
+  <p>
+    Students often ask: <em>“We ran the demo — so what exactly is governance in Purview?”</em>
+    Read this section <strong>after</strong> <code>purview-demo.cmd</code> / <code>pl_gov_06</code>.
+    Nothing below replaces Sections 0–4; it <strong>adds structure</strong> so the demo sticks.
+  </p>
+
+  <div class="card quote">
+    <p><strong>One-line answer:</strong></p>
+    <p>
+      Governance in Purview = one place that answers
+      <em>what data we have, who owns it, how sensitive it is, and how it moved</em> —
+      it is <span class="warn">not</span> another ETL / transform pipeline.
+    </p>
+    <p class="analogy">
+      Analogy: bronze/silver/gold <strong>move and cook</strong> the food; Purview is the
+      <strong>recipe book + guest book</strong> that proves where each dish came from.
+    </p>
+  </div>
+
+  <h3>A. Governance concepts (as per this lab’s documentation)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Concept</th>
+        <th>What it is</th>
+        <th>Why it matters</th>
+        <th>In OUR lab</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Microsoft Purview</strong></td>
+        <td>Data governance catalog for the estate</td>
+        <td>Stops “where did this KPI come from?” Slack hunts</td>
+        <td>Account <code>pviewrohan4hnv7s</code></td>
+      </tr>
+      <tr>
+        <td><strong>Data Map</strong></td>
+        <td>Inventory of sources + assets</td>
+        <td>Know what exists before you trust it</td>
+        <td>ADLS <code>stsharedqgr7mj</code> + ADF lineage push</td>
+      </tr>
+      <tr>
+        <td><strong>Asset</strong></td>
+        <td>One searchable thing (path / table / file)</td>
+        <td>Find the right dataset fast</td>
+        <td>Search <code>sample_transactions</code>, <code>cleaned</code>, <code>aggregates</code> — <span class="bad">not</span> the factory name</td>
+      </tr>
+      <tr>
+        <td><strong>Lineage</strong></td>
+        <td>Graph: source → process → sink</td>
+        <td>Audit + debug “who changed this?”</td>
+        <td>Auto from <strong>Copy / Data Flow</strong> when ADF is <span class="ok">Connected</span></td>
+      </tr>
+      <tr>
+        <td><strong>Glossary</strong></td>
+        <td>Business terms (e.g. <code>Medallion.Bronze</code>)</td>
+        <td>Same word means the same thing across teams</td>
+        <td>Seeded in <code>audit/governance/purview_catalog_template.json</code></td>
+      </tr>
+      <tr>
+        <td><strong>Classifications</strong></td>
+        <td>Sensitivity labels (PII, Internal)</td>
+        <td>Compliance / who may see what</td>
+        <td>Catalog JSON + Copy <strong>user properties</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Ownership</strong></td>
+        <td>Steward for an asset / term</td>
+        <td>Accountability</td>
+        <td>In JSON; assign for real in Purview Studio (production)</td>
+      </tr>
+      <tr>
+        <td><strong>Scan / discovery</strong></td>
+        <td>Purview crawls a registered source</td>
+        <td>Keeps catalog current</td>
+        <td>Optional ADLS scan; class shortcut = <code>pl_gov_05</code> Get Metadata</td>
+      </tr>
+      <tr>
+        <td><strong>ADF ↔ Purview link</strong></td>
+        <td>Factory points at Purview; MI pushes lineage</td>
+        <td>Lineage without a special “lineage activity”</td>
+        <td><strong>Data Curator</strong> on root collection for MI <code>adf-shared-qgr7mj</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="cite">
+    Same definitions live in
+    <a href="../shared-adf-lab/docs/adf_purview_medallion_governance_guide.md">adf_purview_medallion_governance_guide.md</a>
+    (Section A — WHAT &amp; WHY) and in <a href="#concepts">Section 2</a> above.
+  </p>
+
+  <h3>B. How the demo maps to governance (folder <code>13-governance-purview</code>)</h3>
+  <div class="card warn">
+    <p>
+      There is <span class="warn">no</span> pipeline named “Purview”.
+      Governance = this <strong>folder + six <code>pl_gov_*</code> pipelines</strong>.
+    </p>
+  </div>
+  <div class="flow">pl_gov_06 (MASTER) — end-to-end governance demo
+  ├─ pl_gov_01 Bronze Copy      → asset + classification tags
+  ├─ pl_gov_02 Silver Data Flow → lineage (cleanse)
+  ├─ pl_gov_03 Gold Data Flow   → lineage (aggregate)
+  ├─ pl_gov_04 Catalog Lookup   → glossary / catalog workflow
+  └─ pl_gov_05 Get Metadata+Copy→ discovery idea + lineage edge</div>
+  <p><strong>Medallion path the governance pipelines track</strong> (they describe the flow; they do not replace it):</p>
+  <div class="flow">bronze/incoming
+       │  pl_gov_01 Copy
+       ▼
+bronze/loaded
+       │  pl_gov_02 Mapping Data Flow
+       ▼
+silver/cleaned
+       │  pl_gov_03 Mapping Data Flow
+       ▼
+silver/aggregates   ← logical GOLD layer (glossary still says Medallion.Gold)</div>
+
+  <h3>C. What students must remember after the demo</h3>
+  <ol class="steps">
+    <li>
+      <strong>Governance ≠ transform</strong>
+      <div class="step-box">Bronze / silver / gold <em>move</em> data. Purview <em>describes and traces</em> it.</div>
+    </li>
+    <li>
+      <strong>Lineage is automatic</strong> for supported ADF activities once Connected
+      <div class="step-box">Copy, Mapping Data Flow (and Execute SSIS) push lineage — no extra “lineage activity” inside the pipeline.
+        <span class="cite">MS Learn:
+          <a href="https://learn.microsoft.com/en-us/purview/data-map-lineage-azure-data-factory" target="_blank" rel="noopener">ADF lineage in Data Map</a>
+        </span>
+      </div>
+    </li>
+    <li>
+      <strong>Connected + Data Curator</strong> are required
+      <div class="step-box">ADF Manage → Microsoft Purview = Connected. MI <code>adf-shared-qgr7mj</code> needs Data Curator on the Purview root collection.</div>
+    </li>
+    <li>
+      <strong>Use classic Purview portal</strong> for this class
+      <div class="step-box">Turn <span class="warn">New Microsoft Purview portal OFF</span>. Search asset → open <strong>Lineage</strong> tab.</div>
+    </li>
+    <li>
+      <strong>Wait 5–30 minutes</strong> after first successful run before expecting full Lineage.
+    </li>
+    <li>
+      <strong>Open ADLS teaching files</strong>
+      <div class="step-box">
+        Storage <code>stsharedqgr7mj</code> → container <code>audit</code> → folder <code>governance/</code>
+        → <code>purview_catalog_template.json</code> (glossary, classifications, assets, lineage edges).
+      </div>
+    </li>
+  </ol>
+
+  <h3>D. Exit-ticket answers (say these out loud)</h3>
+  <table>
+    <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>What is governance here?</td>
+        <td>Catalog + lineage + glossary + classifications + ownership for FinLedger data.</td>
+      </tr>
+      <tr>
+        <td>Where in ADF?</td>
+        <td>Folder <code>13-governance-purview</code>, demo pipeline <code>pl_gov_06</code>.</td>
+      </tr>
+      <tr>
+        <td>Where in Purview?</td>
+        <td>Classic portal → search <code>sample_transactions</code> → <strong>Lineage</strong>.</td>
+      </tr>
+      <tr>
+        <td>Which commands?</td>
+        <td><code>purview-demo.cmd</code> — or phase 3 then run <code>pl_gov_06</code>.</td>
+      </tr>
+      <tr>
+        <td>Restaurant analogy?</td>
+        <td>Purview = recipe book + guest book; ADF = kitchen timetable; lineage = CCTV of the pass.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>E. Where to click next on this page</h3>
+  <ul class="check">
+    <li><a href="#concepts">Section 2 — Concepts</a> (what / why / analogy per topic)</li>
+    <li><a href="#pipelines">Section 4 — Pipelines</a> (six <code>pl_gov_*</code> table)</li>
+    <li><a href="#connect">Section 7 — Connect ADF↔Purview</a> (Data Curator)</li>
+    <li><a href="#view">Section 9 — View lineage</a> (classic portal clicks)</li>
+    <li><a href="#lab-do">Section 0 — Do this in OUR lab</a> if you have not run the demo yet</li>
+  </ul>
+  <div class="verify">
+    <strong>Done when:</strong> you can explain governance in one sentence, name the folder + master pipeline,
+    and open Lineage on <code>sample_transactions</code> in the classic portal.
+  </div>
 </section>
 
 <!-- ===================== 5 ===================== -->
@@ -662,7 +864,8 @@ infra-walkthrough.cmd --phase 3</div>
     <tbody>
       <tr><td>No Purview pipeline</td><td>Looking for wrong name</td><td>Folder <code>13-governance-purview</code> / <code>pl_gov_*</code></td></tr>
       <tr><td>Folder missing</td><td>Phase 3 not done</td><td><code>infra-walkthrough.cmd --phase 3</code></td></tr>
-      <tr><td>ForEachActivity / type null errors</td><td>ADF SDK v10</td><td><code>pip install --force-reinstall azure-mgmt-datafactory==9.3.0</code></td></tr>
+      <tr><td>Manage → Purview UI: “Cannot read properties of undefined (reading 'variable')”</td><td>ADF Studio bug when pasting resource ID by hand / truncated ID</td><td><strong>Do not paste in UI.</strong> Cancel the panel. Link via code: <code>purview-demo.cmd</code> or phase 3. Correct account is <code>pviewrohan4hnv7s</code> (note <strong>nv</strong>, not nn). Then refresh Manage → Microsoft Purview → Connected.</td></tr>
+      <tr><td>ForEachActivity unexpected keyword 'items'</td><td>ADF SDK v10</td><td><code>pip install --force-reinstall azure-mgmt-datafactory==9.3.0</code> then re-run phase 3</td></tr>
       <tr><td>Manage → Purview Disconnected</td><td>No Data Curator / not linked</td><td>Section 7</td></tr>
       <tr><td>Lineage empty after run</td><td>Async delay / wrong portal</td><td>Wait 5–30 min; classic portal OFF new UI</td></tr>
       <tr><td>Search factory name = 0 hits</td><td>Expected</td><td>Search <code>sample_transactions</code></td></tr>

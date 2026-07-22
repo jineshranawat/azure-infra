@@ -2,6 +2,9 @@
 
 **Open the full HTML:** [purview-teach-demo.html](purview-teach-demo.html)
 
+After the demo, open **Section 4b — After the demo — Governance** in that HTML
+(`#governance`) for the structured explanation students ask for (concepts table, pipeline map, exit tickets).
+
 ## Do not miss — OUR lab steps (Section 0)
 
 After understanding concepts, every student must complete:
@@ -15,6 +18,13 @@ After understanding concepts, every student must complete:
 7. Classic Purview → search `sample_transactions` → **Lineage** tab
 8. Optional: open `audit/governance/` on `stsharedqgr7mj`
 9. Exit ticket (analogy + folder + commands)
+
+### Troubleshoot (common class errors)
+
+| Error | Fix |
+|-------|-----|
+| ADF UI: `Cannot read properties of undefined (reading 'variable')` when pasting Purview resource ID | **Cancel** the Connect panel. Do **not** paste by hand. Run `purview-demo.cmd` or phase 3 so code links ADF. Account must be `pviewrohan4hnv7s` (…**nv**…, not …nn…). |
+| `ForEachActivity.__init__() got an unexpected keyword argument 'items'` | `pip install --force-reinstall azure-mgmt-datafactory==9.3.0` then re-run phase 3 |
 
 ## Official sources
 

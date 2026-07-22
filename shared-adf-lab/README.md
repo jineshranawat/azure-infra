@@ -215,7 +215,7 @@ cd shared-adf-lab
 .\orchestrate.cmd --setup-databricks-integration
 ```
 
-Pipelines are organized in ADF folders `01-core-copy` … `13-governance-purview` (deployed automatically).
+Pipelines are organized in ADF folders `01-core-copy` … `15-enterprise-notify` (deployed automatically).
 
 ### Folder `13-governance-purview` — medallion + Purview (end-to-end)
 
@@ -241,6 +241,34 @@ cd shared-adf-lab
 ```
 
 Optional `.env`: `PURVIEW_ACCOUNT_NAME`, `PURVIEW_RESOURCE_GROUP` — links ADF to Purview for automatic Copy/Data Flow lineage (`scripts/purview_link.py`).
+
+### Enterprise DE playbook — six everyday E2E patterns
+
+**What:** Local one-command demos for patterns every engineer uses: incident notify, DQ gate, watermark, quarantine, config ForEach, audit trail.
+
+**Command:** from repo root `enterprise-de.cmd` (or `enterprise-de.cmd 2` for one UC)  
+**Teach:** [`../docs/enterprise-de-playbook.html`](../docs/enterprise-de-playbook.html) · [ENTERPRISE-DE-PLAYBOOK.md](../docs/ENTERPRISE-DE-PLAYBOOK.md)  
+**Code:** `enterprise-de/run_all.py` · `enterprise-de/scenarios/uc0N_*.py`
+
+### Folder `15-enterprise-notify` — Jira ticket + attach + email
+
+**What:** On pipeline failure, raise a Jira issue, attach the ADF run log, and send email (Web + Databricks notebook). Same as playbook **UC01**.
+
+**Local visible demo:** from repo root run `enterprise-notify.cmd` (Jira UI `:18080`, mail outbox `:18081`)  
+**20-hour curriculum (ADF + Databricks step-by-step):** [`../docs/enterprise-notify-20h.html`](../docs/enterprise-notify-20h.html) · `enterprise-notify-20h.cmd` · [ENTERPRISE-NOTIFY-20H.md](../docs/ENTERPRISE-NOTIFY-20H.md)  
+**Teach HTML (quick):** [`../docs/enterprise-jira-email-demo.html`](../docs/enterprise-jira-email-demo.html)  
+**Guide:** `docs/enterprise_jira_email_guide.md`  
+**Code:** `scripts/adf_notify.py` · `enterprise-notify/` · `notebooks/nb_incident_jira_email.py` → workspace `/Shared/shared-adf/nb_incident_jira_email`
+
+| Pipeline | Role |
+|----------|------|
+| `pl_ntf_01_simulate_work_or_fail` | If + Fail |
+| `pl_ntf_02_web_create_jira` | Web → create issue |
+| `pl_ntf_03_web_send_email` | Web → mail / Logic App |
+| `pl_ntf_04_databricks_incident` | Notebook create + attach + email |
+| `pl_ntf_05_master_incident` | Master: fail → incident |
+
+Azure ADF cannot call `localhost` — local cmd is the browser proof; set `JIRA_BASE_URL` / `NOTIFY_MAIL_URL` for cloud endpoints.
 
 **Databricks medallion from ADF:** `pl_db_14_databricks_medallion_governance` (folder `14-databricks-medallion-governance`) runs `nb_medallion_governance_master` — same audit/governance paths as Day 9 capstone.
 
@@ -286,6 +314,7 @@ This runs:
 3. `adf_pipelines.py` — linked services, datasets, core pipelines
 4. `adf_advanced.py` + `adf_databricks.py` — advanced + Databricks teaching pipelines
 5. `adf_governance.py` — medallion + Purview folder `13-governance-purview`
+6. `adf_notify.py` — enterprise Jira + email folder `15-enterprise-notify`
 6. Upload bronze samples + `audit/watermark.json` + governance catalog JSON
 7. Import Databricks notebooks (`nb_adf_hello`, `nb_adf_params_echo`, `nb_adf_bronze_stats`)
 

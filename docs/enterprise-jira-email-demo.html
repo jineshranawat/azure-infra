@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>FinLedger — Enterprise ADF end-to-end: Jira + attach + email</title>
+<style>
+  :root {
+    --bg:#0c1118; --card:#162032; --text:#e8eef6; --muted:#9aabbf;
+    --accent:#4aa3f0; --ok:#3ecf8e; --warn:#f0b429; --bad:#f07178;
+    --line:#243247; --quote:#1a2838;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.65; }
+  header {
+    padding:2.2rem 1.5rem 1.8rem;
+    background:linear-gradient(145deg,#101c2c 0%,#3a1a2c 50%,#1a3f3a 100%);
+    border-bottom:1px solid var(--line);
+  }
+  header h1 { margin:0 0 .5rem; font-size:clamp(1.45rem,3vw,2.05rem); max-width:62rem; }
+  header .lead { margin:0; color:var(--muted); max-width:62rem; font-size:1.05rem; }
+  .badge {
+    display:inline-block; margin:.25rem .35rem .25rem 0; padding:.2rem .65rem;
+    border:1px solid var(--line); border-radius:999px; font-size:.78rem; color:#c9d9ec; background:#0f1824;
+  }
+  nav.toc {
+    background:var(--card); border-bottom:1px solid var(--line);
+    padding:.7rem 1.2rem; position:sticky; top:0; z-index:20;
+    display:flex; flex-wrap:wrap; gap:.35rem .85rem;
+  }
+  nav.toc a { color:var(--accent); text-decoration:none; font-size:.84rem; white-space:nowrap; }
+  nav.toc a.hot { color:var(--ok); font-weight:700; }
+  main { max-width:62rem; margin:0 auto; padding:1.5rem 1.25rem 3rem; }
+  h2 {
+    color:var(--accent); margin:2.5rem 0 .75rem; padding-bottom:.4rem;
+    border-bottom:1px solid var(--line); scroll-margin-top:3.2rem; font-size:1.4rem;
+  }
+  h3 { margin:1.45rem 0 .45rem; color:#c8daf0; font-size:1.1rem; }
+  h4 { margin:1rem 0 .35rem; color:#9ec5ea; }
+  p { margin:.55rem 0; }
+  .card {
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:1rem 1.15rem; margin:1rem 0;
+  }
+  .card.warn { border-color:#6a5420; background:#231d10; }
+  .card.ok { border-color:#1e5c40; background:#0f2319; }
+  .card.bad { border-color:#6a3038; background:#241014; }
+  .card.quote { background:var(--quote); border-left:4px solid var(--accent); border-radius:0 12px 12px 0; }
+  .cmd {
+    background:#080d14; border:1px solid var(--line); border-radius:8px;
+    padding:.9rem 1rem; font-family:Consolas,"Cascadia Mono",monospace;
+    font-size:.86rem; overflow-x:auto; white-space:pre-wrap; margin:.7rem 0;
+  }
+  table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:.92rem; }
+  th, td { border:1px solid var(--line); padding:.55rem .7rem; text-align:left; vertical-align:top; }
+  th { background:#101a28; }
+  .ok { color:var(--ok); font-weight:600; }
+  .warn { color:var(--warn); font-weight:600; }
+  .bad { color:var(--bad); font-weight:600; }
+  .flow {
+    background:#080d14; border-radius:8px; padding:1rem;
+    font-family:Consolas,monospace; font-size:.8rem; white-space:pre; overflow-x:auto;
+  }
+  .verify {
+    background:#0e1f18; border:1px dashed #2d6b4f; border-radius:8px;
+    padding:.65rem .85rem; margin:.45rem 0 .9rem; font-size:.92rem;
+  }
+  .step-box {
+    background:#080d14; border-left:3px solid var(--accent);
+    padding:.7rem .95rem; margin:.4rem 0 .7rem; border-radius:0 8px 8px 0;
+  }
+  code { background:#080d14; padding:.08rem .35rem; border-radius:4px; font-size:.9em; }
+  a { color:var(--accent); }
+  ol.steps > li { margin:.85rem 0; }
+  ol.steps > li::marker { font-weight:700; color:var(--accent); }
+  .checklist-step {
+    display:grid; grid-template-columns:2.2rem 1fr; gap:.55rem;
+    background:#080d14; border:1px solid var(--line); border-radius:10px;
+    padding:.85rem 1rem; margin:.65rem 0;
+  }
+  .checklist-step .n {
+    width:2rem; height:2rem; border-radius:50%; background:#1e5c40; color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.9rem;
+  }
+  .lab-do {
+    border:2px solid #3ecf8e; background:linear-gradient(180deg,#10261c 0%,#162032 45%);
+  }
+  .lab-do h2 { color:var(--ok); border-bottom-color:#2d6b4f; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+  @media (max-width:760px) { .grid2 { grid-template-columns:1fr; } }
+  footer { max-width:62rem; margin:0 auto; padding:0 1.25rem 3rem; color:var(--muted); font-size:.88rem; }
+  .cite { font-size:.85rem; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Enterprise notify — one command: failure → Jira → attach → email</h1>
+  <p class="lead">
+    <strong>Only command you need for the visible demo:</strong> <code>enterprise-notify.cmd</code>.
+    This page explains that command end-to-end: what it runs, the full flow, and every code file.
+    Optional ADF Studio / 20h curriculum is linked below — not required to see a ticket + mail.
+  </p>
+  <div>
+    <span class="badge" style="border-color:#3ecf8e;color:#3ecf8e">ONE CMD: enterprise-notify.cmd</span>
+    <span class="badge">Jira :18080 · Mail :18081</span>
+    <span class="badge"><a href="#cmd-flow" style="color:#4aa3f0;text-decoration:none">Flow</a></span>
+    <span class="badge"><a href="#cmd-code" style="color:#4aa3f0;text-decoration:none">Code overview</a></span>
+    <span class="badge"><a href="enterprise-notify-20h.html" style="color:#9ec5ea;text-decoration:none">20h curriculum →</a></span>
+    <span class="badge"><a href="enterprise-de-playbook.html" style="color:#9ec5ea;text-decoration:none">All 6 DE patterns →</a></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a class="hot" href="#do">0. RUN: enterprise-notify.cmd</a>
+  <a class="hot" href="#cmd-flow">1. Complete flow</a>
+  <a class="hot" href="#cmd-code">2. Complete code overview</a>
+  <a href="#story">3. Story</a>
+  <a href="#map">4. Architecture</a>
+  <a href="#ui-run">5. Optional ADF UI</a>
+  <a href="#ui-build">6. Company build</a>
+  <a href="#sqlfix">7. SQL notes</a>
+  <a href="#exit">8. Exit ticket</a>
+  <a href="#faq">9. FAQ</a>
+</nav>
+
+<main>
+
+<!-- ===================== 0 ONE COMMAND ===================== -->
+<section id="do" class="card lab-do">
+  <h2 style="margin-top:0">0. Run this only — <code>enterprise-notify.cmd</code></h2>
+  <p>From the <strong>repo root</strong> (e.g. <code>D:\azure</code>):</p>
+  <div class="cmd">enterprise-notify.cmd</div>
+  <p>That single command does everything: venv → deps → start Jira+mail → create ticket → attach log → send email.</p>
+
+  <div class="checklist-step">
+    <div class="n">1</div>
+    <div>
+      <strong>Wait for terminal success</strong> — look for <code>[4/4] Email queued</code> and a key like <code>FIN-4</code>.
+    </div>
+  </div>
+  <div class="checklist-step">
+    <div class="n">2</div>
+    <div>
+      <strong>Open Jira</strong>
+      <div class="cmd">http://127.0.0.1:18080/</div>
+      <div class="verify"><strong>Done when:</strong> newest ticket shows summary <code>[ADF] pl_ntf_05_master_incident failed…</code> and an attachment.</div>
+    </div>
+  </div>
+  <div class="checklist-step">
+    <div class="n">3</div>
+    <div>
+      <strong>Open mail outbox</strong>
+      <div class="cmd">http://127.0.0.1:18081/</div>
+      <div class="verify"><strong>Done when:</strong> mail subject/body includes the same <code>FIN-n</code> key.</div>
+    </div>
+  </div>
+  <div class="card warn">
+    <p><span class="warn">Optional later (not part of this one command):</span>
+      ADF Studio folder <code>15-enterprise-notify</code> — see <a href="#ui-run">§5</a>.
+      Deep curriculum: <a href="enterprise-notify-20h.html">enterprise-notify-20h.html</a>.</p>
+  </div>
+</section>
+
+<!-- ===================== 1 COMPLETE FLOW ===================== -->
+<section id="cmd-flow">
+  <h2>1. Complete flow of <code>enterprise-notify.cmd</code></h2>
+  <div class="flow">enterprise-notify.cmd
+│
+├─ [prep]  cd to repo root (%~dp0)
+├─ [prep]  ensure .venv\Scripts\python.exe  (create venv if missing)
+│
+├─ [1/3]   pip install -r requirements.txt
+│            (fastapi, uvicorn, httpx, python-multipart, …)
+│
+├─ [2/3]   python shared-adf-lab\enterprise-notify\start_services.py
+│            ├─ if :18080 /health OK → reuse Jira mock
+│            │  else start uvicorn jira_mock/app.py on 127.0.0.1:18080
+│            └─ if :18081 /health OK → reuse mail sink
+│               else start uvicorn mail_sink/app.py on 127.0.0.1:18081
+│
+└─ [3/3]   python shared-adf-lab\enterprise-notify\client\run_incident_flow.py --force-fail true
+             ├─ wait_healthy(jira) + wait_healthy(mail)
+             ├─ [1/4] write_run_log → out\adf-run-log-&lt;run_id&gt;.txt
+             ├─ [2/4] JiraClient.create_issue → POST /rest/api/2/issue → FIN-n
+             ├─ [3/4] JiraClient.attach_file  → POST .../attachments
+             ├─ [4/4] MailClient.send         → POST /notify
+             └─ print browser URLs + write out\incident-result-&lt;run_id&gt;.json</div>
+
+  <h3>What you should see in the terminal</h3>
+  <div class="cmd">[1/3] Ensure deps ...
+[2/3] Start local Jira mock :18080 + mail sink :18081 ...
+      started: jira-mock  (or already running)
+      started: mail-sink  (or already running)
+[3/3] Run incident flow ...
+[1/4] Simulated ADF failure - log: ...\out\adf-run-log-local-....txt
+[2/4] Jira issue created: FIN-n
+[3/4] Attached run log to FIN-n
+[4/4] Email queued: {'status': 'sent', 'id': '...', 'outbox': 'http://127.0.0.1:18081/mail/...'}</div>
+
+  <h3>Business sequence (same idea as ADF master)</h3>
+  <table>
+    <thead><tr><th>#</th><th>Step</th><th>Meaning</th><th>Where in code</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Simulate failure</td><td>ADF Fail activity analogue</td><td><code>write_run_log</code></td></tr>
+      <tr><td>2</td><td>Create Jira issue</td><td>Raise ticket</td><td><code>JiraClient.create_issue</code></td></tr>
+      <tr><td>3</td><td>Attach run log</td><td>Evidence on ticket</td><td><code>JiraClient.attach_file</code></td></tr>
+      <tr><td>4</td><td>Send email</td><td>Notify owner</td><td><code>MailClient.send</code></td></tr>
+    </tbody>
+  </table>
+  <p class="cite">Re-run the same command anytime — services are reused; ticket numbers increment (FIN-5, FIN-6, …).</p>
+</section>
+
+<!-- ===================== 2 COMPLETE CODE OVERVIEW ===================== -->
+<section id="cmd-code">
+  <h2>2. Complete code overview (every file the cmd touches)</h2>
+
+  <h3>2.1 Entry — <code>enterprise-notify.cmd</code> (repo root)</h3>
+  <table>
+    <thead><tr><th>Line idea</th><th>What / why</th></tr></thead>
+    <tbody>
+      <tr><td><code>cd /d "%~dp0"</code></td><td>Always run from repo root so relative paths work</td></tr>
+      <tr><td>Create <code>.venv</code> if missing</td><td>Clean Windows machine bootstrap</td></tr>
+      <tr><td><code>pip install -r requirements.txt</code></td><td>fastapi, uvicorn, httpx, python-multipart</td></tr>
+      <tr><td>Call <code>start_services.py</code></td><td>Idempotent local Jira + mail</td></tr>
+      <tr><td>Call <code>run_incident_flow.py --force-fail true</code></td><td>Full incident sequence</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.2 Start services — <code>shared-adf-lab/enterprise-notify/start_services.py</code></h3>
+  <div class="cmd">healthy(url) → GET {url}/health
+start(jira-mock, port 18080)  # uvicorn app:app in jira_mock/
+start(mail-sink, port 18081)  # uvicorn app:app in mail_sink/
+# If already healthy → print "already running" (safe re-run)</div>
+
+  <h3>2.3 Jira mock — <code>shared-adf-lab/enterprise-notify/jira_mock/app.py</code></h3>
+  <table>
+    <thead><tr><th>Endpoint</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /</code></td><td>HTML ticket board</td></tr>
+      <tr><td><code>GET /health</code></td><td>Liveness for start_services</td></tr>
+      <tr><td><code>POST /rest/api/2/issue</code></td><td>Create issue → returns <code>key</code> (FIN-n)</td></tr>
+      <tr><td><code>GET /rest/api/2/issue/{key}</code></td><td>Read issue + attachments</td></tr>
+      <tr><td><code>POST /rest/api/2/issue/{key}/attachments</code></td><td>Multipart file attach</td></tr>
+      <tr><td><code>POST /rest/api/2/issue/{key}/comment</code></td><td>Add comment</td></tr>
+    </tbody>
+  </table>
+  <p>Persists under <code>jira_mock/data/issues.json</code> and <code>attachments/</code>.</p>
+
+  <h3>2.4 Mail sink — <code>shared-adf-lab/enterprise-notify/mail_sink/app.py</code></h3>
+  <table>
+    <thead><tr><th>Endpoint</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /</code></td><td>HTML outbox list</td></tr>
+      <tr><td><code>GET /health</code></td><td>Liveness</td></tr>
+      <tr><td><code>POST /notify</code></td><td>Accept Logic-App-shaped JSON; save outbox + <code>.eml</code></td></tr>
+      <tr><td><code>GET /mail/{id}</code></td><td>View one message</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.5 Clients — <code>shared-adf-lab/enterprise-notify/client/</code></h3>
+  <table>
+    <thead><tr><th>File</th><th>Functions</th><th>Maps to enterprise ADF idea</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>jira_client.py</code></td>
+        <td><code>create_issue</code>, <code>attach_file</code>, <code>add_comment</code>, <code>get_issue</code></td>
+        <td>Web create-issue / Databricks attach</td>
+      </tr>
+      <tr>
+        <td><code>mail_client.py</code></td>
+        <td><code>send(to, subject, body, jira_key, run_id)</code></td>
+        <td>Web → Logic App / local <code>/notify</code></td>
+      </tr>
+      <tr>
+        <td><code>run_incident_flow.py</code></td>
+        <td><code>run_flow</code> orchestrates steps 1→4</td>
+        <td>Master pipeline <code>pl_ntf_05</code> (conceptually)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.6 <code>run_incident_flow.py</code> — step detail</h3>
+  <ol class="steps">
+    <li>Read <code>JIRA_BASE_URL</code> / <code>NOTIFY_MAIL_URL</code> / <code>OWNER_EMAIL</code> from env (defaults: localhost + <code>training@example.com</code>).</li>
+    <li><code>wait_healthy</code> until both services answer <code>/health</code>.</li>
+    <li>Cmd always passes <code>--force-fail true</code> (happy path exists if you pass false).</li>
+    <li><code>write_run_log</code> → <code>shared-adf-lab/enterprise-notify/out/adf-run-log-*.txt</code>.</li>
+    <li>Create issue summary like <code>[ADF] pl_ntf_05_master_incident failed — run_id=…</code>.</li>
+    <li>Attach that file; add comment that email is queued.</li>
+    <li>POST mail with ticket key; write <code>out/incident-result-*.json</code>.</li>
+  </ol>
+
+  <h3>2.7 File tree (cmd-related only)</h3>
+  <div class="flow">repo-root\
+  enterprise-notify.cmd                          ← ONE command
+  requirements.txt
+  docs\enterprise-jira-email-demo.html           ← this page
+  shared-adf-lab\enterprise-notify\
+    start_services.py
+    jira_mock\app.py
+    mail_sink\app.py
+    client\
+      jira_client.py
+      mail_client.py
+      run_incident_flow.py
+    out\                                         ← logs + result JSON (gitignored)</div>
+
+  <div class="verify">
+    <strong>Overview complete when:</strong> you can name the three stages of the .cmd ([1/3][2/3][3/3])
+    and the four steps inside stage 3 (fail log → create → attach → email).
+  </div>
+</section>
+
+<!-- ===================== 1 ===================== -->
+<section id="story">
+  <h2>3. The enterprise story (WHAT / WHY / analogy)</h2>
+  <div class="card quote">
+    <p><strong>Restaurant analogy:</strong></p>
+    <p>
+      Dinner service fails (burnt dish = <strong>ADF Fail activity</strong>).<br/>
+      Automatically open a maintenance ticket (<strong>Jira</strong>), staple the CCTV clip
+      (<strong>run-log attachment</strong>), and text the manager (<strong>email</strong>).
+    </p>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h4>What you build</h4>
+      <p>On pipeline failure: create Jira issue → attach evidence → notify owner email.</p>
+    </div>
+    <div class="card">
+      <h4>Why it matters</h4>
+      <p>2am failures need an audit trail + human wake-up — not Slack archaeology.</p>
+    </div>
+  </div>
+  <div class="card warn">
+    <p><span class="warn">Critical constraint:</span> Azure Data Factory and Databricks run <strong>in the cloud</strong>.
+    They <strong>cannot</strong> call <code>http://127.0.0.1</code> on your laptop.</p>
+    <p>That is why the lab has <strong>two layers</strong> with the <strong>same REST shape</strong>:</p>
+    <table>
+      <thead><tr><th>Layer</th><th>Command</th><th>What you see</th></tr></thead>
+      <tbody>
+        <tr><td>Local proof</td><td><code>enterprise-notify.cmd</code></td><td>Jira UI + mail outbox</td></tr>
+        <tr><td>ADF activities</td><td>Folder <code>15-enterprise-notify</code></td><td>Fail / Web / Databricks in Studio</td></tr>
+        <tr><td>Real enterprise</td><td><code>JIRA_BASE_URL</code> + Logic App URL</td><td>Atlassian Jira + Outlook</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===================== 2 ===================== -->
+<section id="map">
+  <h2>4. Architecture map (end-to-end)</h2>
+  <div class="flow">LOCAL (visible)
+  enterprise-notify.cmd
+       │
+       ├─ start Jira mock     http://127.0.0.1:18080
+       ├─ start mail sink     http://127.0.0.1:18081
+       └─ run_incident_flow.py
+              │
+              ├─ [1] write adf-run-log-*.txt     (simulate Fail)
+              ├─ [2] POST /rest/api/2/issue      → FIN-n
+              ├─ [3] POST .../attachments        → attach log
+              └─ [4] POST /notify                → email outbox
+
+AZURE (Studio folder 15-enterprise-notify)
+  pl_ntf_05_master_incident
+       │
+       ├─ Execute pl_ntf_01  (If force_fail → Fail activity)
+       ├─ on Failed → Execute pl_ntf_04  (Databricks notebook:
+       │                 create issue + attach + email via same REST)
+       └─ optional (use_web_activities=true):
+              Execute pl_ntf_02 Web create Jira
+              Execute pl_ntf_03 Web send email</div>
+</section>
+
+<!-- ===================== 3 ===================== -->
+<section id="local">
+  <h2>3. Local demo — step by step detail</h2>
+  <ol class="steps">
+    <li>
+      <strong>Bootstrap</strong>
+      <div class="step-box"><code>enterprise-notify.cmd</code> creates/uses <code>.venv</code>, pip-installs
+        <code>fastapi</code>, <code>uvicorn</code>, <code>httpx</code> from <code>requirements.txt</code>.</div>
+    </li>
+    <li>
+      <strong>Start services (idempotent)</strong>
+      <div class="step-box">
+        <code>start_services.py</code> checks <code>/health</code> on ports <strong>18080</strong> and <strong>18081</strong>.
+        If already up → reuse. If down → start uvicorn in background.
+      </div>
+    </li>
+    <li>
+      <strong>Incident flow</strong>
+      <div class="step-box">
+        <code>client/run_incident_flow.py</code> with <code>--force-fail true</code>:<br/>
+        invents a failed ADF run → creates Jira → attaches log → posts mail JSON.
+      </div>
+    </li>
+    <li>
+      <strong>Open browsers</strong>
+      <div class="step-box">
+        Board: <a href="http://127.0.0.1:18080/">http://127.0.0.1:18080/</a><br/>
+        Inbox: <a href="http://127.0.0.1:18081/">http://127.0.0.1:18081/</a>
+      </div>
+    </li>
+  </ol>
+  <h3>What the Jira mock implements (real API paths)</h3>
+  <table>
+    <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>POST</td><td><code>/rest/api/2/issue</code></td><td>Create ticket (returns <code>key</code>)</td></tr>
+      <tr><td>GET</td><td><code>/rest/api/2/issue/{key}</code></td><td>Read ticket</td></tr>
+      <tr><td>POST</td><td><code>/rest/api/2/issue/{key}/attachments</code></td><td>Attach run log</td></tr>
+      <tr><td>POST</td><td><code>/rest/api/2/issue/{key}/comment</code></td><td>Add comment</td></tr>
+      <tr><td>GET</td><td><code>/</code></td><td>HTML ticket board</td></tr>
+    </tbody>
+  </table>
+  <p class="cite">Same paths work against real Jira Cloud when you change <code>JIRA_BASE_URL</code>.</p>
+  <h3>What the mail sink implements</h3>
+  <table>
+    <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>POST</td><td><code>/notify</code></td><td>Accept Logic-App-shaped JSON (<code>to</code>, <code>subject</code>, <code>body</code>, <code>jira_key</code>)</td></tr>
+      <tr><td>GET</td><td><code>/</code></td><td>HTML outbox list</td></tr>
+      <tr><td>GET</td><td><code>/mail/{id}</code></td><td>View one message + writes <code>.eml</code> on disk</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===================== 4 ===================== -->
+<section id="activities">
+  <h2>4. Each ADF activity explained (enterprise mapping)</h2>
+  <table>
+    <thead><tr><th>ADF activity</th><th>In this lab</th><th>Enterprise meaning</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>If Condition</strong></td>
+        <td><code>pl_ntf_01</code> — <code>force_fail</code></td>
+        <td>Branch on bad data / validation</td>
+      </tr>
+      <tr>
+        <td><strong>Fail</strong></td>
+        <td><code>FailForcedIncident</code></td>
+        <td>Mark run Failed so parent can catch it</td>
+      </tr>
+      <tr>
+        <td><strong>Execute Pipeline</strong></td>
+        <td>Master calls child pipelines</td>
+        <td>Orchestrate work vs incident path</td>
+      </tr>
+      <tr>
+        <td><strong>Activity dependency = Failed</strong></td>
+        <td>Master: on <code>RunSimulateWork</code> Failed → raise incident</td>
+        <td>Only ticket when work fails</td>
+      </tr>
+      <tr>
+        <td><strong>Web</strong></td>
+        <td><code>pl_ntf_02</code> / <code>pl_ntf_03</code></td>
+        <td>Call Jira REST / Logic App HTTP trigger</td>
+      </tr>
+      <tr>
+        <td><strong>Databricks Notebook</strong></td>
+        <td><code>pl_ntf_04</code> → <code>nb_incident_jira_email</code></td>
+        <td>Richer Python: create + multipart attach + email in one place</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===================== 5 ===================== -->
+<section id="pipelines">
+  <h2>5. Pipeline catalogue (folder <code>15-enterprise-notify</code>)</h2>
+  <table>
+    <thead><tr><th>Pipeline</th><th>What it does</th><th>Key parameters</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>pl_ntf_01_simulate_work_or_fail</code></td>
+        <td>If <code>force_fail</code> → Fail; else Set variable ok</td>
+        <td><code>force_fail</code>, <code>run_id</code></td>
+      </tr>
+      <tr>
+        <td><code>pl_ntf_02_web_create_jira</code></td>
+        <td>Web POST create issue</td>
+        <td><code>jira_base_url</code>, <code>run_id</code>, <code>pipeline_name</code></td>
+      </tr>
+      <tr>
+        <td><code>pl_ntf_03_web_send_email</code></td>
+        <td>Web POST mail webhook</td>
+        <td><code>notify_mail_url</code>, <code>owner_email</code></td>
+      </tr>
+      <tr>
+        <td><code>pl_ntf_04_databricks_incident</code></td>
+        <td>Notebook: create + attach + email</td>
+        <td>All of the above + optional Jira token</td>
+      </tr>
+      <tr>
+        <td><code>pl_ntf_05_master_incident</code></td>
+        <td><strong>Master</strong> — fail path → incident; optional Web</td>
+        <td><code>use_web_activities</code> default <strong>false</strong> (avoids localhost from Azure)</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="flow">pl_ntf_05 (MASTER)
+  ├─ Execute → pl_ntf_01 (force_fail=true → Fail)
+  ├─ on Failed → Execute pl_ntf_04 (Databricks incident)
+  └─ If use_web_activities → Execute pl_ntf_02 then pl_ntf_03</div>
+</section>
+
+<!-- ===================== 6 RUN FROM UI ===================== -->
+<section id="ui-run" class="card lab-do">
+  <h2 style="margin-top:0">6. Run from UI — click by click (class factory)</h2>
+  <p>Use this when pipelines are already deployed (after <code>shared-adf-lab\orchestrate.cmd --skip-sql</code> or full deploy).</p>
+
+  <h3>6.1 Open ADF Studio</h3>
+  <ol class="steps">
+    <li>
+      <strong>Azure Portal</strong> → search bar → type <code>adf-shared-qgr7mj</code> → open the Data Factory.
+      <div class="step-box">Resource group should be <code>rg-shared-class1</code>.</div>
+    </li>
+    <li>
+      Click <strong>Launch Studio</strong> (blue button on Overview).
+      <div class="verify"><strong>Done when:</strong> ADF Studio opens (Author / Monitor / Manage on the left).</div>
+    </li>
+  </ol>
+
+  <h3>6.2 Find the enterprise notify folder</h3>
+  <ol class="steps">
+    <li>Left rail → <strong>Author</strong> (pencil icon).</li>
+    <li>Expand <strong>Pipelines</strong>.</li>
+    <li>Expand folder <strong>15-enterprise-notify</strong>.</li>
+    <li>You must see five pipelines: <code>pl_ntf_01</code> … <code>pl_ntf_05</code>.</li>
+  </ol>
+  <div class="card warn">
+    <p>If the folder is missing: close Studio → run from repo root:</p>
+    <div class="cmd">shared-adf-lab\orchestrate.cmd --skip-sql</div>
+    <p>Then refresh Studio (browser refresh) and look again.</p>
+  </div>
+
+  <h3>6.3 Inspect the master pipeline (before you run)</h3>
+  <ol class="steps">
+    <li>Click <code>pl_ntf_05_master_incident</code>.</li>
+    <li>On the canvas you should see three activity boxes:
+      <div class="step-box">
+        <code>RunSimulateWork</code> (Execute Pipeline → child 01)<br/>
+        <code>RaiseIncidentOnFailure</code> (Execute Pipeline → child 04, depends on <strong>Failed</strong>)<br/>
+        <code>IfUseWebActivities</code> (If Condition)
+      </div>
+    </li>
+    <li>Click blank canvas → right panel <strong>Parameters</strong> tab. Confirm defaults:
+      <div class="step-box">
+        <code>force_fail</code> = true<br/>
+        <code>use_web_activities</code> = false ← keeps Azure from calling localhost<br/>
+        <code>jira_base_url</code> = http://127.0.0.1:18080<br/>
+        <code>notify_mail_url</code> = http://127.0.0.1:18081<br/>
+        <code>owner_email</code> = training@example.com
+      </div>
+    </li>
+    <li>Click activity <code>RaiseIncidentOnFailure</code> → <strong>Settings</strong> → note dependency condition includes <strong>Failed</strong> on <code>RunSimulateWork</code>.
+      <div class="verify"><strong>Why:</strong> ticket/email only run when work fails — classic enterprise pattern.</div>
+    </li>
+  </ol>
+
+  <h3>6.4 Trigger the master from UI</h3>
+  <ol class="steps">
+    <li>With <code>pl_ntf_05_master_incident</code> open → top toolbar <strong>Add trigger</strong> → <strong>Trigger now</strong>
+      <em>or</em> use <strong>Debug</strong> (same parameters).</li>
+    <li>Leave parameters as defaults for class → <strong>OK</strong>.</li>
+    <li>Left rail → <strong>Monitor</strong> → <strong>Pipeline runs</strong>.</li>
+    <li>Open the newest run of <code>pl_ntf_05_master_incident</code>.</li>
+  </ol>
+  <div class="verify">
+    <strong>Expected Monitor result:</strong><br/>
+    • <code>RunSimulateWork</code> → <span class="bad">Failed</span> (intentional)<br/>
+    • <code>RaiseIncidentOnFailure</code> → runs (Succeeded or soft-fail inside notebook if localhost)<br/>
+    • Overall master often shows Failed because child 01 failed — OK for this demo
+  </div>
+
+  <h3>6.5 Drill into child runs</h3>
+  <ol class="steps">
+    <li>In the master run details, click activity <code>RunSimulateWork</code> → open linked pipeline run.</li>
+    <li>Inside <code>pl_ntf_01</code>: <code>IfForceFail</code> true branch → <code>FailForcedIncident</code> with error code <code>PL_NTF-DEMO-FAIL</code>.</li>
+    <li>Back to master → open <code>RaiseIncidentOnFailure</code> → child <code>pl_ntf_04</code> → activity <code>RaiseJiraAndEmail</code>.</li>
+    <li>Open Databricks notebook output (Output tab) — JSON with <code>jira_key</code> or <code>jira_error</code> + hint to run local cmd.</li>
+  </ol>
+
+  <h3>6.6 See the ticket + email (local UI — visible proof)</h3>
+  <p>Azure cannot show localhost Jira. On the trainer/student PC:</p>
+  <div class="cmd">enterprise-notify.cmd</div>
+  <ol class="steps">
+    <li>Browser → <a href="http://127.0.0.1:18080/">http://127.0.0.1:18080/</a> → click newest <code>FIN-n</code> → confirm attachment.</li>
+    <li>Browser → <a href="http://127.0.0.1:18081/">http://127.0.0.1:18081/</a> → open mail → confirm Jira key in body.</li>
+  </ol>
+  <div class="card quote">
+    <p><strong>Teach line:</strong> “ADF Studio proves the <em>control-flow pattern</em>.
+    The local command proves the <em>ticket + attach + email payload</em> you will wire to real Jira in your company.”</p>
+  </div>
+</section>
+
+<!-- ===================== 7 BUILD COMPANY UI ===================== -->
+<section id="ui-build">
+  <h2>7. Build this in your company — ADF Studio UI (from blank)</h2>
+  <p>
+    Recreate the pattern on a company factory (real Jira + Logic App).
+    Same five pipelines; swap URLs/secrets for production.
+  </p>
+
+  <h3>7.0 Prerequisites (company)</h3>
+  <table>
+    <thead><tr><th>Item</th><th>What you need</th></tr></thead>
+    <tbody>
+      <tr><td>Data Factory</td><td>Your factory + Contributor access</td></tr>
+      <tr><td>Jira</td><td>Cloud URL, project key (e.g. <code>OPS</code>), API token, user email</td></tr>
+      <tr><td>Email</td><td>Logic App (HTTP trigger → Office 365 Send email) or approved webhook</td></tr>
+      <tr><td>Optional</td><td>Databricks workspace + linked service (best for file attach)</td></tr>
+      <tr><td>Secret store</td><td>Key Vault for Jira token / Logic App URL (never hard-code in JSON)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>7.1 Create folder</h3>
+  <ol class="steps">
+    <li>ADF Studio → Author → Pipelines → ⋯ on Pipelines → <strong>New folder</strong> → name <code>ops-incident-notify</code> (or <code>15-enterprise-notify</code>).</li>
+    <li>Habit: add <strong>Parameters</strong> on each pipeline <em>before</em> activities so expressions resolve.</li>
+  </ol>
+
+  <h3>7.2 Pipeline A — simulate work or fail</h3>
+  <ol class="steps">
+    <li><strong>New pipeline</strong> → name <code>pl_ntf_01_simulate_work_or_fail</code> → move into folder.</li>
+    <li>Parameters: <code>force_fail</code> (Bool, default true), <code>run_id</code> (String).</li>
+    <li>Variables → New → <code>work_status</code> String.</li>
+    <li>Drag <strong>If Condition</strong> → name <code>IfForceFail</code>.</li>
+    <li>Expression:
+      <div class="cmd">@equals(pipeline().parameters.force_fail, true)</div>
+    </li>
+    <li><strong>True</strong> → drag <strong>Fail</strong> → name <code>FailForcedIncident</code>
+      <div class="step-box">Message: <code>PL_NTF-DEMO-FAIL — raise Jira + email next</code><br/>Error code: <code>PL_NTF-DEMO-FAIL</code></div>
+    </li>
+    <li><strong>False</strong> → <strong>Set variable</strong> <code>MarkWorkOk</code> → <code>work_status</code> = <code>@string('ok')</code>.</li>
+    <li>Publish / Save.</li>
+  </ol>
+  <div class="verify"><strong>Test:</strong> Trigger with <code>force_fail=true</code> → Failed. With false → Succeeded.</div>
+
+  <h3>7.3 Logic App for email (company portal)</h3>
+  <ol class="steps">
+    <li>Portal → Create → <strong>Logic App</strong> (Consumption) → region per company policy.</li>
+    <li>Designer → trigger <strong>When an HTTP request is received</strong>.</li>
+    <li>Request Body JSON Schema:
+      <div class="cmd">{
+  "properties": {
+    "to": { "type": "string" },
+    "subject": { "type": "string" },
+    "body": { "type": "string" },
+    "jira_key": { "type": "string" },
+    "run_id": { "type": "string" }
+  },
+  "type": "object"
+}</div>
+    </li>
+    <li><strong>+ New step</strong> → Office 365 Outlook → <strong>Send an email (V2)</strong>
+      <div class="step-box">To → dynamic <code>to</code> · Subject → <code>subject</code> · Body → <code>body</code></div>
+    </li>
+    <li><strong>Save</strong> → copy HTTP POST URL → store in Key Vault.</li>
+  </ol>
+
+  <h3>7.4 Pipeline B — Web create Jira</h3>
+  <ol class="steps">
+    <li>New pipeline <code>pl_ntf_02_web_create_jira</code>.</li>
+    <li>Parameters: <code>jira_base_url</code>, <code>run_id</code>, <code>pipeline_name</code>.</li>
+    <li>Drag <strong>Web</strong> → name <code>WebCreateJiraIssue</code>.</li>
+    <li>Settings:
+      <div class="step-box">
+        URL (Expression): <code>@concat(pipeline().parameters.jira_base_url, '/rest/api/2/issue')</code><br/>
+        Method: POST<br/>
+        Header: Content-Type = application/json<br/>
+        Auth: Basic (Jira email + API token) per company standard<br/>
+        Body (Expression) — change OPS to your project key:
+      </div>
+      <div class="cmd">@json(concat(
+  '{"fields":{"project":{"key":"OPS"},"summary":"[ADF] ',
+  pipeline().parameters.pipeline_name,
+  ' failed — run_id=', pipeline().parameters.run_id,
+  '","description":"Automated incident. Run ID: ',
+  pipeline().parameters.run_id,
+  '","issuetype":{"name":"Bug"}}}'
+))</div>
+    </li>
+    <li>Optional: <strong>Set variable</strong> <code>jira_key</code> =
+      <code>@activity('WebCreateJiraIssue').output.key</code> for the email body.</li>
+  </ol>
+  <div class="card warn">
+    <p><span class="warn">Company tip:</span> Multipart <strong>file attach</strong> is hard with Web alone.
+      Use Databricks / Azure Function for attachments (Section 7.6), or attach via Logic App reading a blob.</p>
+  </div>
+
+  <h3>7.5 Pipeline C — Web send email</h3>
+  <ol class="steps">
+    <li>New pipeline <code>pl_ntf_03_web_send_email</code>.</li>
+    <li>Parameters: <code>notify_mail_url</code>, <code>owner_email</code>, <code>run_id</code>, <code>pipeline_name</code>, <code>jira_key</code>.</li>
+    <li>Web POST → URL = Logic App HTTP URL parameter.</li>
+    <li>Body:
+      <div class="cmd">@json(concat(
+  '{"to":"', pipeline().parameters.owner_email,
+  '","subject":"[Ops] ADF incident ', pipeline().parameters.run_id,
+  '","body":"Pipeline ', pipeline().parameters.pipeline_name,
+  ' failed. Run: ', pipeline().parameters.run_id,
+  ' Jira: ', pipeline().parameters.jira_key,
+  '","run_id":"', pipeline().parameters.run_id, '"}'
+))</div>
+    </li>
+  </ol>
+
+  <h3>7.6 Pipeline D — Databricks notebook (create + attach + email)</h3>
+  <ol class="steps">
+    <li>Databricks → Workspace → import / create notebook at
+      <code>/Shared/shared-adf/nb_incident_jira_email</code>
+      (source file in repo: <code>shared-adf-lab/notebooks/nb_incident_jira_email.py</code>).</li>
+    <li>Widgets must match ADF base parameter names: <code>run_id</code>, <code>jira_base_url</code>, <code>notify_mail_url</code>, <code>owner_email</code>, …</li>
+    <li>ADF → New pipeline <code>pl_ntf_04_databricks_incident</code> → drag <strong>Databricks Notebook</strong>.</li>
+    <li>Linked service + notebook path → Base parameters map to <code>@pipeline().parameters.…</code>.</li>
+    <li>Notebook does: create issue → multipart attach run log → POST email.</li>
+  </ol>
+
+  <h3>7.7 Pipeline E — master</h3>
+  <ol class="steps">
+    <li>New pipeline <code>pl_ntf_05_master_incident</code> with parameters (<code>force_fail</code>, URLs, <code>owner_email</code>, <code>use_web_activities</code>).</li>
+    <li><strong>Execute Pipeline</strong> <code>RunSimulateWork</code> → invoke <code>pl_ntf_01</code> → Wait on completion = On.</li>
+    <li>Second <strong>Execute Pipeline</strong> <code>RaiseIncidentOnFailure</code> → invoke <code>pl_ntf_04</code> (or Web 02+03).</li>
+    <li>On second activity → Settings → Activity dependency:
+      <div class="step-box">Depends on: <code>RunSimulateWork</code><br/>Condition: tick <strong>Failed</strong> only</div>
+    </li>
+    <li>Optional If <code>use_web_activities</code> → true branch Execute 02 then 03.</li>
+    <li>Publish all pipelines.</li>
+  </ol>
+
+  <h3>7.8 Wire to a real business pipeline</h3>
+  <ol class="steps">
+    <li>Open your nightly load pipeline.</li>
+    <li>After the risky Copy / Data Flow / ForEach, add <strong>Execute Pipeline</strong> with dependency <strong>Failed</strong>
+      → invoke your incident pipeline.</li>
+    <li>Pass <code>@pipeline().RunId</code>, <code>@pipeline().Pipeline</code>, owner from global parameter / Key Vault.</li>
+    <li>DEV-only forced failure → confirm real Jira ticket + Outlook mail.</li>
+  </ol>
+  <div class="verify">
+    <strong>Company done when:</strong> DEV failure creates a real Jira issue + email;
+    PROD uses Key Vault and real Failed dependencies (no <code>force_fail</code> flag).
+  </div>
+</section>
+
+<!-- ===================== 8 CODE EXPLAIN ===================== -->
+<section id="code-explain">
+  <h2>8. Code explained (rebuild / extend)</h2>
+  <p>This class deploys with Python SDK. Your company can use the <strong>same design</strong> via Studio (Section 7) or SDK/CI.</p>
+
+  <h3>8.1 Local orchestrator — <code>run_incident_flow.py</code></h3>
+  <div class="flow">wait_healthy(jira) + wait_healthy(mail)
+write_run_log(...)           # [1] fake ADF failure evidence
+JiraClient.create_issue(...) # [2] POST /rest/api/2/issue
+JiraClient.attach_file(...)  # [3] multipart attachment
+MailClient.send(...)         # [4] POST /notify (or Logic App URL)</div>
+  <table>
+    <thead><tr><th>Idea in code</th><th>Why</th><th>Company equivalent</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>JIRA_BASE_URL</code> / <code>NOTIFY_MAIL_URL</code> from env</td>
+        <td>Swap mock → Cloud without code change</td>
+        <td>Key Vault + ADF global parameters</td>
+      </tr>
+      <tr>
+        <td><code>write_run_log</code></td>
+        <td>Evidence file for attachment</td>
+        <td>Export Monitor error / activity output to blob then attach</td>
+      </tr>
+      <tr>
+        <td><code>force_fail</code></td>
+        <td>Teach path without breaking data</td>
+        <td>Remove in PROD; use real Failed deps</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>8.2 Jira client — <code>jira_client.py</code></h3>
+  <div class="cmd">POST {base}/rest/api/2/issue
+  { "fields": { "project": {"key":"FIN"}, "summary":"...", "description":"...", "issuetype":{"name":"Bug"} } }
+
+POST {base}/rest/api/2/issue/{key}/attachments
+  multipart field "file" + header X-Atlassian-Token: no-check
+
+POST {base}/rest/api/2/issue/{key}/comment
+  { "body": "..." }</div>
+  <p>Real Jira Cloud auth: Basic <code>base64(email:api_token)</code>.</p>
+  <p class="cite"><a href="https://developer.atlassian.com/cloud/jira/platform/rest/v2/" target="_blank" rel="noopener">Jira Cloud REST API v2</a></p>
+
+  <h3>8.3 Mail client — <code>mail_client.py</code></h3>
+  <ul>
+    <li>POSTs JSON <code>{to, subject, body, jira_key, run_id}</code>.</li>
+    <li>Local mock: appends <code>/notify</code> to port 18081.</li>
+    <li>Logic App: full trigger URL as-is (SAS in query string).</li>
+  </ul>
+
+  <h3>8.4 ADF SDK — <code>adf_notify.py</code> ↔ Studio</h3>
+  <table>
+    <thead><tr><th>Python</th><th>Studio</th><th>Pipeline</th></tr></thead>
+    <tbody>
+      <tr><td><code>PipelineFolder(...)</code></td><td>New folder</td><td>all</td></tr>
+      <tr><td><code>IfConditionActivity</code> + <code>FailActivity</code></td><td>If + Fail</td><td>01</td></tr>
+      <tr><td><code>WebActivity</code> POST + expressions</td><td>Web</td><td>02 / 03</td></tr>
+      <tr><td><code>DatabricksNotebookActivity</code></td><td>Databricks Notebook</td><td>04</td></tr>
+      <tr><td><code>ExecutePipeline</code> + dependency <code>Failed</code></td><td>Execute Pipeline + Failed</td><td>05</td></tr>
+      <tr><td><code>use_web_activities=false</code></td><td>Bool parameter</td><td>05 — avoid localhost from Azure</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.5 Create-issue JSON the expression builds</h3>
+  <div class="cmd">{
+  "fields": {
+    "project": { "key": "FIN" },
+    "summary": "[ADF] pl_ntf_05_master_incident failed — run_id=session3-lab",
+    "description": "Automated FinLedger incident. Run ID: session3-lab",
+    "issuetype": { "name": "Bug" }
+  }
+}</div>
+  <p>Company: change project key; add priority, labels, custom fields per Jira scheme.</p>
+
+  <h3>8.6 Databricks notebook — <code>nb_incident_jira_email.py</code></h3>
+  <ol class="steps">
+    <li><code>dbutils.widgets.text</code> — names must match ADF base parameters exactly.</li>
+    <li>If not force_fail → exit early.</li>
+    <li>POST create issue → read <code>key</code>.</li>
+    <li>Multipart POST attachment (reason notebook &gt; pure Web for files).</li>
+    <li>POST mail; on localhost errors from Azure, return soft-fail JSON + hint.</li>
+  </ol>
+
+  <h3>8.7 Local mocks vs company</h3>
+  <table>
+    <thead><tr><th>Lab file</th><th>Teaches</th><th>Replace with</th></tr></thead>
+    <tbody>
+      <tr><td class="path">shared-adf-lab/enterprise-notify/jira_mock/app.py</td><td>REST + HTML board</td><td>Atlassian Jira Cloud / DC</td></tr>
+      <tr><td class="path">shared-adf-lab/enterprise-notify/mail_sink/app.py</td><td>HTTP → outbox</td><td>Logic App → Outlook / Teams</td></tr>
+      <tr><td class="path">enterprise-notify.cmd</td><td>One Windows entry</td><td>CI / runbook calling real APIs</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.8 Deploy hook</h3>
+  <p><code>run_shared_adf.py</code> calls <code>deploy_notify()</code> after governance — re-run
+    <code>shared-adf-lab\orchestrate.cmd</code> upserts all <code>pl_ntf_*</code> (idempotent).</p>
+
+  <h3>8.9 File map (quick)</h3>
+  <table>
+    <thead><tr><th>File</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>enterprise-notify.cmd</code> (repo root)</td><td>One Windows entry</td></tr>
+      <tr><td><code>shared-adf-lab/enterprise-notify/client/*.py</code></td><td>Clients + local flow</td></tr>
+      <tr><td><code>shared-adf-lab/scripts/adf_notify.py</code></td><td>SDK deploy pipelines</td></tr>
+      <tr><td><code>shared-adf-lab/notebooks/nb_incident_jira_email.py</code></td><td>Databricks SOURCE → workspace <code>/Shared/shared-adf/nb_incident_jira_email</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="studio">
+  <h2>Quick links</h2>
+  <p><a href="#ui-run">§6 Run from UI</a> · <a href="#ui-build">§7 Company build</a> · <a href="#code-explain">§8 Code</a></p>
+</section>
+
+<!-- ===================== 9 SQL ===================== -->
+<section id="sqlfix">
+  <h2>9. Fix SQL / ODBC warnings from orchestrate</h2>
+  <p>These warnings <span class="warn">do not stop</span> ADF notify deploy.</p>
+  <h3>Error A — SQL firewall (40615)</h3>
+  <div class="card bad"><p><code>Client with IP address '…' is not allowed to access the server</code></p></div>
+  <div class="cmd">az sql server firewall-rule create -g rg-shared-class1 -s sql-shared-qgr7mj -n AllowClientLaptop --start-ip-address YOUR_IP --end-ip-address YOUR_IP</div>
+  <p>Or re-run orchestrate — <code>ensure_sql_client_firewall</code> auto-heals.</p>
+  <h3>Error B — ODBC IM002</h3>
+  <div class="card bad"><p><code>Data source name not found (IM002)</code></p></div>
+  <p>Install <a href="https://go.microsoft.com/fwlink/?linkid=2249004" target="_blank" rel="noopener">ODBC Driver 18</a> or:</p>
+  <div class="cmd">shared-adf-lab\orchestrate.cmd --skip-sql</div>
+</section>
+
+<!-- ===================== 10 CLOUD ===================== -->
+<section id="cloud">
+  <h2>10. Real Jira Cloud + Logic App email</h2>
+  <div class="cmd"># .env
+JIRA_BASE_URL=https://your-org.atlassian.net
+JIRA_USER=you@company.com
+JIRA_API_TOKEN=...
+NOTIFY_MAIL_URL=https://prod-xx.logic.azure.com:443/workflows/.../triggers/manual/paths/invoke?...
+OWNER_EMAIL=oncall@company.com</div>
+  <ol class="steps">
+    <li>Atlassian → Security → API tokens → Create.</li>
+    <li>Logic App per <a href="#ui-build">§7.3</a> → copy HTTP URL.</li>
+    <li>ADF master: <code>use_web_activities=true</code> + cloud URLs (or Key Vault).</li>
+  </ol>
+  <p class="cite"><a href="https://learn.microsoft.com/en-us/azure/data-factory/how-to-send-email" target="_blank" rel="noopener">MS Learn — Send email from ADF</a></p>
+</section>
+
+<!-- ===================== 11 EXIT ===================== -->
+<section id="exit">
+  <h2>8. Exit ticket (say aloud)</h2>
+  <ul>
+    <li>□ One command: <code>enterprise-notify.cmd</code></li>
+    <li>□ Three stages: deps → start services → incident flow</li>
+    <li>□ Four steps: fail log → create Jira → attach → email</li>
+    <li>□ Open <code>:18080</code> and <code>:18081</code> to prove it</li>
+    <li>□ Name files: <code>start_services.py</code>, <code>run_incident_flow.py</code>, <code>jira_client.py</code>, <code>mail_client.py</code></li>
+  </ul>
+</section>
+
+<!-- ===================== 12 FAQ ===================== -->
+<section id="faq">
+  <h2>9. FAQ</h2>
+  <table>
+    <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+    <tbody>
+      <tr><td>What is the one command?</td><td><code>enterprise-notify.cmd</code> — full visible Jira + mail demo.</td></tr>
+      <tr><td>Where is the flow documented?</td><td>This page §1 <a href="#cmd-flow">Complete flow</a> and §2 <a href="#cmd-code">Code overview</a>.</td></tr>
+      <tr><td>Is local Jira real Atlassian?</td><td>No — REST mock. Swap <code>JIRA_BASE_URL</code> later.</td></tr>
+      <tr><td>Need ADF Studio for the demo?</td><td>No. Studio is optional (§5).</td></tr>
+      <tr><td>Re-run?</td><td><code>enterprise-notify.cmd</code> — safe anytime.</td></tr>
+    </tbody>
+  </table>
+  <p class="cite"><a href="../shared-adf-lab/docs/enterprise_jira_email_guide.md">shared-adf-lab/docs/enterprise_jira_email_guide.md</a>
+    · <strong>20-hour curriculum:</strong> <a href="enterprise-notify-20h.html">enterprise-notify-20h.html</a>
+    · MD: <a href="ENTERPRISE-NOTIFY-20H.md">ENTERPRISE-NOTIFY-20H.md</a>
+    · <strong>Six DE patterns:</strong> <a href="enterprise-de-playbook.html">enterprise-de-playbook.html</a> (<code>enterprise-de.cmd</code>)</p>
+</section>
+
+</main>
+
+<footer>
+  FinLedger · <code>enterprise-notify.cmd</code> · UI run §6 · company build §7 · code §8 ·
+  <a href="enterprise-de-playbook.html">DE playbook</a>
+</footer>
+</body>
+</html>

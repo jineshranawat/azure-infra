@@ -23,3 +23,13 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Enterprise notify local runtime (Jira mock / mail outbox / logs)
+shared-adf-lab/enterprise-notify/out/
+shared-adf-lab/enterprise-notify/jira_mock/data/issues.json
+shared-adf-lab/enterprise-notify/jira_mock/data/attachments/
+shared-adf-lab/enterprise-notify/mail_sink/data/outbox.json
+shared-adf-lab/enterprise-notify/mail_sink/data/eml/
+
+# Enterprise DE playbook local outputs
+shared-adf-lab/enterprise-de/out/

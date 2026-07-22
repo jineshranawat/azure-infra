@@ -43,6 +43,11 @@ from adf_governance import (  # noqa: E402
     deploy_governance,
     list_governance_pipeline_names,
 )
+from adf_notify import (  # noqa: E402
+    default_params as notify_default_params,
+    deploy_notify,
+    list_notify_pipeline_names,
+)
 from adf_pipelines import (  # noqa: E402
     _sql_pipelines_enabled,
     deploy_all_pipelines,
@@ -344,6 +349,7 @@ def _deploy_notebooks(cfg) -> None:
         ("nb_adf_integration_complete.py", "/Shared/shared-adf/nb_adf_integration_complete"),
         ("nb_adf_job_task.py", "/Shared/shared-adf/nb_adf_job_task"),
         ("nb_medallion_governance_master.py", "/Shared/shared-adf/nb_medallion_governance_master"),
+        ("nb_incident_jira_email.py", "/Shared/shared-adf/nb_incident_jira_email"),
     ]
     mkdirs_url = f"{cfg.databricks_host}/api/2.0/workspace/mkdirs"
     mkdirs_resp = requests.post(
@@ -414,6 +420,7 @@ def _print_summary(cfg, estate, sql, *, sql_pipelines: bool) -> None:
         + list_expression_pipeline_names()
         + list_trigger_pipeline_names()
         + list_governance_pipeline_names()
+        + list_notify_pipeline_names()
     ):
         print(f"    - {name}")
     print()
@@ -466,6 +473,9 @@ def _default_params(pipeline_name: str) -> dict:
     gov = governance_default_params(pipeline_name)
     if gov:
         return gov
+    ntf = notify_default_params(pipeline_name)
+    if ntf:
+        return ntf
     return {}
 
 
@@ -490,6 +500,8 @@ _DATABRICKS_PIPELINES = frozenset(
         "pl_db_12_end_to_end_integration",
         "pl_db_13_copy_notebook_job_chain",
         "pl_db_14_databricks_medallion_governance",
+        "pl_ntf_04_databricks_incident",
+        "pl_ntf_05_master_incident",
     }
 )
 
@@ -524,6 +536,7 @@ def _pipelines_from(start_name: str, *, include_sql: bool) -> list[str]:
         + list_expression_pipeline_names()
         + list_trigger_pipeline_names()
         + list_governance_pipeline_names()
+        + list_notify_pipeline_names()
     )
     if start_name not in all_names:
         raise SystemExit(f"Unknown pipeline '{start_name}'. Choose one of: {', '.join(all_names)}")
@@ -573,6 +586,7 @@ def _run_all_until_success(
         + list_expression_pipeline_names()
         + list_trigger_pipeline_names()
         + list_governance_pipeline_names()
+        + list_notify_pipeline_names()
     )
     logger.info("Run-all mode: %d pipelines", len(pending))
     for round_no in range(1, max_rounds + 1):
@@ -711,6 +725,7 @@ def main() -> int:
         deploy_expressions(cfg, estate)
         deploy_triggers(cfg, estate)
         deploy_governance(cfg, estate)
+        deploy_notify(cfg, estate)
 
         if not args.skip_notebook:
             _deploy_notebooks(cfg)

@@ -1,0 +1,5 @@
+[
+  {"entity": "transactions", "incoming": "incoming/transactions", "enabled": true},
+  {"entity": "customers", "incoming": "incoming/customers", "enabled": true},
+  {"entity": "fx_rates", "incoming": "incoming/fx", "enabled": false}
+]

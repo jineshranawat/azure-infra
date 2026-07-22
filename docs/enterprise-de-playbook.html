@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>FinLedger — Enterprise DE playbook (everyday end-to-end)</title>
+<style>
+  :root {
+    --bg:#0c1118; --card:#162032; --text:#e8eef6; --muted:#9aabbf;
+    --accent:#4aa3f0; --ok:#3ecf8e; --warn:#f0b429; --bad:#f07178;
+    --line:#243247; --quote:#1a2838;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.65; }
+  header {
+    padding:2.2rem 1.5rem 1.8rem;
+    background:linear-gradient(145deg,#101c2c 0%,#1a2f4a 45%,#1a3f3a 100%);
+    border-bottom:1px solid var(--line);
+  }
+  header h1 { margin:0 0 .5rem; font-size:clamp(1.45rem,3vw,2.05rem); max-width:64rem; }
+  header .lead { margin:0; color:var(--muted); max-width:64rem; font-size:1.05rem; }
+  .badge {
+    display:inline-block; margin:.25rem .35rem .25rem 0; padding:.2rem .65rem;
+    border:1px solid var(--line); border-radius:999px; font-size:.78rem; color:#c9d9ec; background:#0f1824;
+  }
+  nav.toc {
+    background:var(--card); border-bottom:1px solid var(--line);
+    padding:.7rem 1.2rem; position:sticky; top:0; z-index:20;
+    display:flex; flex-wrap:wrap; gap:.35rem .85rem;
+  }
+  nav.toc a { color:var(--accent); text-decoration:none; font-size:.84rem; white-space:nowrap; }
+  nav.toc a.hot { color:var(--ok); font-weight:700; }
+  main { max-width:64rem; margin:0 auto; padding:1.5rem 1.25rem 3rem; }
+  h2 {
+    color:var(--accent); margin:2.5rem 0 .75rem; padding-bottom:.4rem;
+    border-bottom:1px solid var(--line); scroll-margin-top:3.2rem; font-size:1.4rem;
+  }
+  h3 { margin:1.45rem 0 .45rem; color:#c8daf0; font-size:1.1rem; }
+  p { margin:.55rem 0; }
+  .card {
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:1rem 1.15rem; margin:1rem 0;
+  }
+  .card.ok { border-color:#1e5c40; background:#0f2319; }
+  .card.quote { background:var(--quote); border-left:4px solid var(--accent); border-radius:0 12px 12px 0; }
+  .cmd {
+    background:#080d14; border:1px solid var(--line); border-radius:8px;
+    padding:.9rem 1rem; font-family:Consolas,"Cascadia Mono",monospace;
+    font-size:.86rem; overflow-x:auto; white-space:pre-wrap; margin:.7rem 0;
+  }
+  table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:.92rem; }
+  th, td { border:1px solid var(--line); padding:.55rem .7rem; text-align:left; vertical-align:top; }
+  th { background:#101a28; }
+  .ok { color:var(--ok); font-weight:600; }
+  .flow {
+    background:#080d14; border-radius:8px; padding:1rem;
+    font-family:Consolas,monospace; font-size:.78rem; white-space:pre; overflow-x:auto;
+  }
+  .verify {
+    background:#0e1f18; border:1px dashed #2d6b4f; border-radius:8px;
+    padding:.65rem .85rem; margin:.45rem 0 .9rem; font-size:.92rem;
+  }
+  code { background:#080d14; padding:.08rem .35rem; border-radius:4px; font-size:.9em; }
+  a { color:var(--accent); }
+  .lab-do {
+    border:2px solid #3ecf8e; background:linear-gradient(180deg,#10261c 0%,#162032 45%);
+  }
+  .lab-do h2 { color:var(--ok); border-bottom-color:#2d6b4f; }
+  footer { max-width:64rem; margin:0 auto; padding:0 1.25rem 3rem; color:var(--muted); font-size:.88rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Enterprise DE playbook — six end-to-end patterns every engineer uses</h1>
+  <p class="lead">
+    Same shape as the Jira+email demo: <strong>one Windows command</strong>, visible proof, then map each
+    pattern to ADF / Databricks / lakehouse. Covers quality, incremental, quarantine, config-driven
+    multi-entity, audit, and incident notify.
+  </p>
+  <p style="margin-top:.85rem">
+    <span class="badge" style="border-color:#3ecf8e;color:#3ecf8e">ONE CMD: enterprise-de.cmd</span>
+    <span class="badge">UC01–UC06</span>
+    <span class="badge">uksouth / cheapest SKUs</span>
+    <span class="badge"><a href="enterprise-jira-email-demo.html" style="color:#9ec5ea;text-decoration:none">Notify deep-dive →</a></span>
+  </p>
+</header>
+
+<nav class="toc">
+  <a class="hot" href="#do">0. RUN</a>
+  <a href="#why">1. Why these six</a>
+  <a href="#catalog">2. Catalog</a>
+  <a href="#flow">3. Command flow</a>
+  <a href="#uc">4. Each UC</a>
+  <a href="#map">5. Azure map</a>
+  <a href="#rerun">6. Re-run</a>
+  <a href="#files">7. Files</a>
+</nav>
+
+<main>
+
+<section id="do" class="card lab-do">
+  <h2 style="margin-top:0">0. Run this only — <code>enterprise-de.cmd</code></h2>
+  <p>From the repo root on Windows:</p>
+  <div class="cmd">enterprise-de.cmd
+enterprise-de.cmd 2
+enterprise-de.cmd all</div>
+  <div class="verify">
+    <strong>Proof:</strong> console prints UC01…UC06 · results in
+    <code>shared-adf-lab\enterprise-de\out\</code> · UC01 opens Jira
+    <a href="http://127.0.0.1:18080/">:18080</a> and mail
+    <a href="http://127.0.0.1:18081/">:18081</a> · this HTML opens automatically.
+  </div>
+  <p class="cite">Notify-only (same as UC01 alone): <code>enterprise-notify.cmd</code> ·
+    detail: <a href="enterprise-jira-email-demo.html">enterprise-jira-email-demo.html</a></p>
+</section>
+
+<section id="why">
+  <h2>1. Why these six (what &amp; why)</h2>
+  <div class="card quote">
+    <p><strong>Analogy:</strong> a restaurant kitchen. You don't only plate food — you check ingredients (DQ),
+    cook only new tickets (watermark), send spoiled boxes to returns (quarantine), run the same recipe for
+    many menu items from a clipboard (config ForEach), write the guest book (audit), and ring the manager
+    when the oven fails (Jira+email).</p>
+  </div>
+  <p>Every production data engineer hits these patterns weekly. The local runners prove the
+    <em>logic</em> end-to-end without waiting on cloud networking to your laptop. ADF folder
+    <code>15-enterprise-notify</code> and medallion / watermark pipelines are the Azure twins.</p>
+</section>
+
+<section id="catalog">
+  <h2>2. Catalog — everyday DE coverage</h2>
+  <table>
+    <thead>
+      <tr><th>UC</th><th>Pattern</th><th>Everyday meaning</th><th>Azure twin</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>UC01</strong></td>
+        <td>Incident notify</td>
+        <td>Fail → ticket → attach evidence → email owner</td>
+        <td>ADF <code>15-enterprise-notify</code> · <code>enterprise-notify.cmd</code></td>
+      </tr>
+      <tr>
+        <td><strong>UC02</strong></td>
+        <td>Data quality gate</td>
+        <td>Validate schema / values before promote bronze→silver</td>
+        <td>Get Metadata + If · Databricks expectations · GE</td>
+      </tr>
+      <tr>
+        <td><strong>UC03</strong></td>
+        <td>Incremental watermark</td>
+        <td>Copy only rows after last success watermark</td>
+        <td>ADF pl_05 / pl_23 Lookup + filter · MERGE</td>
+      </tr>
+      <tr>
+        <td><strong>UC04</strong></td>
+        <td>Quarantine / dead-letter</td>
+        <td>Bad files → <code>reject/</code>; good → <code>loaded/</code></td>
+        <td>If + Copy paths · event on reject · notify</td>
+      </tr>
+      <tr>
+        <td><strong>UC05</strong></td>
+        <td>Config-driven ForEach</td>
+        <td>One pipeline, many entities from <code>entities.json</code></td>
+        <td>Lookup config + ForEach + Execute Pipeline</td>
+      </tr>
+      <tr>
+        <td><strong>UC06</strong></td>
+        <td>Run audit trail</td>
+        <td>Immutable JSON of what ran / when / outcome</td>
+        <td>Logging + audit/ Copy · Purview · Monitor</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="flow">
+  <h2>3. Complete flow of <code>enterprise-de.cmd</code></h2>
+  <div class="flow">enterprise-de.cmd [%UC% = all | 1..6]
+│
+├─ Ensure .venv + pip install -r requirements.txt
+│
+└─ python shared-adf-lab\enterprise-de\run_all.py --uc %UC%
+     │
+     ├─ UC01  start Jira/mail mocks → run_incident_flow (force fail)
+     ├─ UC02  DQ gate on good + bad CSV → promote / block lists
+     ├─ UC03  watermark.json → delta CSV + new watermark JSON
+     ├─ UC04  stage incoming → move to loaded/ or reject/
+     ├─ UC05  ForEach entities.json (skip disabled)
+     └─ UC06  write audit trail (+ sha) over prior UCs
+           → out\playbook_summary.json
+           → opens docs\enterprise-de-playbook.html</div>
+</section>
+
+<section id="uc">
+  <h2>4. Each use case — flow + code</h2>
+
+  <h3>UC01 — Incident notify</h3>
+  <p><strong>Why:</strong> on-call must see failure with evidence, not dig Monitor alone.</p>
+  <div class="cmd">scenarios/uc01_incident_notify.py
+→ start_services.py (Jira :18080, mail :18081)
+→ client/run_incident_flow.py --force-fail
+→ out/uc01_incident_result.json</div>
+  <div class="verify">Board + outbox UIs · deep teach: <a href="enterprise-jira-email-demo.html">enterprise-jira-email-demo.html</a></div>
+
+  <h3>UC02 — Data quality gate</h3>
+  <p><strong>Why:</strong> never promote poison rows into silver/gold.</p>
+  <div class="cmd">sample_data/good_transactions.csv  → PASS
+sample_data/bad_transactions.csv   → FAIL (bad channel / empty / non-numeric)
+→ out/uc02_dq_gate_result.json</div>
+
+  <h3>UC03 — Incremental watermark</h3>
+  <p><strong>Why:</strong> full reload every night wastes money and time; deltas are the default.</p>
+  <div class="cmd">sample_data/watermark.json + good_transactions.csv
+→ filter event_ts &gt; last watermark
+→ out/uc03_incremental_delta.csv
+→ out/uc03_watermark_new.json</div>
+
+  <h3>UC04 — Quarantine / dead-letter</h3>
+  <p><strong>Why:</strong> isolate bad files so one corrupt drop doesn't block the lake.</p>
+  <div class="cmd">incoming/*.csv → DQ check
+PASS → out/uc04/loaded/
+FAIL → out/uc04/reject/
+→ out/uc04_quarantine_result.json</div>
+
+  <h3>UC05 — Config-driven entities</h3>
+  <p><strong>Why:</strong> add a table without cloning the whole pipeline — edit config.</p>
+  <div class="cmd">sample_data/entities.json → ForEach enabled=true
+→ out/uc05_entity_&lt;name&gt;.json
+→ out/uc05_config_foreach_result.json</div>
+
+  <h3>UC06 — Run audit trail</h3>
+  <p><strong>Why:</strong> compliance and ops need a guest book of runs, not tribal knowledge.</p>
+  <div class="cmd">prior UC results → out/uc06_audit_trail.json (content_sha256)
+→ out/playbook_summary.json</div>
+</section>
+
+<section id="map">
+  <h2>5. Map to Azure / class estate</h2>
+  <table>
+    <thead>
+      <tr><th>Local proof</th><th>Class / Azure</th><th>Where to look</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>UC01</td><td>Folder <code>15-enterprise-notify</code></td><td><code>scripts/adf_notify.py</code> · notebook <code>nb_incident_jira_email</code></td></tr>
+      <tr><td>UC02–04</td><td>Medallion + DQ + reject paths</td><td>Shared ADF lab pipelines · bronze/silver folders on ADLS</td></tr>
+      <tr><td>UC03</td><td>Watermark / incremental copy</td><td>pl_05 / pl_23 style Lookup + Copy</td></tr>
+      <tr><td>UC05</td><td>Metadata-driven ForEach</td><td>Lookup JSON + ForEach + Execute Pipeline</td></tr>
+      <tr><td>UC06</td><td>Audit + lineage</td><td>Monitor · Purview · <code>audit/</code> container writes</td></tr>
+    </tbody>
+  </table>
+  <div class="card">
+    <p><strong>Azure constraint (same as notify demo):</strong> ADF/Databricks cannot call your laptop
+    <code>localhost</code>. Local <code>enterprise-de.cmd</code> is the visible end-to-end proof;
+    Studio shows the activity shapes for cloud.</p>
+  </div>
+</section>
+
+<section id="rerun">
+  <h2>6. Idempotency — four re-run scenarios</h2>
+  <p><strong>Re-run command:</strong> <code>enterprise-de.cmd</code> (or <code>enterprise-de.cmd N</code>)</p>
+  <table>
+    <thead><tr><th>Scenario</th><th>Safe?</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td>Fresh machine</td><td class="ok">Yes</td><td>Creates <code>.venv</code>, installs deps, runs all UCs</td></tr>
+      <tr><td>Re-run after success</td><td class="ok">Yes</td><td>New Jira key; out/ overwritten; quarantine re-staged</td></tr>
+      <tr><td>Partial / failed run</td><td class="ok">Yes</td><td>Re-run resume by UC number; no duplicate Azure resources</td></tr>
+      <tr><td>After teardown</td><td class="ok">Yes</td><td>Local only — delete <code>enterprise-de\out</code> optional; mocks restart</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="files">
+  <h2>7. Files (docs-as-code)</h2>
+  <div class="cmd">enterprise-de.cmd                         ← ONE Windows entry
+docs\enterprise-de-playbook.html           ← this page
+docs\ENTERPRISE-DE-PLAYBOOK.md             ← markdown twin
+shared-adf-lab\enterprise-de\
+  run_all.py
+  _common.py
+  sample_data\…
+  scenarios\uc01_…uc06_….py
+  out\                                     ← gitignored results
+
+Notify deep-dive only:
+  enterprise-notify.cmd
+  docs\enterprise-jira-email-demo.html</div>
+  <ul>
+    <li>□ One command covers six everyday DE patterns</li>
+    <li>□ Results JSON per UC + playbook summary</li>
+    <li>□ Maps clearly to ADF / lake / Purview</li>
+    <li>□ Safe to re-run anytime</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  FinLedger · <code>enterprise-de.cmd</code> · UC01–UC06 ·
+  <a href="enterprise-jira-email-demo.html">notify demo</a> ·
+  <a href="ENTERPRISE-DE-PLAYBOOK.md">MD twin</a>
+</footer>
+</body>
+</html>

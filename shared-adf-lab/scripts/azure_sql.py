@@ -28,7 +28,7 @@ _ODBC_DRIVERS = (
 
 
 def _connect_pyodbc(sql: SqlEstate):
-    """Open pyodbc connection — tries installed SQL Server ODBC drivers."""
+    """Open pyodbc connection — tries installed SQL Server ODBC drivers only."""
     try:
         import pyodbc  # type: ignore
     except ImportError:
@@ -40,8 +40,17 @@ def _connect_pyodbc(sql: SqlEstate):
         )
         import pyodbc  # type: ignore
 
+    available = set(pyodbc.drivers())
+    drivers = [d for d in _ODBC_DRIVERS if d in available]
+    if not drivers:
+        raise RuntimeError(
+            "IM002: no SQL Server ODBC driver installed "
+            "(need 'ODBC Driver 18 for SQL Server'). "
+            "Download: https://go.microsoft.com/fwlink/?linkid=2249004"
+        )
+
     errors: list[str] = []
-    for driver in _ODBC_DRIVERS:
+    for driver in drivers:
         encrypt = "yes" if "ODBC Driver" in driver else "no"
         trust = "yes" if driver == "SQL Server" else "no"
         conn_str = (
@@ -55,6 +64,113 @@ def _connect_pyodbc(sql: SqlEstate):
         except Exception as exc:
             errors.append(f"{driver}: {exc}")
     raise RuntimeError("; ".join(errors))
+
+
+def _public_ip() -> str | None:
+    """Best-effort public IP of this machine (for SQL firewall)."""
+    try:
+        import urllib.request
+
+        with urllib.request.urlopen("https://api.ipify.org", timeout=10) as resp:
+            ip = resp.read().decode("ascii").strip()
+            if ip and all(part.isdigit() for part in ip.split(".")):
+                return ip
+    except Exception as exc:
+        logger.warning("Could not detect public IP: %s", exc)
+    return None
+
+
+def ensure_sql_client_firewall(cfg: SharedAdfConfig, sql: SqlEstate) -> None:
+    """Allow this laptop's public IP on the SQL server (idempotent). Azure IR already allowed via 0.0.0.0."""
+    ip = _public_ip()
+    if not ip:
+        logger.warning(
+            "Skip SQL client firewall — could not detect public IP. "
+            "If seed fails with 40615, add your IP in Portal → SQL server → Networking."
+        )
+        return
+    rule_name = "AllowClientLaptop"
+    # create (ignore if exists) then update to current IP (ISP may change)
+    create = subprocess.run(
+        [
+            find_az(),
+            "sql",
+            "server",
+            "firewall-rule",
+            "create",
+            "--resource-group",
+            cfg.resource_group,
+            "--server",
+            sql.server_name,
+            "--name",
+            rule_name,
+            "--start-ip-address",
+            ip,
+            "--end-ip-address",
+            ip,
+            "--only-show-errors",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    if create.returncode == 0:
+        logger.info("SQL firewall rule %s created for client IP %s", rule_name, ip)
+        return
+    update = subprocess.run(
+        [
+            find_az(),
+            "sql",
+            "server",
+            "firewall-rule",
+            "update",
+            "--resource-group",
+            cfg.resource_group,
+            "--server",
+            sql.server_name,
+            "--name",
+            rule_name,
+            "--start-ip-address",
+            ip,
+            "--end-ip-address",
+            ip,
+            "--only-show-errors",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    if update.returncode == 0:
+        logger.info("SQL firewall rule %s updated for client IP %s", rule_name, ip)
+    else:
+        logger.warning(
+            "SQL firewall rule for %s not applied (create=%s update=%s). "
+            "Seed from this PC may fail; ADF in Azure still works.",
+            ip,
+            (create.stderr or create.stdout or "")[:120],
+            (update.stderr or update.stdout or "")[:120],
+        )
+
+
+def _format_seed_error(exc: BaseException) -> str:
+    """Short learner-friendly seed error (avoid dumping every ODBC driver attempt)."""
+    msg = str(exc)
+    if "40615" in msg or "not allowed to access" in msg:
+        return (
+            "SQL firewall blocked this PC — auto-heal runs on deploy; "
+            "re-run orchestrate, or Portal → sql-shared-* → Networking → add client IP"
+        )
+    if "IM002" in msg or "Data source name not found" in msg:
+        return (
+            "ODBC Driver 18 for SQL Server not installed on this PC — "
+            "local seed skipped (ADF still uses Azure IR). "
+            "Install: https://go.microsoft.com/fwlink/?linkid=2249004"
+        )
+    if "Login failed" in msg:
+        return "SQL login failed — check Key Vault secret sql-admin-password"
+    return msg[:280]
 
 
 def _execute_sql_scripts(sql: SqlEstate, *scripts: str, label: str) -> None:
@@ -71,7 +187,7 @@ def _execute_sql_scripts(sql: SqlEstate, *scripts: str, label: str) -> None:
     except subprocess.CalledProcessError as exc:
         logger.warning("pyodbc install failed — skip SQL seed %s (%s)", label, exc)
     except Exception as exc:
-        logger.warning("SQL seed %s skipped: %s", label, exc)
+        logger.warning("SQL seed %s skipped: %s", label, _format_seed_error(exc))
 
 
 @dataclass(frozen=True)
@@ -209,6 +325,7 @@ def deploy_sql(cfg: SharedAdfConfig, estate: SharedEstate) -> SqlEstate:
         admin_password=password,
     )
     logger.info("SQL ready: %s / %s (%s)", sql.fqdn, sql.database_name, sql.location)
+    ensure_sql_client_firewall(cfg, sql)
     return sql
 
 

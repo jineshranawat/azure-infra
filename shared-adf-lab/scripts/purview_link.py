@@ -29,10 +29,21 @@ def _az_json(args: list[str]) -> list | dict:
 
 
 def discover_purview_account(cfg: SharedAdfConfig) -> tuple[str, str] | None:
-    """Return (account_name, resource_group) from .env or first account in subscription."""
+    """Return (account_name, resource_group) from .env or class defaults."""
     env = _load_dotenv(ENV_FILE)
-    name = (os.environ.get("PURVIEW_ACCOUNT_NAME") or env.get("PURVIEW_ACCOUNT_NAME", "")).strip()
-    rg = (os.environ.get("PURVIEW_RESOURCE_GROUP") or env.get("PURVIEW_RESOURCE_GROUP", "")).strip()
+    # Shared-class Purview lives in rg-rohan-class1 (documented exception).
+    default_name = "pviewrohan4hnv7s"
+    default_rg = "rg-rohan-class1"
+    name = (
+        os.environ.get("PURVIEW_ACCOUNT_NAME")
+        or env.get("PURVIEW_ACCOUNT_NAME", "")
+        or default_name
+    ).strip()
+    rg = (
+        os.environ.get("PURVIEW_RESOURCE_GROUP")
+        or env.get("PURVIEW_RESOURCE_GROUP", "")
+        or default_rg
+    ).strip()
     if name and rg:
         return name, rg
     if name:

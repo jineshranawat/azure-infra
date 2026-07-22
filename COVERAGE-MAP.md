@@ -31,6 +31,8 @@
 | **Day 7** — Storage + read lake (PySpark) | `day7/` | [data-engineering-course.html](docs/data-engineering-course.html) S7 | 2 h | `day7\orchestrate.cmd` | [day7/MANUAL-LAB.md](day7/MANUAL-LAB.md) |
 | **Day 8** — PySpark transformations | `day8/` | [data-engineering-course.html](docs/data-engineering-course.html) S8 | 2 h | `day8\orchestrate.cmd` | [day8/MANUAL-LAB.md](day8/MANUAL-LAB.md) |
 | Session 4 — Purview | [docs/PURVIEW-TEACH-DEMO.md](docs/PURVIEW-TEACH-DEMO.md) + [purview-teach-demo.html](docs/purview-teach-demo.html) | Day 4 | `purview-demo.cmd` → `pl_gov_06` | [purview_portal_search_guide.md](shared-adf-lab/docs/purview_portal_search_guide.md) |
+| Enterprise notify — Jira + email | [ENTERPRISE-NOTIFY-20H.md](docs/ENTERPRISE-NOTIFY-20H.md) + [enterprise-notify-20h.html](docs/enterprise-notify-20h.html) · quick [enterprise-jira-email-demo.html](docs/enterprise-jira-email-demo.html) | ADF + DBX ops | `enterprise-notify.cmd` · `enterprise-notify-20h.cmd` · folder `15-enterprise-notify` | Studio `pl_ntf_05` + notebook `/Shared/shared-adf/nb_incident_jira_email` |
+| Enterprise DE playbook — 6 everyday E2E patterns | [ENTERPRISE-DE-PLAYBOOK.md](docs/ENTERPRISE-DE-PLAYBOOK.md) + [enterprise-de-playbook.html](docs/enterprise-de-playbook.html) | DQ · watermark · quarantine · config ForEach · audit · notify | `enterprise-de.cmd` · `shared-adf-lab/enterprise-de/` | Local out/ JSON + UC01 Jira/mail; maps to ADF medallion + folder 15 |
 | Session 5+ — Operate / Engineering | *planned* | Day 5–7 | — | — | — |
 
 ---

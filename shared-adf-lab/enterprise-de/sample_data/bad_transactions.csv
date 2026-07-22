@@ -1,0 +1,4 @@
+txn_id,channel,amount,currency,event_ts
+T2001,card,,GBP,2026-07-01T10:00:00Z
+T2002,unknown,abc,GBP,not-a-date
+T2003,,10.00,,2026-07-01T11:00:00Z
