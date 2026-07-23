@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinTrust Retail Banking — DE Capstone Assignment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0b1520;--ink-2:#142433;--paper:#f5f7fa;--card:#fff;--line:#d0d7e2;--muted:#5a6a7a;--accent:#0b6e4f;--teal:#00a972;--code-bg:#0d1b24;--code-ink:#d5e8e2;--warn:#fff4e5}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Source Serif 4",Georgia,serif;background:var(--paper);color:var(--ink);line-height:1.65}
+  h1,h2,h3,h4{font-family:"Space Grotesk",system-ui,sans-serif}
+  code,.cmd{font-family:"JetBrains Mono",Consolas,monospace}
+  a{color:var(--teal)}
+  .hero{background:linear-gradient(155deg,#06281f 0%,#0b1520 55%,#143028 100%);color:#eef6f3;padding:2.6rem 1.5rem 2rem;border-bottom:4px solid var(--accent)}
+  .hero-inner{max-width:1100px;margin:0 auto}
+  .brand{font-size:clamp(1.8rem,3.5vw,2.4rem);font-weight:700;margin:0 0 .35rem}
+  .hero h1{font-size:clamp(1.1rem,2.2vw,1.55rem);font-weight:600;color:#9fe3c5;margin:0 0 1rem;max-width:50ch}
+  .hero p{max-width:75ch;color:#c5d5d0;margin-bottom:.7rem}
+  .chip{display:inline-block;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(159,227,197,.4);padding:.28rem .6rem;color:#9fe3c5;margin:.2rem .3rem .2rem 0}
+  nav{position:sticky;top:0;z-index:10;background:rgba(245,247,250,.95);border-bottom:1px solid var(--line);padding:.5rem 1rem;display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center}
+  nav a{font-family:"Space Grotesk",sans-serif;font-size:.74rem;text-decoration:none;border:1px solid var(--line);padding:.24rem .5rem;background:var(--card);color:var(--ink)}
+  main{max-width:1100px;margin:0 auto;padding:1.5rem 1.25rem 3rem}
+  section{background:var(--card);border:1px solid var(--line);padding:1.3rem 1.4rem;margin-bottom:1rem;scroll-margin-top:3rem}
+  h2{font-size:1.25rem;margin:0 0 .7rem;padding-bottom:.35rem;border-bottom:2px solid var(--accent)}
+  h3{font-size:1.02rem;margin:1.1rem 0 .4rem;color:var(--ink-2)}
+  p,li{margin:.4rem 0} ul,ol{margin:.3rem 0 .7rem 1.2rem}
+  table{width:100%;border-collapse:collapse;font-size:.86rem;margin:.7rem 0}
+  th,td{border:1px solid var(--line);padding:.4rem .5rem;vertical-align:top;text-align:left}
+  th{background:#edf2f6;font-family:"Space Grotesk",sans-serif;font-size:.72rem}
+  .cmd{background:var(--code-bg);color:var(--code-ink);padding:.8rem 1rem;overflow-x:auto;font-size:.78rem;margin:.6rem 0;white-space:pre}
+  .callout{background:#e8f6f1;border-left:4px solid var(--teal);padding:.7rem 1rem;margin:.8rem 0}
+  .callout.warn{background:var(--warn);border-left-color:#c47b00}
+  .lab{border:2px solid var(--teal)}
+  .flow{background:#080d14;color:#c8ecd9;border-radius:8px;padding:1rem;font-family:"JetBrains Mono",monospace;font-size:.76rem;white-space:pre;overflow-x:auto}
+  footer{max-width:1100px;margin:0 auto 2rem;padding:0 1.25rem;color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="brand">FinTrust Bank plc</p>
+    <h1>Retail banking data engineering capstone — problem statement</h1>
+    <p>Richer than the FinLedger module case studies: a full overnight banking book on the <strong>same class Azure estate</strong>.
+    Students must use all four pillars — <strong>ADF</strong>, <strong>Databricks</strong>, <strong>Purview</strong>, and <strong>Azure SQL</strong> — plus Genie, notify, DQ, and cost/region guardrails.</p>
+    <p><span class="chip">Assignment</span><span class="chip">ADF</span><span class="chip">Databricks</span><span class="chip">Purview</span><span class="chip">Azure SQL</span>
+    <span class="chip">Genie</span><span class="chip">uksouth</span></p>
+  </div>
+</header>
+<nav>
+  <a href="#goal">Goal</a>
+  <a href="#crisis">Crisis</a>
+  <a href="#scope">Scope</a>
+  <a href="#model">Domain</a>
+  <a href="#map">Repo map</a>
+  <a href="#phases">Phases</a>
+  <a href="#accept">Acceptance</a>
+  <a href="#rubric">Rubric</a>
+  <a href="RETAIL-BANKING-DE-ASSIGNMENT.md">Full MD</a>
+</nav>
+<main>
+
+<section id="goal" class="lab">
+  <h2>0. Goal (one line)</h2>
+  <p>Deliver <strong>FinTrust Nightly Bank Platform v1</strong>: multi-source ingest → quality/quarantine → incremental medallion → gold MI/fraud marts → failure notify → Genie self-serve → governance evidence — using <em>this repo’s</em> shared resources and patterns.</p>
+  <div class="cmd">Open full brief: docs\RETAIL-BANKING-DE-ASSIGNMENT.md
+Open this page: docs\retail-banking-de-assignment.html
+Related labs: enterprise-de.cmd · enterprise-notify.cmd · genie-lab.cmd · purview-demo.cmd</div>
+</section>
+
+<section id="crisis">
+  <h2>1. Problem statement — the overnight crisis</h2>
+  <p><strong>FinTrust Bank plc</strong> (fictional UK retail bank) cannot answer Risk/Finance questions without Excel:</p>
+  <ol>
+    <li>Yesterday’s authorised card spend by channel / MCC?</li>
+    <li>Which payments failed DQ or arrived late — quarantined or polluting silver?</li>
+    <li>Who breached FPS/card velocity rules for fraud review?</li>
+    <li>If ADF gold fails at 02:10, who gets a ticket <em>with the run log</em>?</li>
+  </ol>
+  <p class="callout warn"><strong>Your role:</strong> Lead Data Engineer. Deadline ~10–15 working days (trainer sets exact). Region <code>uksouth</code>, cheapest SKUs, synthetic data only.</p>
+  <div class="flow">Sources (CSV/JSON card · FPS · dims)
+    → ADF / landing  →  ADLS bronze
+    → DQ gate + quarantine
+    → watermark incremental → silver (UC)
+    → gold marts (spend · velocity · dq · audit)
+    → Genie Agent (MI questions)
+    → Notify on fail (Jira+mail)
+    → Purview / pl_gov lineage story</div>
+</section>
+
+<section id="scope">
+  <h2>2. Mandatory scope (must all appear)</h2>
+  <table>
+    <tr><th>#</th><th>Capability</th><th>Proof</th></tr>
+    <tr><td>A</td><td>≥3 source types → bronze</td><td>Paths + row counts</td></tr>
+    <tr><td>B</td><td>Medallion bronze/silver/gold</td><td>Contracts documented</td></tr>
+    <tr><td>C–D</td><td>DQ gate + quarantine</td><td>Bad file demo</td></tr>
+    <tr><td>E</td><td>Incremental watermark</td><td>2nd run delta only</td></tr>
+    <tr><td>F</td><td>Config-driven entities</td><td>entities.json / ForEach</td></tr>
+    <tr><td>G</td><td>Run audit trail</td><td>JSON per run_id</td></tr>
+    <tr><td>H</td><td>ADF and/or Databricks orchestration</td><td>Monitor / job run</td></tr>
+    <tr><td>I</td><td>Incident notify</td><td>FIN-* + mail or Studio 15-*</td></tr>
+    <tr><td>J</td><td>Genie on gold</td><td>≥10 questions curated</td></tr>
+    <tr><td>K</td><td>Governance</td><td>Purview or pl_gov evidence</td></tr>
+    <tr><td>L–M</td><td>Cost/region + idempotent re-run</td><td>README notes</td></tr>
+  </table>
+  <p><strong>Richer than repo samples:</strong> invent ≥500 synthetic rows, ≥8 DQ rules, ≥3 gold marts, fraud velocity logic, full data dictionary — not the tiny course CSVs alone.</p>
+
+  <h3>Four platform pillars (all mandatory)</h3>
+  <table>
+    <tr><th>Pillar</th><th>Must use</th><th>Repo start</th><th>Minimum proof</th></tr>
+    <tr><td><strong>ADF</strong></td><td>Ingest + master orchestration</td><td><code>shared-adf-lab/</code> · session-2 · Monitor HTML</td><td>Copy to bronze + master pipeline + Monitor shots</td></tr>
+    <tr><td><strong>Databricks</strong></td><td>Silver/gold transforms</td><td>session-3 · day7/8 · <code>/Shared/</code> · Genie</td><td>Notebook + ADF Databricks activity or Job</td></tr>
+    <tr><td><strong>Purview</strong></td><td>Catalog / lineage story</td><td><code>purview-demo.cmd</code> · <code>pl_gov_06</code></td><td>Portal search of assets or documented workaround</td></tr>
+    <tr><td><strong>Azure SQL</strong></td><td>Watermark or reference</td><td><code>azure_sql.py</code> · <code>ls_azure_sql_westus</code> · DB <code>finledger</code></td><td>Lookup/Copy using SQL; document westus exception</td></tr>
+  </table>
+  <p class="callout">README must include: <em>ADF moves/orchestrates; ADLS is the lake; Databricks transforms; Azure SQL holds control/reference; Purview governs; Genie serves MI; notify closes ops.</em></p>
+</section>
+
+<section id="model">
+  <h2>3. Domain (minimum — extend)</h2>
+  <h3>Dimensions</h3>
+  <p>Customer · Account · Channel · Calendar · MCC group</p>
+  <h3>Facts</h3>
+  <p>Card authorisations · FPS payments · Daily balance snapshot · DQ rejection events</p>
+  <h3>Gold marts (minimum)</h3>
+  <ul>
+    <li><code>gold_daily_channel_spend</code></li>
+    <li><code>gold_fraud_velocity_alerts</code></li>
+    <li><code>gold_dq_daily_summary</code></li>
+    <li><code>gold_ops_run_audit</code></li>
+  </ul>
+</section>
+
+<section id="map">
+  <h2>4. Map to this repo (mandatory)</h2>
+  <table>
+    <tr><th>FinTrust need</th><th>Start here</th></tr>
+    <tr><td><strong>ADF</strong> / lake / Monitor</td><td><code>shared-adf-lab/</code> · session-2 · adf-monitoring HTML</td></tr>
+    <tr><td><strong>Databricks</strong> / Genie</td><td>session-3 · day7/8 · <code>/Shared/</code> · <code>genie-lab.cmd</code></td></tr>
+    <tr><td><strong>Azure SQL</strong></td><td><code>scripts/azure_sql.py</code> · <code>ls_azure_sql_westus</code> · DB <code>finledger</code></td></tr>
+    <tr><td><strong>Purview</strong></td><td><code>purview-demo.cmd</code> · Purview teach HTML</td></tr>
+    <tr><td>DQ · watermark · quarantine · audit</td><td><code>enterprise-de.cmd</code></td></tr>
+    <tr><td>Jira + email</td><td><code>enterprise-notify.cmd</code> · folder 15</td></tr>
+  </table>
+  <p>Extend shared estate — do not spawn a second non-UK platform.</p>
+</section>
+
+<section id="phases">
+  <h2>5. Phases (suggested 10–15 days)</h2>
+  <ol>
+    <li><strong>Charter</strong> — diagram + dictionary</li>
+    <li><strong>Ingest</strong> — 3 sources → bronze</li>
+    <li><strong>Quality</strong> — DQ + quarantine + silver</li>
+    <li><strong>Incremental + gold</strong> — watermark + marts + audit</li>
+    <li><strong>Ops + Genie + governance</strong></li>
+    <li><strong>Defence</strong> — peer re-run + 15‑min demo</li>
+  </ol>
+</section>
+
+<section id="accept">
+  <h2>6. Acceptance (trainer ticks)</h2>
+  <ul>
+    <li>□ <strong>ADF</strong> + <strong>Databricks</strong> + <strong>Purview</strong> + <strong>Azure SQL</strong> evidence</li>
+    <li>□ Architecture + dictionary</li>
+    <li>□ 3 sources → silver typed → ≥3 gold</li>
+    <li>□ DQ + quarantine proof</li>
+    <li>□ Watermark second-run proof</li>
+    <li>□ Audit JSON · notify · Genie ≥5 correct</li>
+    <li>□ Idempotent re-run · README (uksouth + SQL westus note)</li>
+  </ul>
+</section>
+
+<section id="rubric">
+  <h2>7. Rubric (100)</h2>
+  <table>
+    <tr><th>Area</th><th>Pts</th></tr>
+    <tr><td>Platform pillars (ADF + DBX + Purview + SQL)</td><td>20</td></tr>
+    <tr><td>Medallion + domain richness</td><td>20</td></tr>
+    <tr><td>DQ + quarantine</td><td>12</td></tr>
+    <tr><td>Incremental + audit</td><td>12</td></tr>
+    <tr><td>Orchestration + notify</td><td>12</td></tr>
+    <tr><td>Genie</td><td>8</td></tr>
+    <tr><td>Cost / region / idempotency</td><td>8</td></tr>
+    <tr><td>Demo + docs</td><td>8</td></tr>
+  </table>
+  <p>Full rules, DQ catalogue, fraud thresholds, Genie question pack, submission pack: see <a href="RETAIL-BANKING-DE-ASSIGNMENT.md">RETAIL-BANKING-DE-ASSIGNMENT.md</a>.</p>
+</section>
+
+</main>
+<footer>
+  FinTrust capstone · uses FinLedger class estate · <code>uksouth</code> · synthetic data only
+</footer>
+</body>
+</html>

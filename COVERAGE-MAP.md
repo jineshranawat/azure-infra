@@ -2,6 +2,7 @@
 
 **Start here if you are lost.** This file is the master index for the whole repo: which **session**, which **document**, which **command**, and which **portal** blade — in order.
 
+> **FinTrust retail banking DE capstone (assignment):** [docs/retail-banking-de-assignment.html](docs/retail-banking-de-assignment.html) · [RETAIL-BANKING-DE-ASSIGNMENT.md](docs/RETAIL-BANKING-DE-ASSIGNMENT.md) · `fintrust-assignment.cmd`  
 > **Tomorrow’s infra + CI/CD session (projector):**  
 > **[docs/infra-cicd-walkthrough.html](docs/infra-cicd-walkthrough.html)** — open in browser  
 > **ADF Monitoring (100h):** [docs/adf-monitoring-deep-dive.html](docs/adf-monitoring-deep-dive.html)  
@@ -34,7 +35,7 @@
 | Session 4 — Purview | [docs/PURVIEW-TEACH-DEMO.md](docs/PURVIEW-TEACH-DEMO.md) + [purview-teach-demo.html](docs/purview-teach-demo.html) | Day 4 | `purview-demo.cmd` → `pl_gov_06` | [purview_portal_search_guide.md](shared-adf-lab/docs/purview_portal_search_guide.md) |
 | Enterprise notify — Jira + email | [ENTERPRISE-NOTIFY-20H.md](docs/ENTERPRISE-NOTIFY-20H.md) + [enterprise-notify-20h.html](docs/enterprise-notify-20h.html) · quick [enterprise-jira-email-demo.html](docs/enterprise-jira-email-demo.html) | ADF + DBX ops | `enterprise-notify.cmd` · `enterprise-notify-20h.cmd` · folder `15-enterprise-notify` | Studio `pl_ntf_05` + notebook `/Shared/shared-adf/nb_incident_jira_email` |
 | Enterprise DE playbook — 6 everyday E2E patterns | [ENTERPRISE-DE-PLAYBOOK.md](docs/ENTERPRISE-DE-PLAYBOOK.md) + [enterprise-de-playbook.html](docs/enterprise-de-playbook.html) | DQ · watermark · quarantine · config ForEach · audit · notify | `enterprise-de.cmd` · `shared-adf-lab/enterprise-de/` | Local out/ JSON + UC01 Jira/mail; maps to ADF medallion + folder 15 |
-| Databricks Genie + Agents (beginner) | [DATABRICKS-GENIE-AGENTS.md](docs/DATABRICKS-GENIE-AGENTS.md) + [databricks-genie-agents-teach.html](docs/databricks-genie-agents-teach.html) | Genie Agents (ex Spaces) · Agent Bricks / Knowledge Assistant · custom agents | `genie-agents-teach.cmd` · **`genie-lab.cmd`** (create+ask) | Live agent + orchestrator results under `shared-adf-lab/genie-lab/out/` |
+| FinTrust retail banking DE capstone | [RETAIL-BANKING-DE-ASSIGNMENT.md](docs/RETAIL-BANKING-DE-ASSIGNMENT.md) + [retail-banking-de-assignment.html](docs/retail-banking-de-assignment.html) | Full bank overnight platform using class estate | `fintrust-assignment.cmd` | Student build on shared ADF/DBX/Purview/Genie/notify |
 | Session 5+ — Operate / Engineering | *planned* | Day 5–7 | — | — | — |
 
 ---
