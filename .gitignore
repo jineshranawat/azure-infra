@@ -33,3 +33,6 @@ shared-adf-lab/enterprise-notify/mail_sink/data/eml/
 
 # Enterprise DE playbook local outputs
 shared-adf-lab/enterprise-de/out/
+
+# Genie lab local outputs (agent state + question results)
+shared-adf-lab/genie-lab/out/

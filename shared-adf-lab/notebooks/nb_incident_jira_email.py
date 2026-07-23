@@ -13,8 +13,65 @@
 # MAGIC **Note:** Azure Databricks cannot reach `127.0.0.1` on your laptop.
 # MAGIC For the visible local board/outbox run `enterprise-notify.cmd`.
 # MAGIC Point `jira_base_url` / `notify_mail_url` at reachable URLs for cloud runs.
+# MAGIC
+# MAGIC **Run locally (Windows):** from repo root
+# MAGIC `shared-adf-lab\notebooks\run_nb_incident_local.cmd`
+# MAGIC or: `python shared-adf-lab\notebooks\nb_incident_jira_email.py`
+# MAGIC (starts/uses Jira :18080 + mail :18081)
 
 # COMMAND ----------
+
+# Local-friendly: stub dbutils when not running inside Databricks
+try:
+    dbutils  # type: ignore[name-defined]
+except NameError:
+    import json as _json
+    import os as _os
+    import time as _time
+    from types import SimpleNamespace as _NS
+
+    class _LocalWidgets:
+        def __init__(self) -> None:
+            self._v = {
+                "run_id": f"local-{int(_time.time())}",
+                "pipeline_name": "pl_ntf_05_master_incident",
+                "jira_base_url": "http://127.0.0.1:18080",
+                "notify_mail_url": "http://127.0.0.1:18081",
+                "owner_email": "training@example.com",
+                "force_fail": "true",
+                "jira_user": "",
+                "jira_api_token": "",
+            }
+            # Optional overrides: NB_RUN_ID, NB_FORCE_FAIL, etc.
+            for k in list(self._v):
+                env_key = "NB_" + k.upper()
+                if env_key in _os.environ:
+                    self._v[k] = _os.environ[env_key]
+
+        def text(self, name: str, default: str = "") -> None:
+            self._v.setdefault(name, default)
+
+        def get(self, name: str) -> str:
+            return str(self._v.get(name, ""))
+
+    class _LocalNotebook:
+        @staticmethod
+        def exit(value: str) -> None:
+            print()
+            print("=" * 64)
+            print("NOTEBOOK EXIT (local) — same JSON Databricks returns")
+            print("=" * 64)
+            try:
+                print(_json.dumps(_json.loads(value), indent=2))
+            except Exception:
+                print(value)
+            raise SystemExit(0)
+
+    dbutils = _NS(widgets=_LocalWidgets(), notebook=_LocalNotebook())
+    print("Running LOCALLY (dbutils stub). Start mocks: enterprise-notify.cmd")
+    print("  Jira UI : http://127.0.0.1:18080/")
+    print("  Mail UI : http://127.0.0.1:18081/")
+    print()
 
 dbutils.widgets.text("run_id", "session3-lab")
 dbutils.widgets.text("pipeline_name", "pl_ntf_05_master_incident")

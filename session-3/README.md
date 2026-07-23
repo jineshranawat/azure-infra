@@ -87,7 +87,7 @@ orchestrate.cmd
 Optional:
 
 ```text
-orchestrate.cmd --setup-secrets   # one-time: save storage key to Databricks (see §H)
+orchestrate.cmd infra  # one-time: save storage key to Databricks (see §H)
 orchestrate.cmd --verify-storage  # after notebooks: check Delta in silver/gold
 ```
 

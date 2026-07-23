@@ -29,6 +29,7 @@ Then: Azure Portal → `rg-shared-class1` → `dbw-shared-qgr7mj` → **Launch W
 
 ## Related
 
+- **[Genie + Agents beginner teach](databricks-genie-agents-teach.html)** · [DATABRICKS-GENIE-AGENTS.md](DATABRICKS-GENIE-AGENTS.md) · `genie-agents-teach.cmd`
 - [session-3/UI-OVERVIEW.md](../session-3/UI-OVERVIEW.md) · [MANUAL-LAB.md](../session-3/MANUAL-LAB.md)
 - [day9/README.md](../day9/README.md)
 - [adf-monitoring-deep-dive.html](adf-monitoring-deep-dive.html) — when ADF calls notebooks

@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinLedger — Databricks Genie 40h+ (why · what · how)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0b1520; --ink-2:#142433; --paper:#f5f7fa; --card:#ffffff;
+    --line:#d0d7e2; --muted:#5a6a7a; --accent:#ff3621; --accent-2:#1b3139;
+    --teal:#00a972; --code-bg:#0d1b24; --code-ink:#d5e8e2;
+    --warn-bg:#fff4e5; --danger:#8b1e1e; --ok:#1b6b3a; --purple:#6b3d8a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Source Serif 4",Georgia,serif;background:var(--paper);color:var(--ink);line-height:1.65}
+  h1,h2,h3,h4,.toc-title{font-family:"Space Grotesk",system-ui,sans-serif}
+  code,pre,.mono,.cmd{font-family:"JetBrains Mono",Consolas,monospace}
+  a{color:var(--teal)} a:hover{color:var(--accent)}
+  .hero{
+    background:
+      radial-gradient(ellipse 55% 45% at 90% 0%, rgba(255,54,33,.32), transparent 55%),
+      radial-gradient(ellipse 40% 40% at 5% 100%, rgba(0,169,114,.22), transparent 50%),
+      linear-gradient(155deg,#0b1520 0%,#1b3139 55%,#0d1b24 100%);
+    color:#eef6f3;padding:2.8rem 1.5rem 2.2rem;border-bottom:4px solid var(--accent);
+  }
+  .hero-inner{max-width:1180px;margin:0 auto}
+  .brand{font-size:clamp(1.85rem,3.6vw,2.5rem);font-weight:700;color:#fff;margin:0 0 .35rem}
+  .hero h1{font-size:clamp(1.15rem,2.3vw,1.65rem);font-weight:600;color:#ffb3a8;margin:0 0 1rem;max-width:52ch}
+  .hero p{max-width:78ch;color:#c5d5d0;margin-bottom:.85rem}
+  .chips{display:flex;flex-wrap:wrap;gap:.45rem}
+  .chip{font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(255,179,168,.4);padding:.28rem .6rem;color:#ffb3a8}
+  .chip.ok{border-color:rgba(0,169,114,.5);color:#7debc9}
+  .sticky-bar{position:sticky;top:0;z-index:20;background:rgba(245,247,250,.95);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:.5rem 1rem;display:flex;flex-wrap:wrap;gap:.35rem;justify-content:center}
+  .sticky-bar a{font-family:"Space Grotesk",sans-serif;font-size:.72rem;text-decoration:none;border:1px solid var(--line);padding:.24rem .48rem;background:var(--card);color:var(--ink)}
+  .sticky-bar a:hover,.sticky-bar a.hot{border-color:var(--accent);color:var(--accent)}
+  .sticky-bar a.hot{font-weight:700;border-color:var(--teal);color:var(--ok)}
+  .layout{max-width:1180px;margin:0 auto;padding:1.5rem;display:grid;grid-template-columns:260px 1fr;gap:1.5rem}
+  @media(max-width:960px){.layout{grid-template-columns:1fr}}
+  .toc{position:sticky;top:3.1rem;align-self:start;background:var(--card);border:1px solid var(--line);padding:1rem;font-size:.82rem;max-height:calc(100vh - 4rem);overflow:auto}
+  .toc-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.5rem}
+  .toc a{display:block;padding:.18rem 0;color:var(--ink-2);text-decoration:none}
+  .toc a:hover{color:var(--accent)}
+  .toc .sub{padding-left:.65rem;font-size:.76rem;color:var(--muted)}
+  .toc .mod{margin-top:.55rem;font-family:"Space Grotesk",sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  main section{background:var(--card);border:1px solid var(--line);padding:1.35rem 1.45rem;margin-bottom:1.1rem;scroll-margin-top:3.4rem}
+  main h2{font-size:1.28rem;margin:0 0 .7rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent)}
+  main h3{font-size:1.05rem;margin:1.15rem 0 .4rem;color:var(--ink-2)}
+  main h4{font-family:"Space Grotesk",sans-serif;font-size:.94rem;margin:.9rem 0 .3rem}
+  main p,main li{margin:.4rem 0}
+  main ul,main ol{margin:.3rem 0 .65rem 1.2rem}
+  table{width:100%;border-collapse:collapse;font-size:.85rem;margin:.7rem 0 .95rem}
+  th,td{border:1px solid var(--line);padding:.4rem .5rem;vertical-align:top;text-align:left}
+  th{background:#edf2f6;font-family:"Space Grotesk",sans-serif;font-size:.72rem}
+  tr:hover td{background:#f7fafc}
+  .cmd{background:var(--code-bg);color:var(--code-ink);padding:.85rem 1rem;overflow-x:auto;font-size:.78rem;margin:.6rem 0 .95rem;line-height:1.5;white-space:pre}
+  .callout{background:#e8f6f1;border-left:4px solid var(--teal);padding:.75rem 1rem;margin:.9rem 0}
+  .callout.warn{background:var(--warn-bg);border-left-color:var(--accent)}
+  .callout.danger{background:#fce8e8;border-left-color:var(--danger)}
+  .analogy{font-style:italic;color:var(--muted);border-left:3px solid #b8c4d0;padding-left:.7rem;margin:.5rem 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem}
+  @media(max-width:800px){.grid2,.grid3{grid-template-columns:1fr}}
+  .card-mini{border:1px solid var(--line);padding:.8rem;background:#fafbfc}
+  .card-mini h4{margin:0 0 .35rem}
+  .steps{counter-reset:step;list-style:none;margin:.4rem 0 1rem;padding:0}
+  .steps > li{position:relative;padding:.85rem 1rem .85rem 3.1rem;margin:.55rem 0;background:#fafbfc;border:1px solid var(--line);border-radius:8px}
+  .steps > li::before{
+    counter-increment:step;content:counter(step);
+    position:absolute;left:.7rem;top:.9rem;width:1.7rem;height:1.7rem;
+    background:var(--accent);color:#fff;border-radius:50%;
+    font-family:"Space Grotesk",sans-serif;font-size:.85rem;font-weight:600;
+    display:flex;align-items:center;justify-content:center;line-height:1.7rem;text-align:center;
+  }
+  .verify{background:#0e1f18;color:#c8ecd9;border:1px dashed #2d6b4f;border-radius:8px;padding:.65rem .85rem;margin:.45rem 0 .85rem;font-size:.9rem}
+  .verify strong{color:#7debc9}
+  .badge{display:inline-block;font-family:"Space Grotesk",sans-serif;font-size:.64rem;text-transform:uppercase;letter-spacing:.04em;background:var(--accent);color:#fff;padding:.12rem .4rem;margin-right:.2rem}
+  .badge.when{background:var(--teal)} .badge.job{background:var(--purple)} .badge.h{background:#1b3139}
+  .lab-do{border:2px solid var(--teal);background:linear-gradient(180deg,#f0faf6 0%,#fff 40%)}
+  .lab-do h2{border-bottom-color:var(--teal);color:var(--ok)}
+  .www{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.65rem;margin:.8rem 0}
+  @media(max-width:800px){.www{grid-template-columns:1fr}}
+  .www > div{border:1px solid var(--line);border-radius:8px;padding:.7rem .85rem;background:#fafbfc}
+  .www .t{font-family:"Space Grotesk",sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.25rem}
+  .hours{font-family:"Space Grotesk",sans-serif;font-size:.78rem;color:var(--muted)}
+  .ext{font-size:.84rem}
+  footer{max-width:1180px;margin:0 auto 2.5rem;padding:0 1.5rem;color:var(--muted);font-size:.85rem}
+  .click{font-weight:600;color:var(--accent-2)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="brand">FinLedger · Databricks Genie</p>
+    <h1>40+ hour Genie curriculum — why, what, how (every click)</h1>
+    <p>
+      Complete classroom path for <strong>Genie Agents</strong> (formerly Genie Spaces): concepts,
+      prerequisites, create/tune/share, Agent mode, APIs, Agent Bricks comparison, FinLedger labs,
+      and a paced <strong>40+ hour</strong> syllabus. Written for new joiners.
+    </p>
+    <p>
+      <strong>Open HTML:</strong> <code style="color:#ffb3a8">genie-agents-teach.cmd</code>
+      · <strong>Live lab:</strong> <code style="color:#ffb3a8">genie-lab.cmd</code>
+      · Workspace <code style="color:#7debc9">dbw-shared-qgr7mj</code> · <code style="color:#7debc9">uksouth</code>
+    </p>
+    <div class="chips">
+      <span class="chip ok">40h+ syllabus</span>
+      <span class="chip">Why · What · How</span>
+      <span class="chip">Genie Agents</span>
+      <span class="chip">Agent mode</span>
+      <span class="chip">Agent Bricks</span>
+      <span class="chip">Class deep links</span>
+    </div>
+  </div>
+</header>
+
+<nav class="sticky-bar">
+  <a class="hot" href="#open-dbx">Open Genie in Databricks</a>
+  <a href="#do">0. Start</a>
+  <a href="#www">1. Why/What/How</a>
+  <a href="#syllabus">2. 40h syllabus</a>
+  <a href="#prereq">3. Prereqs</a>
+  <a href="#create">4. Create (latest docs)</a>
+  <a class="sub" href="#genie-code">4.2 Genie Code</a>
+  <a href="#tune">5. Tune</a>
+  <a href="#agent-mode">6. Agent mode</a>
+  <a href="#share">7. Share · clone · export</a>
+  <a href="#lab">8. FinLedger lab</a>
+  <a href="#api">9. API</a>
+  <a href="#bricks">10. Agent Bricks</a>
+  <a href="#links">Official links</a>
+  <a href="databricks-ui-deep-dive.html">UI deep dive</a>
+</nav>
+
+<div class="layout">
+<aside class="toc">
+  <div class="toc-title">Contents</div>
+  <a href="#open-dbx">★ Open Genie (class links)</a>
+  <a href="#do">0. How to use this page</a>
+  <div class="mod">Foundations</div>
+  <a href="#www">1. Why · What · How</a>
+  <a href="#concepts">1b. Concepts map</a>
+  <a href="#syllabus">2. 40h syllabus</a>
+  <div class="mod">Setup</div>
+  <a href="#prereq">3. Prerequisites</a>
+  <a href="#warehouse">3b. SQL warehouse</a>
+  <a href="#uc-meta">3c. UC metadata</a>
+  <div class="mod">Build</div>
+  <a href="#create">4. Create (latest Databricks docs)</a>
+  <a class="sub" href="#genie-code">4.2 Genie Code</a>
+  <a href="#tune">5. Tune quality</a>
+  <a class="sub" href="#examples">5b. Example SQL</a>
+  <a class="sub" href="#trusted">5c. Trusted assets</a>
+  <a href="#agent-mode">6. Agent mode</a>
+  <a href="#share">7. Share · clone · export</a>
+  <div class="mod">Practice</div>
+  <a href="#lab">8. FinLedger live lab</a>
+  <a href="#questions">8b. Question bank</a>
+  <div class="mod">Advanced</div>
+  <a href="#api">9. Genie Agents API</a>
+  <a href="#bricks">10. Agent Bricks</a>
+  <a href="#multi">11. Multi-agent</a>
+  <a href="#cost">12. Cost &amp; region</a>
+  <a href="#fix">13. Troubleshooting</a>
+  <a href="#check">14. Checklist / FAQ</a>
+  <a href="#links">Official Microsoft + Databricks links</a>
+</aside>
+
+<main>
+
+<!-- OPEN DBX -->
+<section id="open-dbx" class="lab-do">
+  <h2 style="margin-top:0">★ Open Genie in your class Databricks (click these)</h2>
+  <p class="hours">~15–30 min · do this first every class day</p>
+
+  <table>
+    <tr><th>What</th><th>Link / value</th></tr>
+    <tr>
+      <td>Workspace home</td>
+      <td><a href="https://adb-7405613791235979.19.azuredatabricks.net" target="_blank" rel="noopener">https://adb-7405613791235979.19.azuredatabricks.net</a></td>
+    </tr>
+    <tr>
+      <td>Genie Agents (sidebar landing)</td>
+      <td><a href="https://adb-7405613791235979.19.azuredatabricks.net/genie" target="_blank" rel="noopener">…/genie</a> — if 404, use left nav <span class="click">Genie Agents</span></td>
+    </tr>
+    <tr>
+      <td>Class FinLedger Genie room (created by <code>genie-lab.cmd</code>)</td>
+      <td><a href="https://adb-7405613791235979.19.azuredatabricks.net/genie/rooms/01f185e11fc4152bad1eca7e4bbefa05" target="_blank" rel="noopener">FinLedger Class Genie room</a></td>
+    </tr>
+    <tr>
+      <td>SQL warehouses</td>
+      <td><a href="https://adb-7405613791235979.19.azuredatabricks.net/sql/warehouses" target="_blank" rel="noopener">…/sql/warehouses</a></td>
+    </tr>
+    <tr>
+      <td>Catalog explorer</td>
+      <td><a href="https://adb-7405613791235979.19.azuredatabricks.net/explore/data" target="_blank" rel="noopener">…/explore/data</a> → <code>dbw_shared_qgr7mj</code></td>
+    </tr>
+    <tr>
+      <td>Azure Portal → Launch Workspace</td>
+      <td>RG <code>rg-shared-class1</code> → workspace <code>dbw-shared-qgr7mj</code> → <span class="click">Launch Workspace</span></td>
+    </tr>
+  </table>
+
+  <ol class="steps">
+    <li>Sign in to the workspace link above (same Entra ID as class).</li>
+    <li>Left sidebar → <span class="click">Genie Agents</span> (or older label <em>Genie</em> / <em>Genie spaces</em> — same product).</li>
+    <li>Open <strong>FinLedger Class Genie</strong> or click the room link in the table.</li>
+    <li>Ask: <em>“How many rows are in advanced_lab.channel_kpi?”</em></li>
+  </ol>
+  <div class="verify"><strong>Proof:</strong> Chat returns ~3 rows (class data) and shows generated SQL you can expand.</div>
+
+  <p class="ext"><strong>Official create docs:</strong>
+    <a href="https://learn.microsoft.com/en-us/azure/databricks/genie/set-up" target="_blank" rel="noopener">MS Learn — Create Genie Agent</a> ·
+    <a href="https://docs.databricks.com/aws/en/genie/set-up" target="_blank" rel="noopener">docs.databricks.com — Genie set-up</a>
+  </p>
+</section>
+
+<!-- 0 -->
+<section id="do">
+  <h2>0. How to use this page</h2>
+  <div class="www">
+    <div><div class="t">Open teach</div><div class="cmd">genie-agents-teach.cmd</div></div>
+    <div><div class="t">Live create + ask</div><div class="cmd">genie-lab.cmd</div></div>
+    <div><div class="t">MD twin</div><a href="DATABRICKS-GENIE-AGENTS.md">DATABRICKS-GENIE-AGENTS.md</a></div>
+  </div>
+  <p>Every major section uses the same teaching pattern: <strong>Why</strong> → <strong>What</strong> → <strong>How (clicks)</strong> → <strong>Verify</strong> → <strong>Official link</strong>.</p>
+  <p>Related: <a href="databricks-ui-deep-dive.html">Databricks UI 100h</a> · <a href="enterprise-de-playbook.html">DE playbook</a></p>
+</section>
+
+<!-- 1 WWW -->
+<section id="www">
+  <h2>1. Why · What · How (plain language)</h2>
+  <p class="hours">~2–3 hours reading + discussion</p>
+
+  <div class="www">
+    <div>
+      <div class="t">Why</div>
+      <p>Business users wait days for SQL tickets. Analysts rewrite the same metrics. Leadership wants self-serve answers <em>without</em> losing Unity Catalog governance.</p>
+    </div>
+    <div>
+      <div class="t">What</div>
+      <p><strong>Genie Agent</strong> = curated NL→SQL chat over UC tables/views, powered by a SQL warehouse, instructions, example SQL, and trusted assets.</p>
+    </div>
+    <div>
+      <div class="t">How</div>
+      <p>Analyst curates 3–30 tables + examples → users ask English questions → Genie writes/runs SQL → table + summary (permissions still apply).</p>
+    </div>
+  </div>
+
+  <p class="analogy">Analogy: Genie is a trained waiter. UC tables are the pantry. Example SQL is the recipe book. Instructions are house rules. The SQL warehouse is the stove. Guests never enter the kitchen — but they only get dishes they’re allowed to eat (SELECT / RLS).</p>
+
+  <h3>Rename note (2026)</h3>
+  <p><strong>Genie Agents</strong> were formerly called <strong>Genie Spaces</strong>. UI and docs may show either label. Same feature family.</p>
+  <p class="ext">Concepts:
+    <a href="https://learn.microsoft.com/en-us/azure/databricks/genie/concepts" target="_blank" rel="noopener">MS Learn — Genie concepts</a> ·
+    <a href="https://docs.databricks.com/aws/en/genie-agents/concepts" target="_blank" rel="noopener">Databricks — concepts</a>
+  </p>
+</section>
+
+<section id="concepts">
+  <h2>1b. Concepts map (what Genie uses to answer)</h2>
+  <table>
+    <tr><th>Layer</th><th>What it is</th><th>Who owns it</th></tr>
+    <tr><td>Unity Catalog metadata</td><td>Table/column names, comments, PK/FK</td><td>Data owners / DE</td></tr>
+    <tr><td>Attached tables/views</td><td>Up to <strong>30</strong> per agent (keep fewer for quality)</td><td>Genie author</td></tr>
+    <tr><td>Text instructions</td><td>Business rules, date definitions, vocabulary</td><td>Analyst</td></tr>
+    <tr><td>Example SQL</td><td>Gold patterns for common questions</td><td>Analyst</td></tr>
+    <tr><td>Trusted assets</td><td>Verified parameterized SQL / UC functions</td><td>Analyst</td></tr>
+    <tr><td>Knowledge store</td><td>Joins, measures, filters, synonyms (snippet limits apply)</td><td>Analyst</td></tr>
+    <tr><td>SQL warehouse</td><td>Runs generated SQL; author compute credentials embedded</td><td>SQL admin / author</td></tr>
+    <tr><td>User UC privileges</td><td>What rows/columns each user can see</td><td>Governance</td></tr>
+  </table>
+  <div class="callout">
+    Genie can sometimes query beyond the attached list if the user prompts joins and has UC access — still governed by permissions, not by “hiding” tables in the agent alone.
+  </div>
+</section>
+
+<!-- 2 SYLLABUS -->
+<section id="syllabus">
+  <h2>2. Forty-hour+ syllabus (pace yourself)</h2>
+  <p class="hours">Designed for ~40–48 classroom / self-study hours. Mix theory + live clicks + <code>genie-lab.cmd</code>.</p>
+  <table>
+    <tr><th>Module</th><th>Hours</th><th>Focus</th><th>Done when</th></tr>
+    <tr><td>M0 Open workspace + Genie icon</td><td>1</td><td>Links in §★</td><td>You open chat and ask one question</td></tr>
+    <tr><td>M1 Why / What / concepts</td><td>3</td><td>§1–1b</td><td>Explain Genie vs BI dashboard vs notebook in 60s</td></tr>
+    <tr><td>M2 Prereqs + partner AI + entitlements</td><td>3</td><td>§3</td><td>Checklist green or documented blocker</td></tr>
+    <tr><td>M3 SQL warehouse lab</td><td>2</td><td>§3b</td><td>Small warehouse starts/stops</td></tr>
+    <tr><td>M4 UC comments &amp; clean views</td><td>4</td><td>§3c</td><td>3 tables have useful column comments</td></tr>
+    <tr><td>M5 Create first Genie Agent</td><td>4</td><td>§4</td><td>Agent exists with warehouse + 5–10 tables</td></tr>
+    <tr><td>M6 Genie Code review</td><td>2</td><td>§4b</td><td>Accepted/rejected suggestions deliberately</td></tr>
+    <tr><td>M7 Instructions + example SQL</td><td>6</td><td>§5</td><td>≥5 examples; paraphrase test passes</td></tr>
+    <tr><td>M8 Trusted assets + joins</td><td>3</td><td>§5c</td><td>One verified parameterized answer</td></tr>
+    <tr><td>M9 Agent mode deep questions</td><td>3</td><td>§6</td><td>One multi-step report with citations</td></tr>
+    <tr><td>M10 Share / ACL / RLS demo</td><td>3</td><td>§7</td><td>Second user runs with limited rows</td></tr>
+    <tr><td>M11 FinLedger <code>genie-lab.cmd</code></td><td>4</td><td>§8</td><td>Orchestrator results MD reviewed</td></tr>
+    <tr><td>M12 Conversation / Management API</td><td>3</td><td>§9</td><td>One API ask OR documented skip</td></tr>
+    <tr><td>M13 Agent Bricks Knowledge Assistant</td><td>3</td><td>§10</td><td>Know when NOT to use Genie</td></tr>
+    <tr><td>M14 Cost, audit, FAQ, teach-back</td><td>2</td><td>§12–14</td><td>5-min teach-back to peer</td></tr>
+  </table>
+  <p><strong>Total ≈ 46h</strong> (trim M12–M13 if no Model Serving budget).</p>
+</section>
+
+<!-- 3 PREREQ -->
+<section id="prereq">
+  <h2>3. Prerequisites — why / what / how</h2>
+  <p class="hours">~3 hours</p>
+  <div class="www">
+    <div><div class="t">Why</div><p>Without UC + warehouse + partner AI + entitlements, Genie icon may appear but create/chat fails mysteriously.</p></div>
+    <div><div class="t">What</div><p>SQL entitlement, CAN USE on pro/serverless warehouse, SELECT on tables, partner-powered AI ON.</p></div>
+    <div><div class="t">How</div><p>Admin enables features; you verify with the checklist below before Create.</p></div>
+  </div>
+  <table>
+    <tr><th>Need</th><th>How to check</th><th>Owner</th></tr>
+    <tr><td>Unity Catalog tables</td><td><a href="https://adb-7405613791235979.19.azuredatabricks.net/explore/data" target="_blank" rel="noopener">Catalog</a> → <code>dbw_shared_qgr7mj</code></td><td>DE</td></tr>
+    <tr><td>SELECT on those tables</td><td>SQL Editor: <code>SELECT * FROM … LIMIT 5</code></td><td>UC grants</td></tr>
+    <tr><td>Pro/serverless SQL warehouse + CAN USE</td><td><a href="https://adb-7405613791235979.19.azuredatabricks.net/sql/warehouses" target="_blank" rel="noopener">Warehouses</a></td><td>SQL admin</td></tr>
+    <tr><td>Databricks SQL (or consumer) entitlement</td><td>Admin → users / entitlements</td><td>Account admin</td></tr>
+    <tr><td>Partner-powered AI features</td><td>Account + workspace AI settings</td><td>Account admin</td></tr>
+  </table>
+  <p class="ext">Permissions detail: <a href="https://learn.microsoft.com/en-us/azure/databricks/genie/set-up" target="_blank" rel="noopener">Required permissions (MS Learn)</a></p>
+</section>
+
+<section id="warehouse">
+  <h2>3b. SQL warehouse — step by step</h2>
+  <div class="www">
+    <div><div class="t">Why</div><p>Genie-generated SQL must execute somewhere. Warehouse = Genie’s compute.</p></div>
+    <div><div class="t">What</div><p>Pro or <strong>serverless</strong> SQL warehouse. Author’s credentials are embedded for all users’ queries; users still need data SELECT.</p></div>
+    <div><div class="t">How</div><p>Create tiny warehouse, short auto-stop, attach in Genie Settings.</p></div>
+  </div>
+  <ol class="steps">
+    <li>Open <a href="https://adb-7405613791235979.19.azuredatabricks.net/sql/warehouses" target="_blank" rel="noopener">SQL warehouses</a>.</li>
+    <li><span class="click">Create SQL warehouse</span> — name e.g. <code>finledger-genie-wh</code>.</li>
+    <li>Prefer <span class="click">Serverless</span> if available; else smallest Pro.</li>
+    <li>Size: cheapest viable (2X-Small / starter). Auto-stop: <strong>10–15 min</strong>.</li>
+    <li>Create → start once → confirm <span class="click">Running</span> → let it auto-stop.</li>
+  </ol>
+  <div class="callout warn"><strong>Cost:</strong> Warehouses spend money while running. Class rule: warn, smallest SKU, never leave running overnight.</div>
+</section>
+
+<section id="uc-meta">
+  <h2>3c. Prepare Unity Catalog metadata (quality starts here)</h2>
+  <div class="www">
+    <div><div class="t">Why</div><p>Genie reads comments. “amt” with no description → wrong SQL. “amount_gbp — transaction amount in GBP” → better SQL.</p></div>
+    <div><div class="t">What</div><p>Table comment, column comments, useful views that hide messy bronze columns.</p></div>
+    <div><div class="t">How</div><p>Catalog UI or SQL <code>COMMENT ON</code> / ALTER.</p></div>
+  </div>
+  <ol class="steps">
+    <li>Catalog → <code>dbw_shared_qgr7mj.advanced_lab.channel_kpi</code>.</li>
+    <li>Add table description: what grain, what “channel” means.</li>
+    <li>Comment each column in plain business English.</li>
+    <li>Prefer silver/gold-style tables for Genie — not raw dumps.</li>
+  </ol>
+  <div class="cmd"><span class="c">-- Example pattern (names may vary)</span>
+COMMENT ON TABLE dbw_shared_qgr7mj.advanced_lab.channel_kpi IS
+  'Channel-level KPI grain for FinLedger lab; one row per channel metric snapshot';
+COMMENT ON COLUMN dbw_shared_qgr7mj.advanced_lab.channel_kpi.channel IS
+  'Payment channel: card, wire, or fps';</div>
+</section>
+
+<!-- 4 CREATE — aligned to Databricks docs updated Jul 14, 2026 -->
+<section id="create" class="lab-do">
+  <h2 style="margin-top:0">4. Create a Genie Agent — latest Databricks documentation</h2>
+  <p class="hours">Source of truth (updated Jul 14, 2026):
+    <a href="https://docs.databricks.com/aws/en/genie/set-up" target="_blank" rel="noopener">docs.databricks.com — Create and manage a Genie Agent</a>
+    · <a href="https://learn.microsoft.com/en-us/azure/databricks/genie/set-up" target="_blank" rel="noopener">MS Learn (Azure) — same topic</a>
+    · Hub: <a href="https://learn.microsoft.com/en-us/azure/databricks/genie/" target="_blank" rel="noopener">Genie overview</a>
+  </p>
+  <div class="callout">
+    <strong>Official rename:</strong> Genie Agents were formerly known as <em>Genie Spaces</em>.
+    Some locale pages still say “Space” — same product. Sidebar label in current docs: <span class="click">Genie Agents</span>.
+  </div>
+
+  <h3>4.0 Before you click New — requirements (from docs)</h3>
+  <h4>Technical requirements and limits</h4>
+  <ul>
+    <li><strong>Unity Catalog:</strong> data must be registered to UC. You can add up to <strong>30</strong> tables or views per Genie Agent.</li>
+    <li><strong>Compute:</strong> pro or <strong>serverless</strong> SQL warehouse. Creator needs at least <strong>CAN USE</strong> on that warehouse. Your compute credentials are <em>embedded</em> and used to process queries for all users.</li>
+    <li><strong>Capacity:</strong> up to 10,000 conversations per agent; up to 10,000 messages per conversation.</li>
+  </ul>
+  <h4>Required permissions (to create or edit)</h4>
+  <ul>
+    <li><strong>Entitlements:</strong> Databricks SQL workspace entitlement.</li>
+    <li><strong>Compute:</strong> CAN USE on at least one pro/serverless SQL warehouse.</li>
+    <li><strong>Data access:</strong> <code>SELECT</code> on the data used in the agent.</li>
+    <li><strong>Genie Agent ACLs:</strong> at least CAN EDIT to edit; creators get CAN MANAGE automatically.</li>
+  </ul>
+  <h4>Partner-powered AI</h4>
+  <p>Genie uses <strong>partner-powered AI features</strong>, enabled at <em>account and workspace</em> levels.
+  If disabled, users may still see the Genie Agents icon but <strong>cannot access</strong> any Genie Agents.
+  Account admin manages this — see Partner-powered AI features in Databricks docs.</p>
+
+  <h3>4.1 Create a Genie Agent — exact 3 steps from Databricks</h3>
+  <p>Class workspace:
+    <a href="https://adb-7405613791235979.19.azuredatabricks.net" target="_blank" rel="noopener">Launch workspace</a>
+    · then left sidebar <span class="click">Genie Agents</span>
+    · or try <a href="https://adb-7405613791235979.19.azuredatabricks.net/genie" target="_blank" rel="noopener">/genie</a>
+  </p>
+  <ol class="steps">
+    <li>
+      <strong>Click <span class="click">Genie Agents</span> in the sidebar.</strong><br>
+      (If your UI still says Genie Spaces / Genie — use that entry; same feature.)
+    </li>
+    <li>
+      <strong>Click <span class="click">New</span> in the upper-right corner of the screen.</strong>
+    </li>
+    <li>
+      <strong>Choose the data sources</strong> (Unity Catalog tables/views) you want to include.
+      Then click <span class="click">Create</span>.<br>
+      <em>Class tip:</em> start with 5–10 tables from <code>dbw_shared_qgr7mj.advanced_lab</code> + <code>cost_lab</code>
+      (hard max is 30; fewer = better quality).
+    </li>
+  </ol>
+  <div class="verify"><strong>Proof (docs path done):</strong> A new Genie Agent opens and Genie Code typically launches automatically.</div>
+
+  <h3 id="genie-code">4.2 Set up with Genie Code (automatic after Create)</h3>
+  <p>Per docs: when you create an agent, <strong>Genie Code launches automatically</strong>. It reads your data and suggests context
+  (table descriptions, example queries). <strong>Review suggestions → accept the ones you want → reject the rest.</strong>
+  To fill a gap, describe the context you want Genie Code to add.</p>
+  <p>You can also ask Genie Code to <em>create</em> an agent when you do not yet know which tables to use:
+  describe business domain, questions, and data; it identifies sources, confirms with you, and builds the agent.</p>
+  <div class="cmd"><span class="c"># Official-style Genie Code prompt (adapt for FinLedger)</span>
+Create a Genie agent for FinLedger ops that answers questions about
+channel KPIs, payment pulses, chargeback estimates, DQ metrics, and SCD2 channel history.
+Use tables in catalog dbw_shared_qgr7mj schemas advanced_lab and cost_lab.</div>
+  <div class="callout warn">
+    <strong>Before sharing</strong> (Databricks recommendation): add example SQL queries, instructions, and knowledge store
+    configurations to improve accuracy — see
+    <a href="https://docs.databricks.com/aws/en/genie-agents/tune-quality" target="_blank" rel="noopener">Tune Genie Agent quality</a>.
+  </div>
+
+  <h3>4.3 Review query suggestions (Data / Instructions panel)</h3>
+  <p>When you add data assets, Genie searches popular workspace queries on those assets (using your credentials;
+  you need at least CAN VIEW on those queries). If found, a notification appears on the <strong>Data</strong> tab of the
+  Instructions panel → click <span class="click">Review</span>.</p>
+  <ol class="steps">
+    <li><strong>Title</strong> is prepopulated with a question — edit phrasing if needed.</li>
+    <li><strong>Code</strong> shows suggested SQL (not editable in the review dialog). Expand with <span class="click">… more lines</span>.</li>
+    <li>Optional: open <span class="click">SQL query</span> in Query history if you have permission.</li>
+    <li>Click <span class="click">Accept</span> or <span class="click">Reject</span>.</li>
+    <li>Expand other suggestions and review each.</li>
+  </ol>
+  <p>Accepted queries become editable example SQL on the agent. If none appear: missing query ACL, no prior queries on those tables,
+  write-only queries ignored, or queries only on tables not attached to the agent.</p>
+
+  <h3>4.4 Manage data objects</h3>
+  <ol class="steps">
+    <li>Click <span class="click">Configure</span> → <span class="click">Data</span>.</li>
+    <li><span class="click">Add</span> more tables/views, or remove with the control next to a table name.</li>
+    <li>Click a table name → <span class="click">Overview</span> (columns, types, descriptions) and <span class="click">Sample data</span>.</li>
+  </ol>
+  <div class="callout">
+    <strong>Docs note:</strong> Genie can query tables beyond those explicitly added if users prompt joins / edit SQL and have UC access.
+    Access is controlled by Unity Catalog, not by “hiding” tables in the agent alone.
+  </div>
+
+  <h3>4.5 Configure settings (Configure → Settings)</h3>
+  <p>Customize after create. Docs list these settings:</p>
+  <table>
+    <tr><th>Setting</th><th>What docs say</th><th>Class value</th></tr>
+    <tr><td><strong>Title</strong></td><td>Shows in workspace browser; help users discover the agent</td><td><code>FinLedger Class Genie</code></td></tr>
+    <tr><td><strong>Default warehouse</strong></td><td>Powers generated SQL; saving embeds <em>your</em> compute credentials for all users. Need CAN EDIT to change. Prefer <strong>serverless</strong></td><td>Serverless Starter / smallest class WH</td></tr>
+    <tr><td><strong>Tags</strong></td><td>Organize agents (Public Preview). CAN EDIT; governed tags need ASSIGN</td><td>optional <code>class=finledger</code></td></tr>
+    <tr><td><strong>Thumbnail</strong></td><td>Shows on initial chat page and Genie One</td><td>optional</td></tr>
+    <tr><td><strong>Description</strong></td><td>Shown when users open the agent; Markdown supported</td><td>Short FinLedger purpose + links</td></tr>
+    <tr><td><strong>Common questions</strong></td><td>Optional prompts on chat landing. Author questions first; Genie may auto-fill remaining slots</td><td>3–5 KPI questions</td></tr>
+  </table>
+  <ol class="steps">
+    <li><span class="click">Configure</span> → <span class="click">Settings</span>.</li>
+    <li>Set <strong>Default warehouse</strong> → save (critical — without this, chat cannot run SQL reliably).</li>
+    <li>Set Title, Description, Common questions.</li>
+    <li>(Optional) Tags: Settings → General → Add tags / Add/Edit tags.</li>
+  </ol>
+  <div class="verify"><strong>Proof:</strong> Chat landing shows your common questions; Settings shows the selected warehouse.</div>
+
+  <h3>4.6 Class deep links after create</h3>
+  <ul>
+    <li>Existing lab agent:
+      <a href="https://adb-7405613791235979.19.azuredatabricks.net/genie/rooms/01f185e11fc4152bad1eca7e4bbefa05" target="_blank" rel="noopener">FinLedger Class Genie room</a>
+    </li>
+    <li>Or automate create+ask: <code>genie-lab.cmd</code></li>
+  </ul>
+</section>
+
+<!-- 5 TUNE -->
+<section id="tune">
+  <h2>5. Tune quality — where the real work is</h2>
+  <p class="hours">~6–9 hours across examples + trusted assets</p>
+  <div class="www">
+    <div><div class="t">Why</div><p>Out-of-box Genie is average. Tuned Genie with examples is what finance will trust.</p></div>
+    <div><div class="t">What</div><p>Text instructions, example SQL, UC functions, knowledge store joins/measures/filters.</p></div>
+    <div><div class="t">How</div><p>Configure → Instructions → Text / SQL Queries tabs; iterate from wrong answers.</p></div>
+  </div>
+  <p class="ext"><a href="https://learn.microsoft.com/en-us/azure/databricks/genie/tune-quality" target="_blank" rel="noopener">MS Learn — Tune quality</a> ·
+    <a href="https://docs.databricks.com/aws/en/genie-agents/tune-quality" target="_blank" rel="noopener">Databricks tune quality</a> ·
+    <a href="https://docs.databricks.com/aws/en/genie-agents/best-practices" target="_blank" rel="noopener">Best practices</a></p>
+
+  <h3>5.1 Text instructions (examples)</h3>
+  <div class="cmd">- Currency is GBP unless the user asks otherwise.
+- Channels are only: card, wire, fps.
+- "Yesterday" = previous calendar day in UTC.
+- Never invent rows; if empty, say empty and list filters used.
+- Prefer advanced_lab.channel_kpi for channel rollups.
+- When summarizing, lead with the number, then the breakdown.</div>
+
+  <h3 id="examples">5.2 Example SQL (highest impact)</h3>
+  <ol class="steps">
+    <li><span class="click">Configure</span> → <span class="click">Instructions</span> → <span class="click">SQL Queries</span>.</li>
+    <li>Add example. <strong>Title</strong> = how a business user asks (not “Q3 report”).</li>
+    <li>Paste tested SQL against UC.</li>
+    <li>Ask the title verbatim → then paraphrase → refine.</li>
+  </ol>
+  <div class="cmd"><span class="c">-- Title: How many rows are in channel_kpi?</span>
+SELECT COUNT(*) AS row_count
+FROM dbw_shared_qgr7mj.advanced_lab.channel_kpi;</div>
+
+  <h3 id="trusted">5.3 Trusted assets</h3>
+  <p>Parameterized examples and UC SQL functions whose logic you verified. When Genie uses them exactly, answers can show as <em>verified</em>.</p>
+  <ul>
+    <li>Users need <code>EXECUTE</code> on functions used as trusted assets.</li>
+    <li>Authors need CAN EDIT on the agent to add/remove them.</li>
+  </ul>
+</section>
+
+<!-- 6 AGENT MODE -->
+<section id="agent-mode">
+  <h2>6. Agent mode (multi-step research)</h2>
+  <p class="hours">~3 hours</p>
+  <div class="www">
+    <div><div class="t">Why</div><p>One-shot SQL fails on “investigate anomalies across KPIs and cost.” Need plan → many queries → report.</p></div>
+    <div><div class="t">What</div><p>Agent mode: multi-step reasoning, hypothesis testing, citations, longer runtime.</p></div>
+    <div><div class="t">How</div><p>Open agent → Agent mode icon in chat → ask a data-driven exploratory question.</p></div>
+  </div>
+  <ol class="steps">
+    <li>Open your Genie Agent chat.</li>
+    <li>Click the <span class="click">Agent mode</span> icon in the chat box.</li>
+    <li>Ask e.g. <em>“Compare channel KPI pulse volume vs chargeback estimates and highlight anything unusual.”</em></li>
+    <li>Wait; optionally <span class="click">Answer now</span> to stop early with partial evidence.</li>
+    <li>Read final report + citations + supporting tables.</li>
+  </ol>
+  <div class="callout">Agent mode uses the <em>same</em> curated context as normal Genie — tuning still matters.</div>
+  <p class="ext"><a href="https://learn.microsoft.com/en-us/azure/databricks/genie/agent-mode" target="_blank" rel="noopener">MS Learn — Agent mode</a></p>
+</section>
+
+<!-- 7 SHARE — aligned to Databricks set-up docs -->
+<section id="share">
+  <h2>7. Share, clone, export — latest docs steps</h2>
+  <p class="hours">Official:
+    <a href="https://docs.databricks.com/aws/en/genie/set-up" target="_blank" rel="noopener">Create and manage — Share / Clone / Export</a>
+  </p>
+
+  <h3>How compute + data work when shared (docs)</h3>
+  <ul>
+    <li>Queries run with the <strong>embedded compute credentials</strong> of the author who set the warehouse.</li>
+    <li>End users do <strong>not</strong> need warehouse CAN USE.</li>
+    <li>Each user’s <strong>own UC data credentials</strong> apply — they only see allowed rows; no access → empty response.</li>
+    <li>Use Unity Catalog <strong>row filters / column masks</strong> to restrict data per user inside the same agent.</li>
+  </ul>
+  <p>Consumers need: consumer or Databricks SQL entitlement · SELECT on UC objects · Genie ACL at least <strong>CAN VIEW / CAN RUN</strong>
+  (same abilities per ACL table).</p>
+
+  <h3>Share with specific users or groups</h3>
+  <ol class="steps">
+    <li>Click <span class="click">Share</span>.</li>
+    <li>Enter users or groups → <span class="click">Add</span> → set level: CAN MANAGE, CAN EDIT, CAN RUN, or CAN VIEW.</li>
+    <li>Use <span class="click">Copy link</span> at the bottom of the Share dialog for a shareable URL.</li>
+  </ol>
+  <h3>Share with all account users</h3>
+  <ol class="steps">
+    <li><span class="click">Share</span> → select <span class="click">All account users</span> → set permission level.</li>
+  </ol>
+  <p>New agents save to your user folder by default and inherit folder permissions. Agents can also share individual conversations.</p>
+
+  <h3>Clone (exact docs steps)</h3>
+  <p>Copies: tables, settings, general instructions, example SQL, SQL functions.
+  Does <strong>not</strong> copy: chat threads, Monitor tab data.</p>
+  <ol class="steps">
+    <li>Open the Genie Agent.</li>
+    <li>Click the kebab menu (⋯) upper-right.</li>
+    <li>Click <span class="click">Clone</span>.</li>
+    <li>(Optional) New name and workspace folder.</li>
+    <li>Click <span class="click">Clone</span>.</li>
+  </ol>
+
+  <h3>Export as metric view (exact docs steps)</h3>
+  <ol class="steps">
+    <li>Open the Genie Agent.</li>
+    <li>⋯ → <span class="click">Export to metric view</span>.</li>
+    <li>Select path for the new metric view.</li>
+    <li>(Optional) Open Genie Code to refine the definition.</li>
+    <li>Click <span class="click">Create</span>.</li>
+  </ol>
+
+  <h3>Test loop (classroom)</h3>
+  <ol class="steps">
+    <li>Ask each Common question verbatim.</li>
+    <li>Paraphrase once.</li>
+    <li>Ask out-of-scope — expect refuse/empty, not fiction.</li>
+    <li>Wrong answer → add example SQL / instruction → retest (see Tune quality).</li>
+  </ol>
+</section>
+
+<!-- 8 LAB -->
+<section id="lab" class="lab-do">
+  <h2>8. FinLedger live lab — one Windows command</h2>
+  <p class="hours">~4 hours including reading orchestrator output</p>
+  <div class="cmd">cd D:\azure
+genie-lab.cmd
+genie-lab.cmd create
+genie-lab.cmd ask</div>
+  <p><strong>What it does:</strong> grant UC access → inventory <code>dbw_shared_qgr7mj</code> (67 tables) → select 30 → create/update Genie → run 24 questions + 4-step orchestrator → write results.</p>
+  <div class="verify">
+    <strong>Proof:</strong> <code>shared-adf-lab\genie-lab\out\orchestrator_results.md</code>
+    · Room: <a href="https://adb-7405613791235979.19.azuredatabricks.net/genie/rooms/01f185e11fc4152bad1eca7e4bbefa05" target="_blank" rel="noopener">FinLedger Class Genie</a>
+  </div>
+  <div class="callout warn">Starts SQL warehouse (cost). Auto-stop when idle.</div>
+</section>
+
+<section id="questions">
+  <h2>8b. Question bank to practice by hand</h2>
+  <ul>
+    <li>How many rows are in advanced_lab.channel_kpi?</li>
+    <li>Summarize eh_channel_kpi pulses and GBP totals.</li>
+    <li>What is in cost_lab.chargeback_estimate?</li>
+    <li>Show DQ metrics from attached demo_problems tables.</li>
+    <li>Explain SCD2 channel history if attached.</li>
+    <li>Compare row counts channel_kpi vs eh_channel_kpi.</li>
+    <li>(Guardrail) What was Apple’s stock price yesterday?</li>
+    <li>(Guardrail) Delete all rows from channel_kpi.</li>
+  </ul>
+</section>
+
+<!-- 9 API -->
+<section id="api">
+  <h2>9. Genie Agents API (conversation + management)</h2>
+  <p class="hours">~3 hours</p>
+  <div class="www">
+    <div><div class="t">Why</div><p>Embed Genie in apps, CI create/update agents, orchestrators (like <code>genie-lab</code>).</p></div>
+    <div><div class="t">What</div><p>REST: start-conversation, messages, create/update spaces; also Databricks SDK <code>w.genie</code>.</p></div>
+    <div><div class="t">How</div><p>Curate agent in UI first → then call Conversation API with space_id + token.</p></div>
+  </div>
+  <div class="cmd">POST /api/2.0/genie/spaces/{space_id}/start-conversation
+Authorization: Bearer &lt;token&gt;
+{"content":"How many rows are in advanced_lab.channel_kpi?"}</div>
+  <p class="ext"><a href="https://docs.databricks.com/aws/en/genie-agents/conversation-api" target="_blank" rel="noopener">Genie Agents API</a> ·
+    <a href="https://databricks-sdk-py.readthedocs.io/en/latest/workspace/dashboards/genie.html" target="_blank" rel="noopener">Python SDK w.genie</a></p>
+</section>
+
+<!-- 10 BRICKS -->
+<section id="bricks">
+  <h2>10. Agent Bricks / Mosaic AI — not the same as Genie</h2>
+  <p class="hours">~3 hours (demo Knowledge Assistant only if budget allows)</p>
+  <table>
+    <tr><th></th><th>Genie Agent</th><th>Knowledge Assistant (Agent Bricks)</th></tr>
+    <tr><td>Best for</td><td>Numbers in tables</td><td>Chat over PDFs / docs with citations</td></tr>
+    <tr><td>Compute</td><td>SQL warehouse</td><td>Model Serving + serverless</td></tr>
+    <tr><td>Sidebar</td><td>Genie Agents</td><td>Agents / Agent Bricks</td></tr>
+    <tr><td>Class cost</td><td>Warehouse (usually OK)</td><td>Warn — can spend more</td></tr>
+  </table>
+  <p class="ext"><a href="https://learn.microsoft.com/en-us/azure/databricks/generative-ai/agent-bricks/knowledge-assistant" target="_blank" rel="noopener">MS Learn — Knowledge Assistant</a></p>
+</section>
+
+<section id="multi">
+  <h2>11. Multi-agent pattern</h2>
+  <div class="cmd">User: Did yesterday's card volume breach the runbook threshold?
+Supervisor
+  ├─ Knowledge Assistant → threshold from PDF
+  └─ Genie tool            → card volume from UC tables
+Combine → yes/no + citation + SQL number</div>
+  <p class="ext"><a href="https://docs.databricks.com/aws/en/genie-agents/set-up" target="_blank" rel="noopener">Use Genie in multi-agent systems (see set-up additional resources)</a></p>
+</section>
+
+<section id="cost">
+  <h2>12. Cost &amp; region (class guardrails)</h2>
+  <ul>
+    <li>Region: <code>uksouth</code> primary. AI feature availability is region-dependent — confirm with trainer.</li>
+    <li>Genie: SQL warehouse spend — smallest + auto-stop.</li>
+    <li>Agent Bricks: Model Serving — warn before create.</li>
+    <li>Partner AI: prompts may use partner models per Databricks policy.</li>
+  </ul>
+</section>
+
+<section id="fix">
+  <h2>13. Troubleshooting</h2>
+  <table>
+    <tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr>
+    <tr><td>Icon works, chat fails</td><td>Partner AI off</td><td>Account admin enables partner-powered AI</td></tr>
+    <tr><td>Cannot create</td><td>No SQL entitlement / warehouse</td><td>Entitlements + CAN USE</td></tr>
+    <tr><td>Empty answers</td><td>No SELECT / RLS</td><td>UC grants; test in SQL Editor</td></tr>
+    <tr><td>Wrong SQL</td><td>Too many tables / no examples</td><td>Narrow tables; add examples</td></tr>
+    <tr><td>Insufficient privileges on schema</td><td>Missing USE SCHEMA</td><td><code>genie-lab.cmd</code> grant step / GRANT USE SCHEMA</td></tr>
+    <tr><td>Slow first answer</td><td>Warehouse cold start</td><td>Normal; keep small warehouse</td></tr>
+  </table>
+</section>
+
+<section id="check">
+  <h2>14. Checklist + FAQ</h2>
+  <ul>
+    <li>□ Opened class Genie room link and asked a question</li>
+    <li>□ Can explain Why/What/How in one minute</li>
+    <li>□ Warehouse attached; auto-stop set</li>
+    <li>□ UC comments on key tables</li>
+    <li>□ ≥5 example SQLs; paraphrase test OK</li>
+    <li>□ Shared CAN RUN with a peer who has SELECT</li>
+    <li>□ Ran <code>genie-lab.cmd</code> or reviewed orchestrator MD</li>
+    <li>□ Know Genie vs Knowledge Assistant</li>
+  </ul>
+  <table>
+    <tr><th>FAQ</th><th>Answer</th></tr>
+    <tr><td>Genie = ChatGPT on the lake?</td><td>No — NL→SQL under UC + warehouse.</td></tr>
+    <tr><td>Spaces vs Agents?</td><td>Rename (2026) — same family.</td></tr>
+    <tr><td>Max tables?</td><td>30; quality prefers far fewer.</td></tr>
+    <tr><td>Replace ADF?</td><td>No. Genie answers; ADF/Jobs move data.</td></tr>
+  </table>
+</section>
+
+<section id="links">
+  <h2>Official links (bookmark these)</h2>
+  <h3>Microsoft Learn (Azure Databricks)</h3>
+  <ul class="ext">
+    <li><a href="https://learn.microsoft.com/en-us/azure/databricks/genie/set-up" target="_blank" rel="noopener">Create and manage a Genie Agent</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/databricks/genie/concepts" target="_blank" rel="noopener">Genie Agents concepts</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/databricks/genie/tune-quality" target="_blank" rel="noopener">Tune Genie Agent quality</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/databricks/genie/agent-mode" target="_blank" rel="noopener">Agent mode in Genie Agents</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/databricks/generative-ai/agent-bricks/knowledge-assistant" target="_blank" rel="noopener">Knowledge Assistant (Agent Bricks)</a></li>
+  </ul>
+  <h3>docs.databricks.com</h3>
+  <ul class="ext">
+    <li><a href="https://docs.databricks.com/aws/en/genie/set-up" target="_blank" rel="noopener">Create Genie Agent</a></li>
+    <li><a href="https://docs.databricks.com/aws/en/genie-agents/tune-quality" target="_blank" rel="noopener">Tune quality</a></li>
+    <li><a href="https://docs.databricks.com/aws/en/genie-agents/best-practices" target="_blank" rel="noopener">Curate an effective Genie Agent</a></li>
+    <li><a href="https://docs.databricks.com/aws/en/genie-agents/conversation-api" target="_blank" rel="noopener">Genie Agents API</a></li>
+  </ul>
+  <h3>Class deep links</h3>
+  <ul class="ext">
+    <li><a href="https://adb-7405613791235979.19.azuredatabricks.net" target="_blank" rel="noopener">Workspace</a></li>
+    <li><a href="https://adb-7405613791235979.19.azuredatabricks.net/genie" target="_blank" rel="noopener">Genie landing</a></li>
+    <li><a href="https://adb-7405613791235979.19.azuredatabricks.net/genie/rooms/01f185e11fc4152bad1eca7e4bbefa05" target="_blank" rel="noopener">FinLedger Class Genie room</a></li>
+    <li><a href="https://adb-7405613791235979.19.azuredatabricks.net/sql/warehouses" target="_blank" rel="noopener">SQL warehouses</a></li>
+    <li><a href="https://adb-7405613791235979.19.azuredatabricks.net/explore/data" target="_blank" rel="noopener">Catalog</a></li>
+  </ul>
+  <p>Re-open this page: <code>genie-agents-teach.cmd</code> · Live lab: <code>genie-lab.cmd</code></p>
+</section>
+
+</main>
+</div>
+
+<footer>
+  FinLedger · Genie 40h+ curriculum · <code>genie-agents-teach.cmd</code> · <code>genie-lab.cmd</code> ·
+  uksouth · Genie Agents (ex Spaces) · synced with MS Learn / Databricks docs 2026
+</footer>
+</body>
+</html>
