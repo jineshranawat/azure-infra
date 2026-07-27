@@ -1,0 +1,29 @@
+:root{--nhs:#005EB8;--panel:#111a2b;--panel2:#0f1626;--line:#22304a;--txt:#e7eef7;--mut:#9fb2c9;--grn:#12b886;--amb:#f59f00;--red:#e03131}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0a1220,#0b1526);color:var(--txt);font:14px/1.5 -apple-system,Segoe UI,Roboto,Arial,sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:rgba(9,16,30,.92);position:sticky;top:0}
+.logo{width:34px;height:34px;border-radius:8px;background:var(--nhs);display:flex;align-items:center;justify-content:center;font-weight:800}
+header h1{font-size:16px;margin:0}.sub{color:var(--mut);font-size:12px}.spacer{margin-left:auto}
+main{max-width:1200px;margin:0 auto;padding:16px 20px 60px}
+button{cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--txt);padding:7px 12px}
+button.primary{background:var(--nhs);border-color:#0072CE;font-weight:700}
+select,input,textarea{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 9px}
+textarea{width:100%;min-height:60px}
+.err{background:#e0313122;border:1px solid #e0313166;color:#ffc9c9;border-radius:8px;padding:10px 12px;margin:8px 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:10px 0}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi .l{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.06em}.kpi .v{font-size:25px;font-weight:800;margin-top:4px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.muted{color:var(--mut)}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;white-space:nowrap}
+th{background:var(--panel2);color:#cfe0f5;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+tr:hover td{background:#0e1930}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800}
+.chip.GREEN{background:#12b88622;color:#63e6be}.chip.AMBER{background:#f59f0022;color:#ffd43b}.chip.RED{background:#e0313122;color:#ff8787}
+.badge.on{background:#e0313122;color:#ff8787;border:1px solid #e0313166;border-radius:6px;padding:1px 7px;font-size:10.5px;font-weight:700}
+.overlay{position:fixed;inset:0;background:rgba(3,8,18,.6);display:flex;align-items:center;justify-content:center}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(500px,92vw)}
+.modal label{display:block;color:var(--mut);font-size:12px;margin:10px 0 4px}
+.modal select{width:100%}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}

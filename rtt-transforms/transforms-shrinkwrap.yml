@@ -1,0 +1,141 @@
+---
+mappings:
+- alias: "/JINESH-161f69/Training/RTT-Programme/audit/freshness_report"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.67866ddd-c8b4-4658-98bb-2367928b231c"
+- alias: "/JINESH-161f69/Training/RTT-Programme/audit/recon_control_totals"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.a49bdf77-ff80-4e5e-a17c-f5a2d6ae6501"
+- alias: "/JINESH-161f69/Training/RTT-Programme/audit/sae_audit_log"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.aca6c0ec-d3f0-4c44-827d-e27bea02dfbf"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_pathways_appended"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.5496f3dc-0f8d-4a5d-967f-1257e08c2bdc"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_pathways_cdc_feed"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.5cc6e773-2023-4596-b0b9-c84fb1a38206"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_pathways_clean"
+  modes:
+  - "BUILD"
+  - "READ"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.a0a82863-8b8c-4cc5-9f91-31399baef9e7"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_pathways_metrics"
+  modes:
+  - "BUILD"
+  - "READ"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.04bf7522-41b5-4ddb-947c-c35ec15cf210"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_pathways_minimised"
+  modes:
+  - "BUILD"
+  - "READ"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.e63934ef-afe2-46b6-8e5d-1f419b446315"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_pathways_typed"
+  modes:
+  - "BUILD"
+  - "READ"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.387c018a-7b79-499c-a3e3-41a09574a308"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_status_history"
+  modes:
+  - "BUILD"
+  - "READ"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.bf139890-ca15-4fe7-9e65-35bb595e44d4"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_status_scd2"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.b850ebc2-c56d-4e34-8888-5af8e3090a9f"
+- alias: "/JINESH-161f69/Training/RTT-Programme/marts/rtt_cost_region_summary"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.5db8d969-47a7-44d0-a147-cfcb5800fde0"
+- alias: "/JINESH-161f69/Training/RTT-Programme/marts/rtt_longest_waiters_by_trust"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.c288c9c1-74a9-409e-a307-356adf477b5c"
+- alias: "/JINESH-161f69/Training/RTT-Programme/marts/rtt_perf_pathway_bucketed"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.4ed078f2-442a-4259-8ed8-b6ceea732085"
+- alias: "/JINESH-161f69/Training/RTT-Programme/marts/rtt_perf_specialty_duckdb"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.f341f2a6-a159-432d-a567-db8b0b988e75"
+- alias: "/JINESH-161f69/Training/RTT-Programme/marts/rtt_perf_trust_region"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.3bd1c34e-b05e-4020-9d7f-7810d8277a57"
+- alias: "/JINESH-161f69/Training/RTT-Programme/marts/rtt_ptl"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.777a720f-9e42-46e0-a58e-8e5d0f7046b6"
+- alias: "/JINESH-161f69/Training/RTT-Programme/marts/rtt_trust_specialty_perf"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.afdb017f-9692-4217-ab63-ba28485d5907"
+- alias: "/JINESH-161f69/Training/RTT-Programme/ontology-backing/rtt_patient_pseudonymised"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.800a8aaa-19f7-4525-8f77-6300f16b23c1"
+- alias: "/JINESH-161f69/Training/RTT-Programme/quarantine/rtt_pathways_rejects"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.84ee3fc4-5a0f-4399-8fdc-ca658057a880"
+- alias: "/JINESH-161f69/Training/RTT-Programme/quarantine/schema_drift_report"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.9c0826be-0c89-4aae-a322-4fd63ac618d9"
+- alias: "/JINESH-161f69/Training/RTT-Programme/raw/trust_fdp_rtt_pathways_raw"
+  modes:
+  - "BUILD"
+  - "READ"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.6fdc6f72-46cb-48ac-937b-1aa2a98f4667"
+- alias: "/JINESH-161f69/Training/RTT-Programme/reference/provider_reference"
+  modes:
+  - "BUILD"
+  - "READ"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.1f680428-478a-40ba-a962-971206b6178d"
+- alias: "/JINESH-161f69/Training/RTT-Programme/reference/sae_column_rules"
+  modes:
+  - "BUILD"
+  - "READ"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.f9d5fad0-6435-40ae-a33d-c53f8c3bad73"
+- alias: "/JINESH-161f69/Training/RTT-Programme/reference/specialty_reference"
+  modes:
+  - "BUILD"
+  - "READ"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.6d0f3f66-1d39-475e-9cc4-50c1fe9cce3d"
+- alias: "ri.transforms.python.semantic.version"
+  modes:
+  - "READ"
+  path: "/deprecated-field"
+  rid: "ri.transforms.python.semantic.version"

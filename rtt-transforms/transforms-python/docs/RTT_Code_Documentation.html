@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTT Programme - Complete Code Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a1f36;
+            --secondary: #6b7c93;
+            --accent: #635bff;
+            --success: #0cce6b;
+            --warning: #ffc043;
+            --error: #ff4d4d;
+            --bg-light: #f7f9fc;
+            --border: #e3e8ee;
+            --code-bg: #1e1e3f;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.7;
+            color: var(--primary);
+            background: var(--bg-light);
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1a1f36 0%, #3d4f76 100%);
+            color: white;
+            padding: 60px 40px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(99,91,255,0.3) 0%, transparent 70%);
+        }
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        .hero .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            max-width: 800px;
+        }
+        .hero-badges {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+        .badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+        }
+        .badge.palantir { background: var(--accent); }
+        .badge.nhs { background: #005eb8; }
+        
+        /* Navigation */
+        .nav-container {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+        .nav-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .nav-link {
+            padding: 10px 18px;
+            background: var(--bg-light);
+            border-radius: 10px;
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .nav-link:hover {
+            background: var(--accent);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        /* Section Styling */
+        .section {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        .section h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid var(--accent);
+            display: inline-block;
+        }
+        .section h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 30px 0 15px;
+            color: var(--primary);
+        }
+        .section h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 20px 0 10px;
+            color: #4a5568;
+        }
+        .section p {
+            margin-bottom: 15px;
+            color: #4a5568;
+        }
+        
+        /* Code Blocks */
+        .code-block {
+            background: var(--code-bg);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+        .code-block::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+        }
+        .code-block code {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            color: #e4e4e7;
+            line-height: 1.6;
+        }
+        .code-inline {
+            background: #edf2f7;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+        
+        /* Info Boxes */
+        .info-box {
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid;
+        }
+        .info-box.concept {
+            background: #f0f9ff;
+            border-color: #0284c7;
+        }
+        .info-box.important {
+            background: #fffbeb;
+            border-color: var(--warning);
+        }
+        .info-box.success {
+            background: #f0fdf4;
+            border-color: var(--success);
+        }
+        .info-box.enterprise {
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+            border-color: #9333ea;
+        }
+        .info-box-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Flow Diagrams */
+        .flow-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 25px 0;
+            justify-content: center;
+        }
+        .flow-step {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 150px;
+            position: relative;
+        }
+        .flow-step::after {
+            content: '→';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            color: var(--secondary);
+        }
+        .flow-step:last-child::after {
+            display: none;
+        }
+        .flow-step .step-label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        .flow-step .step-name {
+            font-weight: 600;
+        }
+        
+        /* Analogy Boxes */
+        .analogy {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 16px;
+            padding: 25px 30px;
+            margin: 25px 0;
+            position: relative;
+        }
+        .analogy::before {
+            content: '💡';
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            font-size: 1.5rem;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 50%;
+        }
+        .analogy-title {
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 10px;
+            margin-left: 10px;
+        }
+        
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .data-table th {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table tr:nth-child(even) {
+            background: var(--bg-light);
+        }
+        .data-table tr:hover {
+            background: #e8f4fd;
+        }
+        
+        /* Layer Cards */
+        .layer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        .layer-card {
+            border-radius: 16px;
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+        .layer-card.bronze {
+            background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+            color: white;
+        }
+        .layer-card.silver {
+            background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+            color: white;
+        }
+        .layer-card.gold {
+            background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+            color: #1a1f36;
+        }
+        .layer-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        .layer-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        /* Problem Cards */
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        .problem-card {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .problem-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(99,91,255,0.1);
+        }
+        .problem-number {
+            background: var(--accent);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+        
+        /* File Tree */
+        .file-tree {
+            background: #1e1e3f;
+            border-radius: 12px;
+            padding: 25px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #a5b4fc;
+            margin: 20px 0;
+        }
+        .file-tree .folder {
+            color: #fbbf24;
+        }
+        .file-tree .file {
+            color: #34d399;
+        }
+        .file-tree .indent {
+            margin-left: 20px;
+        }
+        
+        /* Status Indicators */
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .status.pass { background: #dcfce7; color: #166534; }
+        .status.warn { background: #fef3c7; color: #92400e; }
+        .status.fail { background: #fee2e2; color: #991b1b; }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            .section { padding: 25px; }
+            .flow-step::after { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Hero Section -->
+        <div class="hero">
+            <h1>🏥 RTT Programme - Complete Code Documentation</h1>
+            <p class="subtitle">
+                A comprehensive enterprise data pipeline built on <strong>Palantir Foundry</strong> 
+                demonstrating NHS Referral-to-Treatment (RTT) pathway analytics - from raw data ingestion 
+                through to operational dashboards and AI-powered assistance.
+            </p>
+            <div class="hero-badges">
+                <span class="badge palantir">Palantir Foundry</span>
+                <span class="badge nhs">NHS RTT Standards</span>
+                <span class="badge">Python Transforms</span>
+                <span class="badge">50 Enterprise Problems</span>
+                <span class="badge">Medallion Architecture</span>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="nav-container">
+            <div class="nav-title">Quick Navigation</div>
+            <div class="nav-links">
+                <a href="#overview" class="nav-link">📋 Overview</a>
+                <a href="#architecture" class="nav-link">🏗️ Architecture</a>
+                <a href="#medallion" class="nav-link">🥇 Medallion Layers</a>
+                <a href="#transforms" class="nav-link">⚙️ Transforms</a>
+                <a href="#libraries" class="nav-link">📚 Library Functions</a>
+                <a href="#dq" class="nav-link">✅ Data Quality</a>
+                <a href="#concepts" class="nav-link">🎓 Key Concepts</a>
+                <a href="#problems" class="nav-link">🔢 50 Problems</a>
+                <a href="#tests" class="nav-link">🧪 Testing</a>
+            </div>
+        </nav>
+
+        <!-- Section 1: Overview -->
+        <section id="overview" class="section">
+            <h2>📋 Project Overview</h2>
+            
+            <h3>What is the RTT Programme?</h3>
+            <p>
+                The <strong>Referral-to-Treatment (RTT)</strong> Programme is an NHS England initiative that tracks 
+                patient waiting times from the point of GP referral to the start of treatment. This codebase 
+                implements a <strong>complete data platform</strong> that ingests, cleanses, validates, and transforms 
+                RTT pathway data into actionable operational intelligence.
+            </p>
+
+            <div class="analogy">
+                <div class="analogy-title">Real-World Analogy: The Hospital Traffic Controller</div>
+                <p>
+                    Imagine you're managing traffic flow at a busy airport. Every plane (patient pathway) has:
+                </p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><strong>An arrival time</strong> (referral date)</li>
+                    <li><strong>A designated runway/terminal</strong> (specialty like Cardiology, Orthopaedics)</li>
+                    <li><strong>A target departure time</strong> (18-week treatment target)</li>
+                    <li><strong>Status tracking</strong> (Active = waiting, Discharged = treated)</li>
+                </ul>
+                <p style="margin-top: 10px;">
+                    Our system is like an <em>air traffic control tower</em> - it monitors every patient journey, 
+                    flags those at risk of "missing their slot" (breaching 18 weeks), and gives operators 
+                    a clear dashboard to prioritise who needs attention first.
+                </p>
+            </div>
+
+            <h3>Key Business Objectives</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Objective</th>
+                        <th>Description</th>
+                        <th>Success Metric</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>18-Week Compliance</strong></td>
+                        <td>92% of patients should start treatment within 18 weeks of referral</td>
+                        <td>Constitutional standard monitoring</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Long Waiter Elimination</strong></td>
+                        <td>Identify and prioritise 52+ week and 65+ week breaches</td>
+                        <td>Zero tolerance for long waiters</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Data Quality</strong></td>
+                        <td>Clean, validated data with full audit trail</td>
+                        <td>Quarantine &amp; reconciliation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Operational Visibility</strong></td>
+                        <td>Real-time Patient Tracking List for operations managers</td>
+                        <td>Clare's RTT Command Centre</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Repository Structure</h3>
+            <div class="file-tree">
+                <div><span class="folder">📁 transforms-python/src/myproject/</span></div>
+                <div class="indent"><span class="folder">📁 datasets/</span> <span style="color: #9ca3af;"># Transform definitions (the "what")</span></div>
+                <div class="indent indent"><span class="file">📄 seed.py</span> - Generate source reference & raw data</div>
+                <div class="indent indent"><span class="file">📄 raw_ingest.py</span> - Bronze: Type casting & parse flags</div>
+                <div class="indent indent"><span class="file">📄 clean_silver.py</span> - Silver: Validate, canonicalise, quarantine</div>
+                <div class="indent indent"><span class="file">📄 sae_minimise.py</span> - Silver: IG data minimisation (PII removal)</div>
+                <div class="indent indent"><span class="file">📄 metrics.py</span> - Silver: RTT breach flags & RAG status</div>
+                <div class="indent indent"><span class="file">📄 marts.py</span> - Gold: Performance & PTL aggregates</div>
+                <div class="indent indent"><span class="folder">📁 problems/</span> - DQ monitors & performance demos</div>
+                <div class="indent"><span class="folder">📁 lib/</span> <span style="color: #9ca3af;"># Pure helper functions (the "how")</span></div>
+                <div class="indent indent"><span class="file">📄 canonicalise.py</span> - Date parsing, specialty mapping</div>
+                <div class="indent indent"><span class="file">📄 dq_rules.py</span> - Quarantine policy (reject reasons)</div>
+                <div class="indent indent"><span class="file">📄 rtt_metrics.py</span> - Breach flags, bands, RAG</div>
+                <div class="indent indent"><span class="file">📄 sae_minimiser.py</span> - Column drop logic</div>
+                <div class="indent indent"><span class="file">📄 schema_contract.py</span> - Drift detection</div>
+                <div class="indent indent"><span class="file">📄 freshness.py</span> - Staleness monitoring</div>
+                <div class="indent"><span class="file">📄 paths.py</span> - Foundry dataset paths (single source of truth)</div>
+                <div class="indent"><span class="file">📄 pipeline.py</span> - Transform discovery entry point</div>
+            </div>
+        </section>
+
+        <!-- Section 2: Architecture -->
+        <section id="architecture" class="section">
+            <h2>🏗️ System Architecture</h2>
+            
+            <h3>Data Flow Overview</h3>
+            <p>
+                The pipeline follows the <strong>Medallion Architecture</strong> (Bronze → Silver → Gold), 
+                a best-practice pattern in modern data platforms. Each layer has a specific responsibility.
+            </p>
+
+            <div class="flow-container">
+                <div class="flow-step" style="background: linear-gradient(135deg, #92400e 0%, #b45309 100%);">
+                    <div class="step-label">Source</div>
+                    <div class="step-name">seed.py</div>
+                </div>
+                <div class="flow-step" style="background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);">
+                    <div class="step-label">Bronze</div>
+                    <div class="step-name">raw_ingest</div>
+                </div>
+                <div class="flow-step" style="background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);">
+                    <div class="step-label">Silver</div>
+                    <div class="step-name">clean_silver</div>
+                </div>
+                <div class="flow-step" style="background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);">
+                    <div class="step-label">Silver</div>
+                    <div class="step-name">sae_minimise</div>
+                </div>
+                <div class="flow-step" style="background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);">
+                    <div class="step-label">Silver</div>
+                    <div class="step-name">metrics</div>
+                </div>
+                <div class="flow-step" style="background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%); color: #1a1f36;">
+                    <div class="step-label">Gold</div>
+                    <div class="step-name">marts</div>
+                </div>
+            </div>
+
+            <div class="info-box enterprise">
+                <div class="info-box-title">🏢 Enterprise Pattern: Medallion Architecture</div>
+                <p>
+                    <strong>Why layers matter:</strong> In enterprise data platforms, data flows through quality gates. 
+                    Each layer adds value:
+                </p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><strong>Bronze (Raw)</strong>: Preserve original data exactly as received - never lose source truth</li>
+                    <li><strong>Silver (Cleansed)</strong>: Apply business rules, validate, enrich - make data trustworthy</li>
+                    <li><strong>Gold (Marts)</strong>: Pre-aggregate for specific use cases - make data consumable</li>
+                </ul>
+            </div>
+
+            <h3>Key Palantir Foundry Concepts Used</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Concept</th>
+                        <th>What It Does</th>
+                        <th>Where Used</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code class="code-inline">@transform</code></td>
+                        <td>Defines a data transformation with explicit inputs/outputs</td>
+                        <td>Every transform file</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">Input()</code> / <code class="code-inline">Output()</code></td>
+                        <td>Declares dataset dependencies - Foundry tracks lineage automatically</td>
+                        <td>All decorators</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">LightweightInput</code></td>
+                        <td>Uses single-node compute (Polars/Pandas) instead of Spark - faster for small data</td>
+                        <td>Most transforms</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">Check()</code> with <code class="code-inline">expectations</code></td>
+                        <td>Built-in data quality assertions that FAIL or WARN builds</td>
+                        <td>Output datasets</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">paths.py</code></td>
+                        <td>Single source of truth for all dataset paths - change once, update everywhere</td>
+                        <td>Imported by all transforms</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 3: Medallion Layers -->
+        <section id="medallion" class="section">
+            <h2>🥇 Medallion Architecture Layers</h2>
+
+            <div class="layer-grid">
+                <div class="layer-card bronze">
+                    <div class="layer-icon">🥉</div>
+                    <div class="layer-title">Bronze Layer</div>
+                    <p><strong>File:</strong> raw_ingest.py</p>
+                    <p><strong>Purpose:</strong> Cast string columns to proper types. Flag parse failures but keep ALL rows.</p>
+                    <p><strong>Principle:</strong> Never drop data at Bronze - just add metadata about quality issues.</p>
+                </div>
+
+                <div class="layer-card silver">
+                    <div class="layer-icon">🥈</div>
+                    <div class="layer-title">Silver Layer</div>
+                    <p><strong>Files:</strong> clean_silver.py, sae_minimise.py, metrics.py</p>
+                    <p><strong>Purpose:</strong> Validate, canonicalise, quarantine bad rows, remove PII, add business metrics.</p>
+                    <p><strong>Principle:</strong> Bad rows go to quarantine with reasons - never silently dropped.</p>
+                </div>
+
+                <div class="layer-card gold">
+                    <div class="layer-icon">🥇</div>
+                    <div class="layer-title">Gold Layer</div>
+                    <p><strong>File:</strong> marts.py</p>
+                    <p><strong>Purpose:</strong> Pre-aggregated tables optimised for specific users (e.g., PTL for Clare).</p>
+                    <p><strong>Principle:</strong> Fast reads for dashboards - computation done once upstream.</p>
+                </div>
+            </div>
+
+            <div class="analogy">
+                <div class="analogy-title">Real-World Analogy: Restaurant Kitchen Workflow</div>
+                <p>Think of data layers like a professional kitchen:</p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><strong>Bronze (Receiving Bay)</strong>: Ingredients arrive in boxes. You inspect, weigh, and label them but don't throw anything away - even the bruised tomatoes get logged.</li>
+                    <li><strong>Silver (Prep Kitchen)</strong>: Chefs wash, chop, and prepare ingredients. Bad items go in a separate "reject bin" with labels explaining why. Clean ingredients go to the cook line.</li>
+                    <li><strong>Gold (Plated Dishes)</strong>: Final dishes are assembled for specific customers. The Beef Wellington is pre-sliced, the salad is dressed - ready to serve instantly.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 4: Transform Details -->
+        <section id="transforms" class="section">
+            <h2>⚙️ Transform Functions - Detailed Breakdown</h2>
+
+            <h3>1. seed.py - Source Data Generation</h3>
+            <div class="info-box concept">
+                <div class="info-box-title">📖 Purpose</div>
+                <p>
+                    Creates deterministic, reproducible source data so the entire pipeline is self-contained. 
+                    In production, these datasets would come from Data Connection syncs (external systems).
+                </p>
+            </div>
+
+            <h4>Key Functions:</h4>
+            <ul style="margin-left: 20px;">
+                <li><code class="code-inline">seed_provider_reference()</code> - Creates the 5 NHS Trust reference records</li>
+                <li><code class="code-inline">seed_specialty_reference()</code> - Creates the 10 medical specialty codes</li>
+                <li><code class="code-inline">seed_sae_column_rules()</code> - Metadata-driven PII column removal rules</li>
+                <li><code class="code-inline">seed_rtt_pathways_raw()</code> - 1,215 rows: 25 verbatim + 1,175 generated + 15 intentionally dirty</li>
+            </ul>
+
+            <div class="code-block" data-lang="Python">
+<code># The 15 dirty rows test every DQ rule:
+_DIRTY_PATHWAYS = [
+    # Dirty specialty variants -> canonicalised in clean (Problem 40)
+    ("PWD001", "TR001", "T&O", ...),         # "T&O" → "Trauma and Orthopaedics"
+    ("PWD002", "TR002", "gen surg", ...),    # "gen surg" → "General Surgery"
+    
+    # Blank specialty -> quarantine (Problem 8/40)
+    ("PWD006", "TR001", "", ...),            # Cannot map blank → reject
+    
+    # Orphan trust code -> quarantine (Problem 34)
+    ("PWD007", "TR999", "Cardiology", ...),  # TR999 doesn't exist → reject
+    
+    # Negative weeks -> quarantine (Problem 35)
+    ("PWD009", "TR002", "Neurology", "-5", ...), # -5 weeks is invalid → reject
+]</code>
+            </div>
+
+            <div class="info-box important">
+                <div class="info-box-title">⚠️ Why Inject Dirty Data?</div>
+                <p>
+                    Real-world data is NEVER perfect. By intentionally including dirty rows, we prove that:
+                </p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>Our DQ rules catch every known failure mode</li>
+                    <li>Bad rows are quarantined (not silently dropped)</li>
+                    <li>We can trace exactly why each row was rejected</li>
+                </ul>
+            </div>
+
+            <!-- Continue with more transforms... -->
+            <h3>2. raw_ingest.py - Bronze Layer</h3>
+            <div class="info-box concept">
+                <div class="info-box-title">📖 Purpose</div>
+                <p>
+                    Type-cast the all-string CSV-landed data into proper types (dates, integers). 
+                    Flag rows where parsing fails but NEVER drop them.
+                </p>
+            </div>
+
+            <div class="code-block" data-lang="Python">
+<code>@transform.using(
+    src=Input(paths.RTT_PATHWAYS_RAW),
+    out=Output(
+        paths.RTT_PATHWAYS_TYPED,
+        checks=[
+            Check(E.col("pathway_id").non_null(), "raw: pathway_id present", on_error="WARN"),
+        ],
+    ),
+)
+def compute(src: LightweightInput, out: LightweightOutput) -> None:
+    df = src.polars()
+    df = df.with_columns([
+        # Keep original string values for debugging
+        pl.col("referral_date").alias("referral_date_str"),
+        
+        # Parse using tested helper functions
+        pl.col("referral_date").map_elements(C.parse_date, return_dtype=pl.Date),
+        pl.col("weeks_waited").map_elements(C.to_int, return_dtype=pl.Int64),
+    ]).with_columns([
+        # Flag parse failures (NULL after parsing but non-blank original)
+        (pl.col("weeks_waited").is_null()
+         & pl.col("weeks_waited_str").is_not_null()
+         & (pl.col("weeks_waited_str").str.strip_chars() != "")).alias("weeks_parse_failed"),
+    ])
+    out.write_table(df)</code>
+            </div>
+
+            <h3>3. clean_silver.py - Silver Layer (Main Cleansing)</h3>
+            <div class="info-box concept">
+                <div class="info-box-title">📖 Purpose</div>
+                <p>
+                    This is the HEART of data quality. It canonicalises specialties, validates every row 
+                    against business rules, routes bad rows to quarantine with reasons, and proves 
+                    clean + rejects = input (no silent loss).
+                </p>
+            </div>
+
+            <h4>Three Outputs:</h4>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Output Dataset</th>
+                        <th>Purpose</th>
+                        <th>Row Count (Example)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code class="code-inline">rtt_pathways_clean</code></td>
+                        <td>Valid, trustworthy rows ready for downstream</td>
+                        <td>1,205 ✅</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">rtt_pathways_rejects</code></td>
+                        <td>Invalid rows with <code>reject_reason</code> column</td>
+                        <td>10 ❌</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">recon_control_totals</code></td>
+                        <td>Reconciliation: typed_count = clean + reject</td>
+                        <td>Proves 1,215 = 1,205 + 10</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="code-block" data-lang="Python">
+<code># Quarantine policy lives in ONE tested place (lib.dq_rules)
+df = dq_rules.add_reject_reason(df, valid_trusts, SNAPSHOT, MAX_WEEKS)
+
+# Split clean vs rejects
+clean_df = df.filter(pl.col("reject_reason").is_null())
+rejects_df = df.filter(pl.col("reject_reason").is_not_null())
+
+# PROVE no silent data loss
+n_in, n_clean, n_rej = df.height, clean_df.height, rejects_df.height
+recon_df = pl.DataFrame({
+    "metric": ["typed_count", "clean_count", "reject_count", "reconciled"],
+    "value": [n_in, n_clean, n_rej, int(n_clean + n_rej == n_in)],
+})</code>
+            </div>
+
+            <div class="info-box success">
+                <div class="info-box-title">✅ Data Expectations (Quality Gates)</div>
+                <p>FAIL expectations prevent bad data from ever reaching downstream consumers:</p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><code class="code-inline">E.primary_key("pathway_id")</code> - Every row must have unique, non-null PK</li>
+                    <li><code class="code-inline">E.col("weeks_waited").gte(0).lte(520)</code> - Valid range (0-10 years)</li>
+                    <li><code class="code-inline">E.col("specialty_code").non_null()</code> - Every specialty must be mapped</li>
+                </ul>
+            </div>
+
+            <h3>4. sae_minimise.py - IG Data Minimisation</h3>
+            <div class="info-box concept">
+                <div class="info-box-title">📖 Purpose</div>
+                <p>
+                    <strong>SAE = Sufficient, Accurate, Exact</strong> - A legal/governance principle that you should 
+                    only hold the minimum data necessary. This transform removes PII columns (sex, age_at_referral, source_load_ts) 
+                    before data leaves Silver.
+                </p>
+            </div>
+
+            <h4>Key Feature: Metadata-Driven</h4>
+            <p>
+                The columns to drop are NOT hard-coded. They're read from the <code class="code-inline">sae_column_rules</code> 
+                reference table. IG can update the policy without a code change.
+            </p>
+
+            <div class="code-block" data-lang="Python">
+<code># Read drop-list from reference table
+drop_cols = S.columns_to_drop(rules_df.to_dicts(), SAE_DATASET_NAME)
+
+# Apply minimisation
+kept, dropped = S.apply_minimisation(df.columns, drop_present)
+minimised_df = df.select(kept)
+
+# HARD POST-CONDITION: banned columns must not survive
+if not S.assert_minimised(minimised_df.columns, _MUST_BE_ABSENT):
+    raise ValueError(f"SAE minimisation failed!")  # Fails the build
+
+# Audit log records what was removed and when
+audit_df = rules_df.with_columns([
+    pl.lit(applied_ts).alias("applied_ts"),
+    pl.col("column_name").is_in(dropped).alias("column_dropped"),
+])</code>
+            </div>
+
+            <h3>5. metrics.py - Business Metrics</h3>
+            <div class="info-box concept">
+                <div class="info-box-title">📖 Purpose</div>
+                <p>
+                    Add RTT-specific business metrics to each pathway: breach flags, wait bands, RAG status. 
+                    These are computed using TESTED library functions from <code class="code-inline">lib/rtt_metrics.py</code>.
+                </p>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Metric Column</th>
+                        <th>Logic</th>
+                        <th>Example Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code class="code-inline">is_breach_18w</code></td>
+                        <td>weeks_waited > 18</td>
+                        <td>True/False</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">is_52w_breach</code></td>
+                        <td>weeks_waited >= 52</td>
+                        <td>True (nationally reportable)</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">wait_band</code></td>
+                        <td>0-18, 19-26, 27-39, 40-51, 52-64, 65+</td>
+                        <td>"52-64"</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">rag_status</code></td>
+                        <td>GREEN (≤18w), AMBER (19-51w), RED (≥52w)</td>
+                        <td>"RED" 🔴</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>6. marts.py - Gold Layer (Consumption-Ready)</h3>
+            <div class="info-box concept">
+                <div class="info-box-title">📖 Purpose</div>
+                <p>
+                    Pre-aggregated datasets for specific users. <strong>Clare</strong> (RTT Ops Manager) needs the 
+                    Patient Tracking List (PTL) sorted by longest waiters. Trust managers need performance summaries.
+                </p>
+            </div>
+
+            <h4>Two Gold Outputs:</h4>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Dataset</th>
+                        <th>User</th>
+                        <th>What It Contains</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code class="code-inline">rtt_trust_specialty_perf</code></td>
+                        <td>Trust Managers</td>
+                        <td>Aggregated by Trust × Specialty: total pathways, % within 18w, meets 92% standard</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">rtt_ptl</code></td>
+                        <td>Clare (Ops)</td>
+                        <td>One row per ACTIVE pathway, sorted by longest waiters first, with RAG status</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="code-block" data-lang="Python">
+<code># PTL: Patient Tracking List for Clare
+ptl_df = (
+    df.filter(pl.col("pathway_status") == "Active")  # Only incomplete pathways
+    .select(_PTL_COLS)
+    .sort("weeks_waited", descending=True)  # Longest waiters first
+)
+
+# Performance: Trust × Specialty aggregation
+perf_df = (
+    df.group_by(["trust_code", "trust_name", "region", "specialty_name"])
+    .agg([
+        pl.len().alias("total_pathways"),
+        pl.col("within_target").sum().alias("within_18w"),
+        pl.col("is_breach_18w").sum().alias("breaches_18w"),
+    ])
+    .with_columns(
+        (pl.col("within_18w") / pl.col("total_pathways")).alias("pct_within_18w")
+    )
+    .with_columns(
+        (pl.col("pct_within_18w") >= 0.92).alias("meets_constitutional_standard")
+    )
+)</code>
+            </div>
+        </section>
+
+        <!-- Section 5: Library Functions -->
+        <section id="libraries" class="section">
+            <h2>📚 Library Functions - The Building Blocks</h2>
+
+            <div class="info-box enterprise">
+                <div class="info-box-title">🏢 Enterprise Pattern: Separation of Concerns</div>
+                <p>
+                    <strong>Why a separate /lib folder?</strong> Business logic lives in pure Python functions that:
+                </p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>Are <strong>engine-agnostic</strong> - work with Polars, Pandas, or plain Python</li>
+                    <li>Are <strong>independently testable</strong> - pytest runs without Spark/Foundry</li>
+                    <li>Follow <strong>Single Responsibility</strong> - each module does one thing well</li>
+                    <li>Enable <strong>reuse</strong> - same functions used in transforms AND unit tests</li>
+                </ul>
+            </div>
+
+            <h3>lib/canonicalise.py - Text Normalisation &amp; Parsing</h3>
+            
+            <h4>Function: <code class="code-inline">canonical_specialty(value)</code></h4>
+            <p>Maps dirty free-text specialty variants to clean reference names.</p>
+
+            <div class="code-block" data-lang="Python">
+<code># Synonym dictionary (dirty → clean)
+_SPECIALTY_SYNONYMS = {
+    "t and o": "Trauma and Orthopaedics",
+    "t o": "Trauma and Orthopaedics",
+    "ortho": "Trauma and Orthopaedics",
+    "gen surg": "General Surgery",
+    "ent": "Ear Nose and Throat",
+    "cardio": "Cardiology",
+    ...
+}
+
+def canonical_specialty(value: Optional[str]) -> Optional[str]:
+    """Map a dirty free-text specialty to a canonical name, else None."""
+    key = normalise_text(value)  # lowercase, strip, expand &
+    if key is None:
+        return None
+    return _SPECIALTY_SYNONYMS.get(key)</code>
+            </div>
+
+            <div class="analogy">
+                <div class="analogy-title">Real-World Analogy: Spell-Check for Hospital Departments</div>
+                <p>
+                    Think of this like autocorrect for department names. When someone types "T&O" or "ortho" 
+                    or "Trauma & Orthopaedics", we recognise they all mean the same thing and standardise 
+                    to the official name: "Trauma and Orthopaedics".
+                </p>
+            </div>
+
+            <h4>Function: <code class="code-inline">parse_date(value)</code></h4>
+            <p>Parses dates from multiple formats (YYYY-MM-DD, DD/MM/YYYY, ISO timestamps).</p>
+
+            <div class="code-block" data-lang="Python">
+<code>_DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%m/%d/%Y")
+
+def parse_date(value) -> Optional[dt.date]:
+    """Parse a date from several known formats; None if unparseable."""
+    # Handle datetime objects directly
+    if isinstance(value, dt.datetime):
+        return value.date()
+    
+    # Try each format in order
+    for fmt in _DATE_FORMATS:
+        try:
+            return dt.datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None  # Unparseable → will trigger quarantine downstream</code>
+            </div>
+
+            <h3>lib/dq_rules.py - The Quarantine Policy</h3>
+            
+            <div class="info-box important">
+                <div class="info-box-title">⚠️ Critical Design: Single Source of Truth</div>
+                <p>
+                    <strong>ALL quarantine logic lives in ONE function:</strong> <code class="code-inline">add_reject_reason()</code>. 
+                    This means:
+                </p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>The exact same logic runs in transforms AND unit tests</li>
+                    <li>When we fix a bug, it's fixed everywhere</li>
+                    <li>We can test every reject reason with crafted data frames</li>
+                </ul>
+            </div>
+
+            <div class="code-block" data-lang="Python">
+<code>def add_reject_reason(df, valid_trusts, snapshot, max_weeks) -> pl.DataFrame:
+    """Add reject_reason column: None = valid, else = first rule violated."""
+    
+    # Mark duplicate primary keys (keep first occurrence)
+    df = df.with_columns(
+        (~pl.col("pathway_id").is_first_distinct()).alias("_is_dup_pk")
+    )
+    
+    # Cascading WHEN/THEN - order = precedence
+    reason = (
+        pl.when(pl.col("pathway_id").is_null())
+          .then(pl.lit("null_pathway_id"))          # Problem 8/42
+        .when(pl.col("_is_dup_pk"))
+          .then(pl.lit("duplicate_pathway_id"))     # Problem 1/42
+        .when(~pl.col("trust_code").is_in(valid_trusts))
+          .then(pl.lit("orphan_trust_code"))        # Problem 34
+        .when(pl.col("specialty_code").is_null())
+          .then(pl.lit("unmapped_specialty"))       # Problem 40
+        .when(pl.col("weeks_waited") < 0)
+          .then(pl.lit("weeks_waited_negative"))    # Problem 35
+        .when(pl.col("weeks_waited") > max_weeks)
+          .then(pl.lit("weeks_waited_out_of_range"))# Problem 35
+        .when(pl.col("referral_date") > snapshot)
+          .then(pl.lit("referral_date_in_future"))  # Problem 41
+        .otherwise(pl.lit(None))
+    )
+    return df.with_columns(reason.alias("reject_reason"))</code>
+            </div>
+
+            <h3>lib/rtt_metrics.py - Business Metric Functions</h3>
+
+            <div class="code-block" data-lang="Python">
+<code>RTT_TARGET_WEEKS = 18
+REPORTABLE_52W = 52
+REPORTABLE_65W = 65
+CONSTITUTIONAL_STANDARD = 0.92  # 92% within 18 weeks
+
+def is_breach(weeks_waited: int, target: int = RTT_TARGET_WEEKS) -> bool:
+    """True if pathway has breached the RTT target."""
+    return weeks_waited > target
+
+def wait_band(weeks_waited: int) -> str:
+    """National RTT reporting band."""
+    if weeks_waited <= 18: return "0-18"
+    if weeks_waited <= 26: return "19-26"
+    if weeks_waited <= 39: return "27-39"
+    if weeks_waited <= 51: return "40-51"
+    if weeks_waited <= 64: return "52-64"
+    return "65+"
+
+def rag_status(weeks_waited: int) -> str:
+    """Traffic light status for operations."""
+    if weeks_waited <= 18: return "GREEN"
+    if weeks_waited < 52: return "AMBER"
+    return "RED"</code>
+            </div>
+        </section>
+
+        <!-- Section 6: Data Quality -->
+        <section id="dq" class="section">
+            <h2>✅ Data Quality Framework</h2>
+
+            <h3>The 9 Reject Reasons</h3>
+            <p>Every row that fails validation is sent to quarantine with exactly one of these reasons:</p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Reject Reason</th>
+                        <th>Rule Violated</th>
+                        <th>Example Dirty Value</th>
+                        <th>Problem #</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code class="code-inline">null_pathway_id</code></td>
+                        <td>Primary key cannot be null</td>
+                        <td><code>pathway_id = NULL</code></td>
+                        <td>P8, P42</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">duplicate_pathway_id</code></td>
+                        <td>Primary key must be unique</td>
+                        <td><code>PW00580</code> appears twice</td>
+                        <td>P1, P42</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">orphan_trust_code</code></td>
+                        <td>FK must exist in reference table</td>
+                        <td><code>trust_code = "TR999"</code></td>
+                        <td>P34</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">unmapped_specialty</code></td>
+                        <td>Specialty must map to reference</td>
+                        <td><code>specialty = ""</code></td>
+                        <td>P8, P40</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">weeks_waited_unparseable</code></td>
+                        <td>Must be a valid integer</td>
+                        <td><code>weeks_waited = "N/A"</code></td>
+                        <td>P6</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">weeks_waited_negative</code></td>
+                        <td>Cannot be less than 0</td>
+                        <td><code>weeks_waited = -5</code></td>
+                        <td>P35</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">weeks_waited_out_of_range</code></td>
+                        <td>Cannot exceed 520 weeks (~10 yrs)</td>
+                        <td><code>weeks_waited = 9999</code></td>
+                        <td>P35</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">referral_date_unparseable</code></td>
+                        <td>Must be a valid date</td>
+                        <td><code>referral_date = "not_a_date"</code></td>
+                        <td>P10</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">referral_date_in_future</code></td>
+                        <td>Cannot be after snapshot date</td>
+                        <td><code>referral_date = 2030-01-01</code></td>
+                        <td>P41</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Data Expectations (Build-Time Quality Gates)</h3>
+            <p>
+                Palantir Foundry's <code class="code-inline">Check()</code> decorator with the <code class="code-inline">expectations</code> 
+                library enforces quality rules at build time:
+            </p>
+
+            <div class="code-block" data-lang="Python">
+<code>from transforms import expectations as E
+
+@transform.using(
+    out=Output(
+        paths.RTT_PATHWAYS_CLEAN,
+        checks=[
+            # FAIL: Build aborts if any row violates
+            Check(E.primary_key("pathway_id"), "PK unique + non-null", on_error="FAIL"),
+            Check(E.col("weeks_waited").gte(0).lte(520), "weeks in range", on_error="FAIL"),
+            
+            # WARN: Build continues but flags issue
+            Check(E.col("total_pathways").gt(0), "non-empty groups", on_error="WARN"),
+        ],
+    ),
+)</code>
+            </div>
+
+            <div class="info-box success">
+                <div class="info-box-title">✅ Verified Build Results</div>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Input rows:</strong> 1,215</li>
+                    <li><strong>Clean rows:</strong> 1,205 (passed all rules)</li>
+                    <li><strong>Rejected rows:</strong> 10 (with documented reasons)</li>
+                    <li><strong>Reconciled:</strong> 1,205 + 10 = 1,215 ✓ (no silent data loss)</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 7: Key Concepts -->
+        <section id="concepts" class="section">
+            <h2>🎓 Key Concepts Explained</h2>
+
+            <h3>Concept 1: Lightweight Transforms</h3>
+            <div class="info-box concept">
+                <div class="info-box-title">📖 What is it?</div>
+                <p>
+                    <code class="code-inline">@transform.using()</code> with <code class="code-inline">LightweightInput/Output</code> 
+                    opts out of Apache Spark and uses single-node compute (Polars/Pandas). This is 
+                    <strong>faster and cheaper</strong> for datasets under ~10 million rows.
+                </p>
+            </div>
+
+            <div class="analogy">
+                <div class="analogy-title">Real-World Analogy: Bicycle vs. Semi-Truck</div>
+                <p>
+                    Spark is like a fleet of semi-trucks - great for moving mountains of data across a warehouse. 
+                    But for 1,200 rows? That's like hiring 100 trucks to deliver a pizza. 
+                    Lightweight transforms are like a bicycle - nimble, fast, and perfectly suited for the job.
+                </p>
+            </div>
+
+            <div class="code-block" data-lang="Python">
+<code># Lightweight transform (single-node, Polars)
+@transform.using(
+    src=Input(paths.RTT_PATHWAYS_RAW),
+    out=Output(paths.RTT_PATHWAYS_TYPED),
+)
+def compute(src: LightweightInput, out: LightweightOutput) -> None:
+    df = src.polars()  # Returns a Polars DataFrame (NOT Spark)
+    # ... process with Polars ...
+    out.write_table(df)</code>
+            </div>
+
+            <h3>Concept 2: Polars vs PySpark</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Polars</th>
+                        <th>PySpark</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Execution</strong></td>
+                        <td>Single-node, in-memory</td>
+                        <td>Distributed across cluster</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Best for</strong></td>
+                        <td>&lt; 10M rows</td>
+                        <td>> 10M rows, joins of large tables</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Startup time</strong></td>
+                        <td>Instant</td>
+                        <td>30+ seconds (cluster provisioning)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Syntax feel</strong></td>
+                        <td>Modern, expressive, chainable</td>
+                        <td>SQL-like, verbose</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Concept 3: Data Lineage &amp; Dependency Tracking</h3>
+            <div class="info-box enterprise">
+                <div class="info-box-title">🏢 Enterprise Pattern: Automatic Lineage</div>
+                <p>
+                    When you declare <code class="code-inline">Input("path/to/dataset")</code>, Foundry automatically:
+                </p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>Tracks that your transform <em>depends on</em> that dataset</li>
+                    <li>Rebuilds downstream when upstream changes</li>
+                    <li>Visualises the full data lineage graph</li>
+                    <li>Enables impact analysis ("what breaks if I change X?")</li>
+                </ul>
+            </div>
+
+            <h3>Concept 4: Referential Integrity</h3>
+            <div class="info-box concept">
+                <div class="info-box-title">📖 What is it?</div>
+                <p>
+                    Referential integrity means foreign keys (FKs) must exist in their parent table. 
+                    If <code class="code-inline">trust_code = "TR999"</code> but TR999 isn't in <code class="code-inline">provider_reference</code>, 
+                    that's an orphan record - it references something that doesn't exist.
+                </p>
+            </div>
+
+            <div class="code-block" data-lang="Python">
+<code># In clean_silver.py - check FK exists
+valid_trusts = providers.polars()["trust_code"].to_list()  # ["TR001", "TR002", ...]
+
+# In dq_rules.py - quarantine orphans
+.when(~pl.col("trust_code").is_in(valid_trusts))
+  .then(pl.lit("orphan_trust_code"))</code>
+            </div>
+
+            <h3>Concept 5: Idempotent &amp; Deterministic Transforms</h3>
+            <div class="info-box concept">
+                <div class="info-box-title">📖 What does this mean?</div>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><strong>Idempotent</strong>: Running the same transform twice produces the same output</li>
+                    <li><strong>Deterministic</strong>: Given the same inputs, output is always identical</li>
+                </ul>
+                <p style="margin-top: 10px;">
+                    This is why <code class="code-inline">seed.py</code> uses <code class="code-inline">random.Random(42)</code> - 
+                    the seed ensures "random" data is reproducible across runs.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 8: 50 Problems Mapping -->
+        <section id="problems" class="section">
+            <h2>🔢 50 Enterprise Problems - Traceability Matrix</h2>
+
+            <p>
+                This pipeline was designed to demonstrate solutions to <strong>50 real-world enterprise data problems</strong>. 
+                Here's how they map to the codebase:
+            </p>
+
+            <h3>Category: Data Quality &amp; Consistency (Problems 1, 6, 8, 9, 10, 34, 35, 40, 41, 42, 43)</h3>
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-number">1</div>
+                    <strong>Deduplication</strong>
+                    <p><code class="code-inline">dq_rules.py</code> → <code>is_first_distinct()</code> keeps first occurrence, marks duplicates</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">6</div>
+                    <strong>Type Validation</strong>
+                    <p><code class="code-inline">raw_ingest.py</code> → <code>to_int()</code>, <code>parse_date()</code> with failure flags</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">8</div>
+                    <strong>Null Handling</strong>
+                    <p><code class="code-inline">dq_rules.py</code> → <code>null_pathway_id</code> and <code>unmapped_specialty</code> reject reasons</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">9</div>
+                    <strong>Schema Drift</strong>
+                    <p><code class="code-inline">problems/dq.py</code> → <code>p9_schema_drift()</code> detects missing/unexpected columns</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">10</div>
+                    <strong>Date Format</strong>
+                    <p><code class="code-inline">canonicalise.py</code> → <code>parse_date()</code> handles 5 formats + ISO timestamps</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">34</div>
+                    <strong>Referential Integrity</strong>
+                    <p><code class="code-inline">clean_silver.py</code> → orphan trust codes quarantined with reason</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">35</div>
+                    <strong>Range/Domain</strong>
+                    <p><code class="code-inline">dq_rules.py</code> → weeks_waited must be 0-520 (negative/extreme rejected)</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">40</div>
+                    <strong>Canonicalisation</strong>
+                    <p><code class="code-inline">canonicalise.py</code> → "T&O", "ortho", "ENT" → standard names</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">41</div>
+                    <strong>Cross-Field</strong>
+                    <p><code class="code-inline">dq_rules.py</code> → referral_date cannot be after snapshot (temporal rule)</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">42</div>
+                    <strong>PK Uniqueness</strong>
+                    <p><code class="code-inline">Check(E.primary_key("pathway_id"))</code> → FAIL if violated</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">43</div>
+                    <strong>Freshness</strong>
+                    <p><code class="code-inline">problems/dq.py</code> → <code>p43_freshness()</code> WARN if data > 45 days old</p>
+                </div>
+            </div>
+
+            <h3>Category: Security &amp; Governance (Problems 29, 30, 31, 47, 48)</h3>
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-number">48</div>
+                    <strong>Data Minimisation (SAE)</strong>
+                    <p><code class="code-inline">sae_minimise.py</code> → Drops PII columns (sex, age) based on IG-approved rules</p>
+                </div>
+            </div>
+
+            <h3>Category: Performance &amp; Scalability (Problems 4, 5, 11, 12, 13, 22, 23, 24, 25, 45, 46)</h3>
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-number">4</div>
+                    <strong>Adaptive Query Execution</strong>
+                    <p><code class="code-inline">problems/perf.py</code> → AQE enabled for shuffle optimisation</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">5</div>
+                    <strong>Broadcast Join</strong>
+                    <p><code class="code-inline">problems/perf.py</code> → Small dims broadcast to avoid shuffle</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">22</div>
+                    <strong>Salting for Skew</strong>
+                    <p><code class="code-inline">problems/perf.py</code> → TR005 (hot key) spread across 8 buckets</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-number">46</div>
+                    <strong>DuckDB In-Process</strong>
+                    <p><code class="code-inline">problems/perf.py</code> → SQL over Polars without Spark overhead</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 9: Testing -->
+        <section id="tests" class="section">
+            <h2>🧪 Unit Testing Strategy</h2>
+
+            <div class="info-box enterprise">
+                <div class="info-box-title">🏢 Enterprise Pattern: Test Pure Functions</div>
+                <p>
+                    All business logic lives in <code class="code-inline">/lib</code> as <strong>pure functions</strong> 
+                    (no Spark, no Foundry dependencies). This means we can run <code class="code-inline">pytest</code> 
+                    locally without any infrastructure.
+                </p>
+            </div>
+
+            <h3>Test Files</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Test File</th>
+                        <th>Tests</th>
+                        <th>Coverage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code class="code-inline">test_canonicalise.py</code></td>
+                        <td>Specialty mapping, date parsing, integer casting</td>
+                        <td>All dirty variants + negative cases</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">test_dq_rules.py</code></td>
+                        <td>Quarantine policy with crafted frames</td>
+                        <td>All 9 reject reasons fire correctly</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">test_rtt_metrics.py</code></td>
+                        <td>Breach flags, wait bands, RAG status</td>
+                        <td>Edge cases (18w, 52w, negative)</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">test_sae_minimiser.py</code></td>
+                        <td>Column drop logic, post-condition guard</td>
+                        <td>Banned columns must be absent</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">test_schema_contract.py</code></td>
+                        <td>Schema drift detection</td>
+                        <td>Missing/unexpected columns</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Example: Testing All Reject Reasons</h3>
+            <div class="code-block" data-lang="Python">
+<code># test_dq_rules.py - Crafted frame proves every reject reason fires
+
+def test_every_reject_reason_fires():
+    rows = [
+        (None, "TR001", "SP04", 10, dt.date(2024, 1, 1)),     # null_pathway_id
+        ("PWX", "TR001", "SP04", 10, dt.date(2024, 1, 1)),    # first PWX -> VALID
+        ("PWX", "TR001", "SP04", 11, dt.date(2024, 1, 2)),    # duplicate_pathway_id
+        ("PW2", "TR999", "SP04", 10, dt.date(2024, 1, 1)),    # orphan_trust_code
+        ("PW3", "TR001", None, 10, dt.date(2024, 1, 1)),      # unmapped_specialty
+        ("PW4", "TR001", "SP04", None, dt.date(2024, 1, 1)),  # weeks_waited_unparseable
+        ("PW5", "TR001", "SP04", -5, dt.date(2024, 1, 1)),    # weeks_waited_negative
+        ("PW6", "TR001", "SP04", 9999, dt.date(2024, 1, 1)),  # weeks_waited_out_of_range
+        ("PW7", "TR001", "SP04", 10, None),                   # referral_date_unparseable
+        ("PW8", "TR001", "SP04", 10, dt.date(2030, 1, 1)),    # referral_date_in_future
+    ]
+    out = R.add_reject_reason(_frame(rows), VALID, SNAP, 520)
+    
+    assert out["reject_reason"].to_list() == [
+        "null_pathway_id", None, "duplicate_pathway_id", "orphan_trust_code",
+        "unmapped_specialty", "weeks_waited_unparseable", "weeks_waited_negative",
+        "weeks_waited_out_of_range", "referral_date_unparseable", "referral_date_in_future",
+    ]</code>
+            </div>
+
+            <div class="info-box success">
+                <div class="info-box-title">✅ CI Status</div>
+                <p>
+                    All tests pass in CI. Run locally with: <code class="code-inline">pytest transforms-python/src/test/</code>
+                </p>
+            </div>
+        </section>
+
+        <!-- Summary Section -->
+        <section class="section" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+            <h2>📝 Summary: What You've Learned</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+                <div style="background: white; padding: 20px; border-radius: 12px;">
+                    <h4>🏗️ Architecture</h4>
+                    <ul style="margin-left: 15px;">
+                        <li>Medallion (Bronze→Silver→Gold)</li>
+                        <li>Separation of concerns (lib vs datasets)</li>
+                        <li>Single source of truth (paths.py)</li>
+                    </ul>
+                </div>
+                <div style="background: white; padding: 20px; border-radius: 12px;">
+                    <h4>✅ Data Quality</h4>
+                    <ul style="margin-left: 15px;">
+                        <li>Quarantine with reasons (never drop)</li>
+                        <li>Reconciliation (prove no loss)</li>
+                        <li>Expectations (FAIL/WARN gates)</li>
+                    </ul>
+                </div>
+                <div style="background: white; padding: 20px; border-radius: 12px;">
+                    <h4>⚙️ Palantir Foundry</h4>
+                    <ul style="margin-left: 15px;">
+                        <li>@transform decorators</li>
+                        <li>Lightweight (Polars) transforms</li>
+                        <li>Automatic lineage tracking</li>
+                    </ul>
+                </div>
+                <div style="background: white; padding: 20px; border-radius: 12px;">
+                    <h4>🧪 Testing</h4>
+                    <ul style="margin-left: 15px;">
+                        <li>Pure functions in /lib</li>
+                        <li>Crafted frame testing</li>
+                        <li>Positive + negative cases</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                <strong>RTT Programme Documentation</strong> | 
+                Generated for training purposes | 
+                <a href="https://jinesh.euw-3.palantirfoundry.co.uk/workspace/ai-fde/session/5304ab57-2d62-4e57-b051-216f494a4834" target="_blank">View AI-FDE Session</a>
+            </p>
+            <p style="margin-top: 10px; opacity: 0.7;">
+                Repository: rtt-transforms (ri.stemma.main.repository.0082fd3e-9c97-4941-b94f-c2e51bdbadf6) | 
+                Branch: ai-fde/ranawatjinesh/rtt-50-problems-jvPofb
+            </p>
+        </div>
+    </div>
+</body>
+</html>

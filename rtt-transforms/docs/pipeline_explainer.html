@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'/>
+<meta name='viewport' content='width=device-width, initial-scale=1'/>
+<title>RTT-Programme - Pipeline Explainer</title>
+<style>
+  :root{--nhs:#005EB8;--nhs2:#0072CE;--ink:#0b1220;--panel:#111a2b;--panel2:#0f1626;--line:#22304a;--txt:#e7eef7;--mut:#9fb2c9;--grn:#12b886;--amb:#f59f00;--red:#e03131;--code:#0a1120;}
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0a1220,#0b1526);color:var(--txt);font:15px/1.6 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{position:sticky;top:0;z-index:9;background:rgba(9,16,30,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:14px 22px;display:flex;align-items:center;gap:14px}
+  header .logo{width:34px;height:34px;border-radius:8px;background:var(--nhs);display:flex;align-items:center;justify-content:center;font-weight:800}
+  header h1{font-size:16px;margin:0}
+  header .sub{color:var(--mut);font-size:12px}
+  nav{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+  nav a{color:var(--mut);text-decoration:none;font-size:12.5px;padding:6px 10px;border-radius:7px;border:1px solid transparent}
+  nav a:hover{color:#fff;border-color:var(--line);background:var(--panel)}
+  main{max-width:1080px;margin:0 auto;padding:26px 22px 80px}
+  section{margin:34px 0;scroll-margin-top:78px}
+  h2{font-size:22px;border-left:4px solid var(--nhs);padding-left:12px;margin:0 0 6px}
+  h3{font-size:16px;color:#cfe0f5;margin:22px 0 6px}
+  p{color:#d7e2f0}
+  .lead{color:var(--mut);font-size:15px;margin-top:4px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:16px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h4{margin:0 0 6px;font-size:14px}
+  .card p{margin:0;color:var(--mut);font-size:13px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid var(--line)}
+  .ok{color:var(--grn);border-color:#12b88655;background:#12b8861a}
+  .warn{color:var(--amb);border-color:#f59f0055;background:#f59f001a}
+  .bad{color:var(--red);border-color:#e0313155;background:#e031311a}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;font:12.5px/1.55 SFMono-Regular,Consolas,monospace;color:#d6e6ff}
+  pre.mermaid{background:var(--panel2);color:inherit;text-align:center}
+  code{background:#0a1120;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-family:SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#a9c7ff}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#cfe0f5}
+  .callout{border:1px solid var(--nhs);background:#0072ce14;border-radius:10px;padding:12px 14px;margin:14px 0}
+  .step{display:flex;gap:12px;margin:12px 0;align-items:flex-start}
+  .step .n{flex:0 0 28px;height:28px;border-radius:50%;background:var(--nhs);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+  .muted{color:var(--mut)}
+  footer{border-top:1px solid var(--line);color:var(--mut);padding:22px;text-align:center;font-size:12.5px}
+  a.link{color:#7db4ff}
+</style>
+</head>
+<body>
+<header>
+  <div class='logo'>RTT</div>
+  <div>
+    <h1>RTT-Programme &middot; Pipeline Explainer</h1>
+    <div class='sub'>&ldquo;The 50 Problems, Solved&rdquo; &mdash; how the NHS RTT pipeline works, end to end</div>
+  </div>
+  <nav>
+    <a href='#overview'>Overview</a>
+    <a href='#arch'>Architecture</a>
+    <a href='#flow'>Code flow</a>
+    <a href='#dq'>Data quality</a>
+    <a href='#inc'>Incremental</a>
+    <a href='#perf'>Performance</a>
+    <a href='#onto'>Ontology</a>
+    <a href='#lineage'>Lineage</a>
+    <a href='#matrix'>50 problems</a>
+    <a href='#tests'>Tests</a>
+    <a href='#open'>Open / next</a>
+  </nav>
+</header>
+
+<main>
+
+<section id='overview'>
+  <h2>1 &middot; Overview</h2>
+  <p class='lead'>This project is a single, coherent Foundry reference implementation that proves Foundry natively solves 50 recurring data-engineering problems, using the NHS <b>RTT (Referral-To-Treatment)</b> dataset. The primary user is <b>Clare</b>, an RTT operations manager; the IG owner is <b>Nitin</b>.</p>
+  <div class='grid'>
+    <div class='card'><h4>Domain facts (used verbatim)</h4><p>RTT clock target = <b>18 weeks</b>. <b>52</b> and <b>65</b>-week waits are nationally reportable breaches. Constitutional standard = <b>92%</b> within 18 weeks. <b>PTL</b> = Patient Tracking List.</p></div>
+    <div class='card'><h4>Shape of the data</h4><p>~1,200 pathways across 5 trusts and 10 specialties. <code>nhs_number</code> is PII. IG rules (SAE) drop <code>sex</code>, <code>age_at_referral</code>, <code>source_load_ts</code> before Silver leaves the layer.</p></div>
+    <div class='card'><h4>Design rule</h4><p>Every choice traces to a constraint: legal/PII, performance, cost, or Clare&rsquo;s real need. Lightweight engines by default; Spark only where a shuffle is genuinely warranted.</p></div>
+  </div>
+  <div class='callout'>Verified control totals from the actual build: <b>typed 1,215 = clean 1,205 + quarantine 10</b> (reconciled), PK unique 1,205/1,205, SAE removed 3 columns, freshness monitor flags the data stale (541 days).</div>
+</section>
+
+<section id='arch'>
+  <h2>2 &middot; Architecture (the medallion)</h2>
+  <p class='lead'>Data flows left to right through Bronze &rarr; Silver &rarr; Gold, with quarantine and audit branches. Green = dataset, purple = transform, orange = Ontology.</p>
+<pre class='mermaid'>
+flowchart LR
+  subgraph SRC[Sources - seed.py]
+    P[provider_reference]:::d
+    S[specialty_reference]:::d
+    SAE[sae_column_rules]:::d
+    RAW[trust_fdp_rtt_pathways_raw<br/>all-string landing]:::d
+  end
+  RAW --> RI[raw_ingest.py<br/>type and parse]:::t --> TY[rtt_pathways_typed]:::d
+  TY --> CS[clean_silver.py<br/>canonicalise + quarantine]:::t
+  P --> CS
+  S --> CS
+  CS --> CL[rtt_pathways_clean]:::d
+  CS --> RJ[rtt_pathways_rejects]:::q
+  CS --> RC[recon_control_totals]:::a
+  CL --> SM[sae_minimise.py]:::t
+  SAE --> SM
+  SM --> MIN[rtt_pathways_minimised]:::d
+  SM --> AU[sae_audit_log]:::a
+  MIN --> MET[metrics.py<br/>breach flags/bands/RAG]:::t --> M[rtt_pathways_metrics]:::d
+  M --> MA[marts.py]:::t
+  P --> MA
+  MA --> PERF[rtt_trust_specialty_perf]:::d
+  MA --> PTL[rtt_ptl]:::d
+  M --> SECU[security.py<br/>pseudonymise + drop PII]:::t --> PP[rtt_patient_pseudonymised]:::d
+  PP --> OBJ[Pathway object]:::o
+  classDef d fill:#0f2f24,stroke:#12b886,color:#d6ffe9;
+  classDef t fill:#231a3a,stroke:#8a63d2,color:#ead9ff;
+  classDef q fill:#3a1a1a,stroke:#e03131,color:#ffd9d9;
+  classDef a fill:#2a2410,stroke:#f59f00,color:#ffeec2;
+  classDef o fill:#2a1a0f,stroke:#ff922b,color:#ffe3c2;
+</pre>
+  <div class='grid'>
+    <div class='card'><h4>Bronze</h4><p><code>raw_ingest.py</code> types the all-string landing; unparseable values become null and are flagged (never dropped).</p></div>
+    <div class='card'><h4>Silver</h4><p><code>clean_silver.py</code> canonicalises + validates and <b>quarantines</b> bad rows; <code>sae_minimise.py</code> removes IG columns; <code>metrics.py</code> adds clinical flags.</p></div>
+    <div class='card'><h4>Gold</h4><p><code>marts.py</code> builds the trust&times;specialty performance mart and the <b>PTL</b> for Clare.</p></div>
+    <div class='card'><h4>Ontology backing</h4><p><code>security.py</code> pseudonymises <code>nhs_number</code> and drops it, producing the PII-free dataset behind the Pathway object.</p></div>
+  </div>
+</section>
+
+<section id='flow'>
+  <h2>3 &middot; Code flow, stage by stage</h2>
+  <p class='lead'>Each stage reuses a <b>unit-tested</b> function from <code>lib/</code>, so &ldquo;the test that proves the function also proves the pipeline column&rdquo;.</p>
+
+  <div class='step'><div class='n'>1</div><div>
+    <h3>seed.py &mdash; reproducible sources <span class='pill ok'>Problem 19</span></h3>
+    <p>Materialises the 4 source tables deterministically (25 verbatim rows + 1,175 seeded valid rows + <b>15 documented dirty rows</b>). The raw pathway table is emitted as <b>all strings</b> (CSV-landing shape) so we can demonstrate real type validation downstream.</p>
+<pre>@transform.using(out=Output(paths.RTT_PATHWAYS_RAW))
+def seed_rtt_pathways_raw(out):
+    out.write_table(pl.DataFrame(_raw_pathway_rows(),
+        schema={c: pl.Utf8 for c in _PATHWAY_COLS}, orient='row'))</pre>
+  </div></div>
+
+  <div class='step'><div class='n'>2</div><div>
+    <h3>raw_ingest.py &mdash; ingest-time typing <span class='pill ok'>P6</span> <span class='pill ok'>P10</span></h3>
+    <p>Casts <code>referral_date</code>, <code>weeks_waited</code>, <code>age_at_referral</code>, <code>source_load_ts</code> using the tested parsers in <code>lib/canonicalise.py</code>. Bad casts become <code>null</code> and are flagged (<code>weeks_parse_failed</code>, <code>date_parse_failed</code>). WARN checks on raw; nothing is dropped here.</p>
+<pre>pl.col('weeks_waited').map_elements(C.to_int, return_dtype=pl.Int64)
+pl.col('referral_date').map_elements(C.parse_date, return_dtype=pl.Date)</pre>
+  </div></div>
+
+  <div class='step'><div class='n'>3</div><div>
+    <h3>clean_silver.py + lib/dq_rules.py &mdash; canonicalise &amp; quarantine <span class='pill ok'>P1 P8 P34 P35 P40 P41 P42</span></h3>
+    <p>Canonicalises free-text specialty to the reference (<code>T&amp;O</code> &rarr; <code>Trauma and Orthopaedics</code>), joins the dimensions, then applies the <b>quarantine policy</b> in one tested place. Rows that fail any rule are routed to <code>/quarantine</code> with a <code>reject_reason</code>; a recon dataset proves <code>clean + rejects = input</code>. FAIL Data Expectations on the clean output stay green <i>because</i> the policy works.</p>
+<pre>df = dq_rules.add_reject_reason(df, valid_trusts, SNAPSHOT, MAX_WEEKS)
+clean   = df.filter(pl.col('reject_reason').is_null())
+rejects = df.filter(pl.col('reject_reason').is_not_null())</pre>
+  </div></div>
+
+  <div class='step'><div class='n'>4</div><div>
+    <h3>sae_minimise.py &mdash; IG data minimisation <span class='pill ok'>P29 P31 P48</span></h3>
+    <p>Reads <code>sae_column_rules</code> (metadata-driven, not hard-coded) and drops <code>sex</code>, <code>age_at_referral</code>, <code>source_load_ts</code>. A hard post-condition <b>fails the build</b> if any banned column survives, and an audit log records who/what/when.</p>
+<pre>if not S.assert_minimised(minimised.columns, _MUST_BE_ABSENT):
+    raise ValueError('SAE minimisation failed: banned column present')</pre>
+  </div></div>
+
+  <div class='step'><div class='n'>5</div><div>
+    <h3>metrics.py + lib/rtt_metrics.py &mdash; clinical flags <span class='pill ok'>P35</span></h3>
+    <p>Adds <code>is_breach_18w</code>, <code>is_52w_breach</code>, <code>is_65w_breach</code>, <code>wait_band</code>, <code>rag_status</code> via the tested metric functions (18-week target, 52/65-week reportable breaches).</p>
+  </div></div>
+
+  <div class='step'><div class='n'>6</div><div>
+    <h3>marts.py &mdash; Gold outputs</h3>
+    <p><code>rtt_trust_specialty_perf</code> (% within 18 weeks + the 92% constitutional flag) and <code>rtt_ptl</code> (active pathways, longest-wait first, RAG + breach flags) &mdash; the screen Clare runs each week.</p>
+  </div></div>
+
+  <div class='step'><div class='n'>7</div><div>
+    <h3>security.py + lib/pii.py &mdash; PII protection <span class='pill ok'>P29 P31</span></h3>
+    <p>Pseudonymises <code>nhs_number</code> (SHA-256) and <b>drops the raw value</b>, producing the PII-free dataset that backs the Pathway object. A post-condition asserts <code>nhs_number</code> never leaves.</p>
+  </div></div>
+</section>
+
+<section id='dq'>
+  <h2>4 &middot; Data-quality decision flow</h2>
+  <p class='lead'>The quarantine policy is precedence-ordered: the first rule a row violates names its <code>reject_reason</code>.</p>
+<pre class='mermaid'>
+flowchart TD
+  A[typed row] --> B{pathway_id null/blank?}
+  B -- yes --> R1[null_pathway_id]:::r
+  B -- no --> C{duplicate PK?}
+  C -- yes --> R2[duplicate_pathway_id]:::r
+  C -- no --> D{trust_code in reference?}
+  D -- no --> R3[orphan_trust_code]:::r
+  D -- yes --> E{specialty maps?}
+  E -- no --> R4[unmapped_specialty]:::r
+  E -- yes --> F{weeks parseable and 0..520?}
+  F -- no --> R5[weeks_* reject]:::r
+  F -- yes --> G{referral parseable and not future?}
+  G -- no --> R6[referral_date reject]:::r
+  G -- yes --> OK[clean]:::o
+  classDef r fill:#3a1a1a,stroke:#e03131,color:#ffd9d9;
+  classDef o fill:#0f2f24,stroke:#12b886,color:#d6ffe9;
+</pre>
+  <table>
+    <tr><th>reject_reason</th><th>Problem</th><th>Injected example</th></tr>
+    <tr><td>null_pathway_id</td><td>P8 / P42</td><td>row with empty pathway_id</td></tr>
+    <tr><td>duplicate_pathway_id</td><td>P1 / P42</td><td>PW00580 appears twice</td></tr>
+    <tr><td>orphan_trust_code</td><td>P34</td><td>TR999, TR888</td></tr>
+    <tr><td>unmapped_specialty</td><td>P8 / P40</td><td>blank specialty</td></tr>
+    <tr><td>weeks_waited_negative / _out_of_range / _unparseable</td><td>P35 / P6</td><td>-5, 9999, &ldquo;N/A&rdquo;</td></tr>
+    <tr><td>referral_date_unparseable / _in_future</td><td>P10 / P41</td><td>&ldquo;not_a_date&rdquo;, 2030-01-01</td></tr>
+  </table>
+  <div class='callout'>All 10 quarantined rows are provable: <code>test_dq_rules.py</code> feeds a crafted frame and asserts every <code>reject_reason</code> fires; the built <code>recon_control_totals</code> shows <b>1215 = 1205 + 10</b>.</div>
+</section>
+
+<section id='inc'>
+  <h2>5 &middot; Incremental &amp; streaming patterns</h2>
+  <p class='lead'>Built with <code>@incremental</code>; the delta logic (CDC, SCD2, dedup, windowing) lives in tested <code>lib/scd.py</code>.</p>
+<pre class='mermaid'>
+flowchart LR
+  RAW[raw 'added' rows]:::d --> APP[inc_pathways_appended<br/>watermark + snapshot ref]:::t
+  MIN[minimised 'current']:::d --> CDC[cdc_change_feed<br/>vs previous output]:::t --> FEED[INSERT/UPDATE/DELETE feed]:::d
+  MIN --> HIST[status_history<br/>append each snapshot]:::t --> SCD[build_scd2<br/>valid_from/valid_to/is_current]:::t --> H[rtt_status_scd2]:::d
+  MET[metrics]:::d --> WIN[window rank<br/>top-5 waiters per trust]:::t --> W[longest_waiters]:::d
+  classDef d fill:#0f2f24,stroke:#12b886,color:#d6ffe9;
+  classDef t fill:#231a3a,stroke:#8a63d2,color:#ead9ff;
+</pre>
+  <p class='muted'>CDC first build = 1,205 INSERT; SCD2 = 1,205 current segments; window rank returns 5 rows per trust. Later builds surface UPDATE/DELETE and status transitions.</p>
+</section>
+
+<section id='perf'>
+  <h2>6 &middot; Performance &amp; cost &mdash; the right engine for the job</h2>
+  <div class='grid'>
+    <div class='card'><h4>Lightweight by default</h4><p>The whole medallion runs on Polars/DuckDB single-node (<span class='pill ok'>P28 P45 P46</span>). <code>cost.py</code> pins <code>@lightweight(1 core / 2 GB)</code> (<span class='pill ok'>P26 P27</span>).</p></div>
+    <div class='card'><h4>Spark only when needed</h4><p><code>perf.py</code> demonstrates AQE, broadcast join, salting the hot TR005 key, caching, column pruning, partitioned + bucketed writes and compaction (<span class='pill ok'>P4 5 11 12 13 22 23 24 25</span>).</p></div>
+  </div>
+</section>
+
+<section id='onto'>
+  <h2>7 &middot; Ontology &mdash; from tables to an operational app</h2>
+<pre class='mermaid'>
+erDiagram
+  TRUST ||--o{ PATHWAY : "has many"
+  TRUST {
+    string trust_code PK
+    string trust_name
+    string region
+    long   beds
+  }
+  PATHWAY {
+    string pathway_id PK
+    string patient_pseudo_id
+    string trust_code FK
+    string specialty_name
+    long   weeks_waited
+    string wait_band
+    string rag_status
+    bool   is_65w_breach
+    string review_status "edit-only"
+    string triage_note "edit-only"
+  }
+</pre>
+  <p>The <b>Pathway</b> object carries RAG traffic-light conditional formatting and two <b>edit-only</b> properties written by the <b>Triage Pathway</b> action &mdash; so Clare records a validation outcome without touching the source data. Because of the tenant&rsquo;s 60 object-type cap, Specialty/Patient are modelled as Pathway properties.</p>
+</section>
+
+<section id='lineage'>
+  <h2>8 &middot; Lineage (captured automatically) <span class='pill ok'>P32</span></h2>
+  <p class='lead'>Foundry records the full source&rarr;Ontology graph with zero config &mdash; the basis for impact analysis and disaster recovery (<span class='pill ok'>P50</span>, immutable transactions).</p>
+<pre class='mermaid'>
+flowchart LR
+  seed[seed.py]:::t --> raw[raw]:::d --> typed[typed]:::d --> clean[clean]:::d --> min[minimised]:::d --> met[metrics]:::d
+  met --> ptl[rtt_ptl]:::d
+  met --> pp[patient_pseudonymised]:::d --> obj[Pathway object]:::o --> app[RTT Command Centre]:::app
+  classDef d fill:#0f2f24,stroke:#12b886,color:#d6ffe9;
+  classDef t fill:#231a3a,stroke:#8a63d2,color:#ead9ff;
+  classDef o fill:#2a1a0f,stroke:#ff922b,color:#ffe3c2;
+  classDef app fill:#3a1a2a,stroke:#e64980,color:#ffd9ec;
+</pre>
+</section>
+
+<section id='matrix'>
+  <h2>9 &middot; The 50 problems (summary)</h2>
+  <p class='lead'>Full matrix with artifact + test paths is in <code>docs/TRACEABILITY.md</code>.</p>
+  <table>
+    <tr><th>Category</th><th>Problems</th><th>How Foundry does it natively</th></tr>
+    <tr><td>Data Quality</td><td>1,6,8,9,10,34,35,40,41,42,43</td><td>Data Expectations + quarantine + Data Health (vs Great Expectations bolt-on)</td></tr>
+    <tr><td>Performance</td><td>4,5,11,12,13,22,23,24,25,45,46</td><td>Spark config + write API + lightweight engines in one platform</td></tr>
+    <tr><td>Incremental</td><td>2,3,14,15,18,19,20,21,36,37,44</td><td><code>@incremental</code> framework (vs hand-rolled watermarks)</td></tr>
+    <tr><td>Automation</td><td>7,16,17,38,39</td><td>Schedules + Automate (no Airflow/cron)</td></tr>
+    <tr><td>Cost</td><td>26,27,28</td><td>Right-sized profiles + lightweight vs Spark</td></tr>
+    <tr><td>Security</td><td>29,30,31,47,48</td><td>Markings, Restricted Views, property security, audit</td></tr>
+    <tr><td>Visibility</td><td>32,33,49,50</td><td>Automatic lineage, resource docs, Data Health, immutable transactions</td></tr>
+  </table>
+</section>
+
+<section id='tests'>
+  <h2>10 &middot; Test strategy &amp; CI</h2>
+  <div class='grid'>
+    <div class='card'><h4>Unit (pytest)</h4><p>11 modules over <code>lib/</code> with deterministic fixtures; every rule has a negative case.</p></div>
+    <div class='card'><h4>Data Expectations</h4><p>FAIL where a bad row corrupts keys/joins/metrics; WARN for signals. Bad rows are quarantined, so FAIL checks stay green because the policy works.</p></div>
+    <div class='card'><h4>Integration</h4><p>Reconciliation, PK uniqueness, quarantine breakdown, SAE removal, CDC/SCD2 counts, partition/bucket layout.</p></div>
+    <div class='card'><h4>CI</h4><p>Every commit runs pytest + <code>ci/foundry-publish</code>; merge to master only when green.</p></div>
+  </div>
+</section>
+
+<section id='open'>
+  <h2>11 &middot; How to open this &amp; what&rsquo;s next</h2>
+  <ol>
+    <li>In the repository, open <code>docs/pipeline_explainer.html</code> (this file). Use <b>Code Repositories &rarr; Files</b>, download it, then double-click to open in your browser. Diagrams render via the Mermaid CDN (needs internet on first load).</li>
+    <li>Open the interactive app <code>app/rtt_command_centre.html</code> the same way to try live <b>CRUD + Triage</b> over the Pathway/Trust model.</li>
+    <li>This complements your <code>Foundry_Learning_Journey.html</code> (the concepts course): that teaches the platform; this documents <i>this</i> pipeline and its 50-problem coverage. Keep both in the same folder for a complete package.</li>
+    <li>See <code>docs/HOW_TO_OPEN.md</code> for exact steps.</li>
+  </ol>
+</section>
+
+</main>
+<footer>RTT-Programme &middot; &ldquo;The 50 Problems, Solved&rdquo; &middot; generated for branch ai-fde/ranawatjinesh/rtt-50-problems &middot; verify SDK/UI names against your current tenant.</footer>
+
+<script type='module'>
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({startOnLoad:true, theme:'dark', securityLevel:'loose', themeVariables:{fontSize:'13px'}});
+</script>
+</body>
+</html>

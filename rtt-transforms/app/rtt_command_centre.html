@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'/>
+<meta name='viewport' content='width=device-width, initial-scale=1'/>
+<title>RTT Command Centre (React)</title>
+<style>
+  :root{--nhs:#005EB8;--nhs2:#0072CE;--panel:#111a2b;--panel2:#0f1626;--line:#22304a;--txt:#e7eef7;--mut:#9fb2c9;--grn:#12b886;--amb:#f59f00;--red:#e03131;--pink:#e64980}
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0a1220,#0b1526);color:var(--txt);font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .top{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:rgba(9,16,30,.92);position:sticky;top:0;z-index:6}
+  .logo{width:34px;height:34px;border-radius:8px;background:var(--nhs);display:flex;align-items:center;justify-content:center;font-weight:800}
+  .top h1{font-size:16px;margin:0}
+  .top .sub{color:var(--mut);font-size:12px}
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel2);position:sticky;top:59px;z-index:5}
+  .tab{padding:7px 13px;border-radius:8px;color:var(--mut);cursor:pointer;font-size:13px;border:1px solid transparent}
+  .tab:hover{color:#fff;background:var(--panel)}
+  .tab.on{color:#fff;background:var(--nhs);border-color:var(--nhs2);font-weight:700}
+  .wrap{max-width:1280px;margin:0 auto;padding:16px 20px 70px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:6px 0 14px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .kpi .l{color:var(--mut);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  .kpi .v{font-size:25px;font-weight:800;margin-top:4px}
+  .kpi .d{color:var(--mut);font-size:11px;margin-top:2px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+  select,input,textarea,button{font:inherit}
+  select,input,textarea{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 9px}
+  input::placeholder{color:#5f7392}
+  button{cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--txt);padding:7px 12px}
+  button.primary{background:var(--nhs);border-color:var(--nhs2);font-weight:700}
+  button.danger{background:#e0313122;border-color:#e0313166;color:#ffc9c9}
+  button.mini{padding:4px 8px;font-size:12px}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .spacer{margin-left:auto}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;white-space:nowrap}
+  th{background:var(--panel2);color:#cfe0f5;font-size:11px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;user-select:none}
+  th.no{cursor:default}
+  tr:hover td{background:#0e1930}
+  .chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800}
+  .GREEN{background:#12b88622;color:#63e6be;border:1px solid #12b88655}
+  .AMBER{background:#f59f0022;color:#ffd43b;border:1px solid #f59f0055}
+  .RED{background:#e0313122;color:#ff8787;border:1px solid #e0313155}
+  .badge{display:inline-block;padding:1px 7px;border-radius:6px;font-size:10.5px;font-weight:700;border:1px solid var(--line);color:var(--mut)}
+  .badge.on{background:#e0313122;color:#ff8787;border-color:#e0313166}
+  .badge.ok{background:#12b88622;color:#8ce99a;border-color:#12b88655}
+  .badge.warn{background:#f59f0022;color:#ffd43b;border-color:#f59f0055}
+  .overlay{position:fixed;inset:0;background:rgba(3,8,18,.6);display:flex;align-items:center;justify-content:center;z-index:30}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(540px,92vw);max-height:88vh;overflow:auto}
+  .modal h3{margin:0 0 12px}
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+  .field label{font-size:12px;color:var(--mut)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  .foot{color:var(--mut);font-size:12px;margin-top:14px}
+  .tag{font-size:10.5px;color:var(--mut);border:1px dashed var(--line);border-radius:6px;padding:1px 6px}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:min(420px,94vw);background:var(--panel);border-left:1px solid var(--line);z-index:25;padding:18px;overflow:auto;box-shadow:-20px 0 40px rgba(0,0,0,.4)}
+  .drawer h3{margin:0 0 4px}
+  .prop{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .prop .k{color:var(--mut)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .bars{display:flex;gap:8px;align-items:flex-end;height:200px}
+  .barcol{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end}
+  .bartrack{width:100%;height:150px;display:flex;align-items:flex-end;background:#0f1626;border-radius:6px}
+  .barfill{width:100%;border-radius:6px 6px 0 0;min-height:2px}
+  .barlbl{font-size:10px;color:var(--mut);margin-top:5px;text-align:center;line-height:1.2}
+  .barval{font-size:11px;font-weight:800;margin-bottom:3px}
+  .gtrack{position:relative;height:16px;background:#0f1626;border-radius:999px;border:1px solid var(--line);overflow:hidden}
+  .gfill{height:100%;border-radius:999px}
+  .gmark{position:absolute;top:-3px;width:2px;height:22px;background:#fff}
+  .toasts{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:8px;z-index:40}
+  .toast{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--nhs);border-radius:8px;padding:10px 14px;min-width:220px;font-size:13px}
+  .toast.ok{border-left-color:var(--grn)} .toast.err{border-left-color:var(--red)} .toast.warn{border-left-color:var(--amb)}
+  .pager{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:10px}
+  .bulkbar{display:flex;gap:8px;align-items:center;background:#0e1930;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:8px 0}
+  code{background:#0a1120;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-family:SFMono-Regular,Consolas,monospace;font-size:12px;color:#a9c7ff}
+  pre{background:#0a1120;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font:12px/1.5 SFMono-Regular,Consolas,monospace;color:#d6e6ff}
+  a{color:#7db4ff}
+  h2{font-size:19px;margin:6px 0}
+  .muted{color:var(--mut)}
+</style>
+</head>
+<body>
+<div id='root'></div>
+
+<script crossorigin src='https://unpkg.com/react@18/umd/react.production.min.js'></script>
+<script crossorigin src='https://unpkg.com/react-dom@18/umd/react-dom.production.min.js'></script>
+<script src='https://unpkg.com/@babel/standalone/babel.min.js'></script>
+<script type='text/babel' data-presets='react'>
+const {useState, useMemo, useEffect} = React;
+
+/* ============================ Domain logic ============================
+   Mirrors lib/rtt_metrics.py. The Foundry transform is the source of truth;
+   this recomputes derived fields when a user edits a pathway client-side. */
+const TARGET=18;
+const waitBand=w=>(w==null||w<0)?null:w<=18?'0-18':w<=26?'19-26':w<=39?'27-39':w<=51?'40-51':w<=64?'52-64':'65+';
+const rag=w=>(w==null||w<0)?null:w<=18?'GREEN':w<52?'AMBER':'RED';
+const derive=p=>{const w=Number(p.weeks_waited);return {...p,weeks_waited:w,wait_band:waitBand(w),rag_status:rag(w),is_breach_18w:w>18,is_52w_breach:w>=52,is_65w_breach:w>=65};};
+const pseudo=s=>{let h=0;for(let i=0;i<String(s).length;i++){h=(h*31+String(s).charCodeAt(i))>>>0;}return('0000000'+h.toString(16)).slice(-8)+'d1';};
+const mulberry32=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+
+const TRUSTS0=[
+  {trust_code:'TR001',trust_name:'Northfield University Hospital NHS Trust',region:'North West',trust_type:'Acute',beds:820},
+  {trust_code:'TR002',trust_name:'Westgate General Hospital NHS Trust',region:'South West',trust_type:'Acute',beds:610},
+  {trust_code:'TR003',trust_name:'Eastbrook District General NHS Trust',region:'East of England',trust_type:'Acute',beds:540},
+  {trust_code:'TR004',trust_name:'Southmead Health Services NHS Trust',region:'South East',trust_type:'Acute',beds:390},
+  {trust_code:'TR005',trust_name:'Central Mercia Teaching Hospitals NHS Trust',region:'Midlands',trust_type:'Teaching',beds:1050},
+];
+const SPECIALTIES=[
+  {specialty_code:'SP01',specialty_name:'Trauma and Orthopaedics',specialty_group:'Surgery'},
+  {specialty_code:'SP02',specialty_name:'General Surgery',specialty_group:'Surgery'},
+  {specialty_code:'SP03',specialty_name:'Ophthalmology',specialty_group:'Surgery'},
+  {specialty_code:'SP04',specialty_name:'Cardiology',specialty_group:'Medicine'},
+  {specialty_code:'SP05',specialty_name:'Gastroenterology',specialty_group:'Medicine'},
+  {specialty_code:'SP06',specialty_name:'Ear Nose and Throat',specialty_group:'Surgery'},
+  {specialty_code:'SP07',specialty_name:'Urology',specialty_group:'Surgery'},
+  {specialty_code:'SP08',specialty_name:'Neurology',specialty_group:'Medicine'},
+  {specialty_code:'SP09',specialty_name:'Dermatology',specialty_group:'Medicine'},
+  {specialty_code:'SP10',specialty_name:'Rheumatology',specialty_group:'Medicine'},
+];
+const SPEC_NAMES=SPECIALTIES.map(s=>s.specialty_name);
+const REVIEW_OPTIONS=['Validated','Needs escalation','Data query','Removed in error'];
+const specCode=n=>(SPECIALTIES.find(s=>s.specialty_name===n)||{}).specialty_code||'';
+const specGroup=n=>(SPECIALTIES.find(s=>s.specialty_name===n)||{}).specialty_group||'';
+
+const HAND=[
+  ['PW00580','TR004','Neurology','2024-09-25',23,'Active'],['PW00134','TR002','Trauma and Orthopaedics','2024-04-05',15,'Active'],
+  ['PW00106','TR001','Ophthalmology','2024-06-24',59,'Active'],['PW00771','TR005','Ear Nose and Throat','2025-01-14',14,'Discharged'],
+  ['PW00900','TR003','General Surgery','2025-01-13',85,'Active'],['PW00259','TR002','Rheumatology','2024-04-25',95,'Active'],
+  ['PW00661','TR003','Gastroenterology','2025-01-14',38,'Active'],['PW00251','TR005','General Surgery','2024-03-22',28,'Active'],
+  ['PW00435','TR003','Trauma and Orthopaedics','2024-02-03',53,'Active'],['PW00295','TR004','Trauma and Orthopaedics','2023-11-01',100,'Active'],
+  ['PW00503','TR004','General Surgery','2023-05-14',34,'Active'],['PW00155','TR001','Cardiology','2024-02-12',44,'Active'],
+  ['PW00756','TR002','Cardiology','2024-07-12',50,'Active'],['PW00037','TR001','General Surgery','2024-08-30',69,'Active'],
+  ['PW00364','TR004','Rheumatology','2024-04-16',13,'Discharged'],['PW00353','TR004','Trauma and Orthopaedics','2023-12-08',153,'Active'],
+  ['PW00812','TR002','Gastroenterology','2025-01-13',98,'Active'],['PW00095','TR004','Dermatology','2024-03-07',45,'Active'],
+  ['PW00538','TR001','Trauma and Orthopaedics','2024-08-17',148,'Active'],['PW00613','TR005','Ophthalmology','2024-08-09',73,'Active'],
+];
+function buildSeed(){
+  const rows=HAND.map(r=>mk(r[0],r[1],r[2],r[3],r[4],r[5]));
+  const rnd=mulberry32(42);const tw=['TR005','TR005','TR005','TR005','TR001','TR002','TR003','TR004'];
+  for(let i=0;i<44;i++){
+    const id='PW0'+(2000+i);const tc=tw[Math.floor(rnd()*tw.length)];const sp=SPEC_NAMES[Math.floor(rnd()*SPEC_NAMES.length)];
+    const w=Math.floor(Math.min(160,Math.abs(rnd()*rnd()*220)));const st=rnd()<0.8?'Active':'Discharged';
+    const d=new Date(2025,0,31);d.setDate(d.getDate()-Math.floor(rnd()*730));
+    rows.push(mk(id,tc,sp,d.toISOString().slice(0,10),w,st));
+  }
+  return rows;
+}
+function mk(id,tc,sp,rd,w,st){return derive({pathway_id:id,trust_code:tc,specialty_name:sp,specialty_code:specCode(sp),specialty_group:specGroup(sp),referral_date:rd,weeks_waited:w,pathway_status:st,patient_pseudo_id:pseudo(id),review_status:'',triage_note:''});}
+
+/* ============================ Persistence ============================ */
+const LS_ROWS='rtt_cc_rows_v2',LS_AUDIT='rtt_cc_audit_v2';
+const loadLS=(k,def)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;}};
+const saveLS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
+
+/* ============================ Data sources ============================
+   Default = InMemory (offline, persists to localStorage).
+   Live    = FoundryDataSource, calling the Ontology REST/OSDK API. */
+class InMemoryDataSource{
+  constructor(rows){this.rows=rows;this.name='In-memory';}
+  async list(){return this.rows;}
+  async create(p){this.rows=[derive(p),...this.rows];this._p();return this.rows;}
+  async update(id,patch){this.rows=this.rows.map(r=>r.pathway_id===id?derive({...r,...patch}):r);this._p();return this.rows;}
+  async triage(id,status,note){this.rows=this.rows.map(r=>r.pathway_id===id?{...r,review_status:status,triage_note:note}:r);this._p();return this.rows;}
+  async remove(id){this.rows=this.rows.filter(r=>r.pathway_id!==id);this._p();return this.rows;}
+  _p(){saveLS(LS_ROWS,this.rows);}
+}
+class FoundryDataSource{
+  constructor(cfg){this.cfg=cfg;this.name='Foundry live';}
+  h(){return {Authorization:'Bearer '+this.cfg.token,'Content-Type':'application/json'};}
+  base(){return `${this.cfg.host.replace(/\/$/,'')}/api/v2/ontologies/${this.cfg.ontology}`;}
+  async list(){
+    const r=await fetch(`${this.base()}/objects/RttPathway?pageSize=200`,{headers:this.h()});
+    if(!r.ok)throw new Error('list '+r.status);const j=await r.json();
+    return (j.data||[]).map(o=>derive({pathway_id:o.pathwayId,trust_code:o.trustCode,specialty_name:o.specialtyName,specialty_code:o.specialtyCode,specialty_group:o.specialtyGroup,referral_date:o.referralDate,weeks_waited:o.weeksWaited,pathway_status:o.pathwayStatus,patient_pseudo_id:o.patientPseudoId,review_status:o.reviewStatus||'',triage_note:o.triageNote||''}));
+  }
+  async triage(id,status,note){
+    const r=await fetch(`${this.base()}/actions/rtt-triage-pathway/apply`,{method:'POST',headers:this.h(),body:JSON.stringify({parameters:{pathway:id,reviewStatus:status,triageNote:note}})});
+    if(!r.ok)throw new Error('triage '+r.status);return this.list();
+  }
+  async update(id,patch){ // maps to an edit action; only trust/status/weeks demoed
+    throw new Error('Configure create/update/delete Action types in Foundry, then map here.');
+  }
+  async create(){throw new Error('Configure a create-pathway Action type in Foundry.');}
+  async remove(){throw new Error('Configure a delete/soft-delete Action type in Foundry.');}
+}
+
+/* ============================ helpers ============================ */
+const trust=c=>TRUSTS0.find(t=>t.trust_code===c)||{trust_code:c,trust_name:c,region:'',beds:0};
+function toCSV(rows){const cols=['pathway_id','patient_pseudo_id','trust_code','specialty_name','specialty_code','referral_date','weeks_waited','wait_band','rag_status','is_52w_breach','is_65w_breach','pathway_status','review_status','triage_note'];
+  return cols.join(',')+'\n'+rows.map(r=>cols.map(c=>JSON.stringify(r[c]==null?'':r[c])).join(',')).join('\n');}
+function download(name,text,type){const b=new Blob([text],{type});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
+
+/* ============================ small components ============================ */
+function KPI({label,value,detail,tone}){return <div className='kpi'><div className='l'>{label}</div><div className='v' style={tone?{color:tone}:null}>{value}</div><div className='d'>{detail}</div></div>;}
+function Chip({v}){return v?<span className={'chip '+v}>{v}</span>:<span className='badge'>-</span>;}
+function BarChart({data}){const max=Math.max(1,...data.map(d=>d.value));return <div className='bars'>{data.map((d,i)=><div className='barcol' key={i}><div className='barval'>{d.value}</div><div className='bartrack'><div className='barfill' style={{height:(d.value/max*100)+'%',background:d.color||'#0072CE'}}></div></div><div className='barlbl'>{d.label}</div></div>)}</div>;}
+function Gauge({pct}){return <div><div className='gtrack'><div className='gfill' style={{width:Math.min(100,pct)+'%',background:pct>=92?'var(--grn)':'var(--amb)'}}></div><div className='gmark' style={{left:'92%'}}></div></div><div className='foot' style={{marginTop:6}}>{pct}% within 18 weeks <span className='muted'>&middot; target 92%</span></div></div>;}
+function Modal({title,onClose,children}){return <div className='overlay' onClick={onClose}><div className='modal' onClick={e=>e.stopPropagation()}><h3>{title}</h3>{children}</div></div>;}
+
+function PathwayForm({initial,isNew,onSave,onCancel}){
+  const [p,setP]=useState(initial);const set=(k,v)=>setP({...p,[k]:v});const d=derive(p);
+  return <div>
+    <div className='row2'>
+      <div className='field'><label>Pathway ID</label><input value={p.pathway_id} disabled={!isNew} onChange={e=>set('pathway_id',e.target.value)} placeholder='auto if blank'/></div>
+      <div className='field'><label>Status</label><select value={p.pathway_status} onChange={e=>set('pathway_status',e.target.value)}><option>Active</option><option>Discharged</option></select></div>
+    </div>
+    <div className='row2'>
+      <div className='field'><label>Trust</label><select value={p.trust_code} onChange={e=>set('trust_code',e.target.value)}>{TRUSTS0.map(t=><option key={t.trust_code} value={t.trust_code}>{t.trust_name}</option>)}</select></div>
+      <div className='field'><label>Specialty</label><select value={p.specialty_name} onChange={e=>set('specialty_name',e.target.value)}>{SPEC_NAMES.map(s=><option key={s}>{s}</option>)}</select></div>
+    </div>
+    <div className='row2'>
+      <div className='field'><label>Referral date</label><input type='date' value={p.referral_date} onChange={e=>set('referral_date',e.target.value)}/></div>
+      <div className='field'><label>Weeks waited</label><input type='number' min='0' value={p.weeks_waited} onChange={e=>set('weeks_waited',e.target.value)}/></div>
+    </div>
+    <div className='foot'>Derived: band <b>{d.wait_band}</b> &middot; <Chip v={d.rag_status}/> {d.is_65w_breach?<span className='badge on'>65w</span>:d.is_52w_breach?<span className='badge on'>52w</span>:null}</div>
+    <div className='actions'><button onClick={onCancel}>Cancel</button><button className='primary' onClick={()=>onSave(p)}>{isNew?'Create pathway':'Save changes'}</button></div>
+  </div>;
+}
+function TriageForm({row,onSave,onCancel}){
+  const [status,setStatus]=useState(row.review_status||'Validated');const [note,setNote]=useState(row.triage_note||'');
+  return <div>
+    <div className='foot' style={{marginTop:0,marginBottom:10}}>{row.pathway_id} &middot; {trust(row.trust_code).trust_name} &middot; {row.specialty_name} &middot; {row.weeks_waited}w <Chip v={row.rag_status}/></div>
+    <div className='field'><label>Review status</label><select value={status} onChange={e=>setStatus(e.target.value)}>{REVIEW_OPTIONS.map(o=><option key={o}>{o}</option>)}</select></div>
+    <div className='field'><label>Triage note</label><textarea rows='3' value={note} onChange={e=>setNote(e.target.value)} placeholder='Optional note...'></textarea></div>
+    <div className='foot' style={{marginTop:0}}>Maps to the <b>Triage Pathway</b> action (edit-only <code>review_status</code>/<code>triage_note</code>).</div>
+    <div className='actions'><button onClick={onCancel}>Cancel</button><button className='primary' onClick={()=>onSave(status,note)}>Submit triage</button></div>
+  </div>;
+}
+
+/* ============================ App ============================ */
+function App(){
+  const [ds,setDs]=useState(()=>new InMemoryDataSource(loadLS(LS_ROWS,null)||buildSeed()));
+  const [rows,setRows]=useState([]);const [tab,setTab]=useState('Command Centre');
+  const [f,setF]=useState({trust:'',specialty:'',rag:'',status:'Active',group:''});
+  const [q,setQ]=useState('');const [sort,setSort]=useState({k:'weeks_waited',dir:-1});
+  const [page,setPage]=useState(1);const [size,setSize]=useState(12);
+  const [sel,setSel]=useState(()=>new Set());const [modal,setModal]=useState(null);const [drawer,setDrawer]=useState(null);
+  const [toasts,setToasts]=useState([]);const [audit,setAudit]=useState(()=>loadLS(LS_AUDIT,[]));
+  const [busy,setBusy]=useState(false);
+
+  useEffect(()=>{ds.list().then(setRows);},[ds]);
+  const toast=(msg,kind)=>{const id=Math.random();setToasts(t=>[...t,{id,msg,kind}]);setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),3200);};
+  const log=(action,target,detail)=>{const e={ts:new Date().toISOString(),action,target,detail};setAudit(a=>{const n=[e,...a].slice(0,500);saveLS(LS_AUDIT,n);return n;});};
+  const refresh=async()=>setRows(await ds.list());
+
+  const run=async(fn,ok)=>{setBusy(true);try{await fn();await refresh();if(ok)toast(ok,'ok');}catch(e){toast(e.message||'Error','err');}finally{setBusy(false);}};
+  const doCreate=p=>{const id=(p.pathway_id||'').trim()||('PW'+Math.floor(10000+Math.random()*89999));const row={...p,pathway_id:id,specialty_code:specCode(p.specialty_name),specialty_group:specGroup(p.specialty_name),patient_pseudo_id:pseudo(id)};run(()=>ds.create(row),'Created '+id);log('CREATE',id,p.specialty_name+' @ '+p.trust_code);};
+  const doUpdate=(id,patch)=>{run(()=>ds.update(id,{...patch,specialty_code:specCode(patch.specialty_name||''),specialty_group:specGroup(patch.specialty_name||'')}),'Saved '+id);log('UPDATE',id,JSON.stringify(patch));};
+  const doTriage=(id,s,n)=>{run(()=>ds.triage(id,s,n),'Triaged '+id);log('TRIAGE',id,s);};
+  const doDelete=id=>{run(()=>ds.remove(id),'Deleted '+id);log('DELETE',id,'');};
+  const doReassign=(id,tc)=>{run(()=>ds.update(id,{trust_code:tc}),'Reassigned '+id);log('REASSIGN',id,'-> '+tc);};
+  const doDischarge=id=>{run(()=>ds.update(id,{pathway_status:'Discharged'}),'Discharged '+id);log('DISCHARGE',id,'');};
+  const bulk=async(ids,fn,label)=>{setBusy(true);try{for(const id of ids){await fn(id);}await refresh();toast(label+' '+ids.length+' pathways','ok');log('BULK '+label,ids.length+' rows','');setSel(new Set());}catch(e){toast(e.message,'err');}finally{setBusy(false);}};
+
+  const filtered=useMemo(()=>rows.filter(r=>
+    (!f.trust||r.trust_code===f.trust)&&(!f.specialty||r.specialty_name===f.specialty)&&
+    (!f.rag||r.rag_status===f.rag)&&(!f.status||r.pathway_status===f.status)&&(!f.group||r.specialty_group===f.group)&&
+    (!q||[r.pathway_id,r.patient_pseudo_id,r.specialty_name,r.trust_code,r.pathway_status,r.review_status].join(' ').toLowerCase().includes(q.toLowerCase()))
+  ),[rows,f,q]);
+  const sorted=useMemo(()=>{const a=[...filtered];a.sort((x,y)=>{const vx=x[sort.k],vy=y[sort.k];return (vx>vy?1:vx<vy?-1:0)*sort.dir;});return a;},[filtered,sort]);
+  const pages=Math.max(1,Math.ceil(sorted.length/size));const pg=Math.min(page,pages);const view=sorted.slice((pg-1)*size,pg*size);
+  const th=(k,l,no)=><th className={no?'no':''} onClick={no?null:()=>setSort(s=>({k,dir:s.k===k?-s.dir:1}))}>{l}{sort.k===k?(sort.dir>0?' \u25B2':' \u25BC'):''}</th>;
+
+  const kpis=useMemo(()=>{const a=rows.filter(r=>r.pathway_status==='Active');const within=a.filter(r=>r.weeks_waited<=TARGET).length;
+    return {total:a.length,pct:a.length?Math.round(1000*within/a.length)/10:0,b52:a.filter(r=>r.is_52w_breach).length,b65:a.filter(r=>r.is_65w_breach).length};},[rows]);
+
+  const toggle=id=>setSel(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n;});
+  const allOnPage=view.length>0&&view.every(r=>sel.has(r.pathway_id));
+  const toggleAll=()=>setSel(s=>{const n=new Set(s);if(allOnPage)view.forEach(r=>n.delete(r.pathway_id));else view.forEach(r=>n.add(r.pathway_id));return n;});
+
+  return <div>
+    <div className='top'>
+      <div className='logo'>RTT</div>
+      <div><h1>RTT Command Centre</h1><div className='sub'>Operational app over the Pathway / Trust ontology &middot; React + OSDK-ready</div></div>
+      <div className='spacer'></div>
+      <span className='tag'>source: {ds.name}</span>
+      {busy&&<span className='tag'>working...</span>}
+    </div>
+    <div className='tabs'>{['Command Centre','Trusts','Analytics','Ontology','Data Health','Audit','Connect'].map(t=><div key={t} className={'tab'+(tab===t?' on':'')} onClick={()=>setTab(t)}>{t}</div>)}</div>
+
+    <div className='wrap'>
+      {tab==='Command Centre'&&<div>
+        <div className='kpis'>
+          <KPI label='Active PTL' value={kpis.total} detail='incomplete pathways'/>
+          <KPI label='% within 18 weeks' value={kpis.pct+'%'} tone={kpis.pct>=92?'var(--grn)':'var(--amb)'} detail={(kpis.pct>=92?'meets':'below')+' 92% standard'}/>
+          <KPI label='52-week breaches' value={kpis.b52} tone='var(--red)' detail='nationally reportable'/>
+          <KPI label='65-week breaches' value={kpis.b65} tone='var(--red)' detail='nationally reportable'/>
+          <KPI label='Total pathways' value={rows.length} detail='active + discharged'/>
+        </div>
+        <div className='bar'>
+          <select value={f.status} onChange={e=>{setF({...f,status:e.target.value});setPage(1);}}><option value=''>All statuses</option><option>Active</option><option>Discharged</option></select>
+          <select value={f.trust} onChange={e=>{setF({...f,trust:e.target.value});setPage(1);}}><option value=''>All trusts</option>{TRUSTS0.map(t=><option key={t.trust_code} value={t.trust_code}>{t.trust_name}</option>)}</select>
+          <select value={f.specialty} onChange={e=>{setF({...f,specialty:e.target.value});setPage(1);}}><option value=''>All specialties</option>{SPEC_NAMES.map(s=><option key={s}>{s}</option>)}</select>
+          <select value={f.rag} onChange={e=>{setF({...f,rag:e.target.value});setPage(1);}}><option value=''>All RAG</option><option>GREEN</option><option>AMBER</option><option>RED</option></select>
+          <input placeholder='Search id / patient / specialty...' value={q} onChange={e=>{setQ(e.target.value);setPage(1);}} style={{minWidth:220}}/>
+          <span className='spacer'></span>
+          <button className='mini' onClick={()=>download('rtt_ptl.csv',toCSV(sorted),'text/csv')}>Export CSV</button>
+          <button className='mini' onClick={()=>download('rtt_ptl.json',JSON.stringify(sorted,null,2),'application/json')}>Export JSON</button>
+          <button className='primary' onClick={()=>setModal({t:'new'})}>+ New pathway</button>
+        </div>
+
+        {sel.size>0&&<div className='bulkbar'>
+          <b>{sel.size} selected</b>
+          <button className='mini' onClick={()=>setModal({t:'bulktriage'})}>Bulk triage</button>
+          <button className='mini' onClick={()=>bulk([...sel],id=>ds.update(id,{pathway_status:'Discharged'}),'Discharged')}>Bulk discharge</button>
+          <button className='mini danger' onClick={()=>bulk([...sel],id=>ds.remove(id),'Deleted')}>Bulk delete</button>
+          <span className='spacer'></span><button className='mini' onClick={()=>setSel(new Set())}>Clear</button>
+        </div>}
+
+        <table>
+          <thead><tr>
+            <th className='no'><input type='checkbox' checked={allOnPage} onChange={toggleAll}/></th>
+            {th('pathway_id','Pathway')}{th('trust_code','Trust')}{th('specialty_name','Specialty')}{th('weeks_waited','Weeks')}{th('wait_band','Band')}{th('rag_status','RAG')}<th className='no'>Breach</th>{th('pathway_status','Status')}{th('review_status','Review')}<th className='no'>Actions</th>
+          </tr></thead>
+          <tbody>
+            {view.map(r=><tr key={r.pathway_id}>
+              <td><input type='checkbox' checked={sel.has(r.pathway_id)} onChange={()=>toggle(r.pathway_id)}/></td>
+              <td><a onClick={()=>setDrawer(r)} style={{cursor:'pointer'}}><b>{r.pathway_id}</b></a></td>
+              <td>{trust(r.trust_code).trust_name}</td><td>{r.specialty_name}</td><td><b>{r.weeks_waited}</b></td>
+              <td>{r.wait_band}</td><td><Chip v={r.rag_status}/></td>
+              <td>{r.is_65w_breach?<span className='badge on'>65w</span>:r.is_52w_breach?<span className='badge on'>52w</span>:<span className='badge'>-</span>}</td>
+              <td>{r.pathway_status}</td>
+              <td>{r.review_status?<span className='badge ok'>{r.review_status}</span>:<span className='badge'>-</span>}</td>
+              <td><button className='mini' onClick={()=>setModal({t:'triage',row:r})}>Triage</button> <button className='mini' onClick={()=>setModal({t:'edit',row:r})}>Edit</button> <button className='mini danger' onClick={()=>setModal({t:'del',row:r})}>Del</button></td>
+            </tr>)}
+            {view.length===0&&<tr><td colSpan='11' className='foot' style={{textAlign:'center',padding:20}}>No pathways match.</td></tr>}
+          </tbody>
+        </table>
+        <div className='pager'>
+          <span className='muted'>{sorted.length} rows</span>
+          <select value={size} onChange={e=>{setSize(Number(e.target.value));setPage(1);}}><option>12</option><option>25</option><option>50</option></select>
+          <button className='mini' disabled={pg<=1} onClick={()=>setPage(pg-1)}>Prev</button>
+          <span className='muted'>{pg} / {pages}</span>
+          <button className='mini' disabled={pg>=pages} onClick={()=>setPage(pg+1)}>Next</button>
+        </div>
+      </div>}
+
+      {tab==='Trusts'&&<TrustsView rows={rows} onOpen={tc=>{setF({...f,trust:tc,status:''});setTab('Command Centre');}}/>}
+      {tab==='Analytics'&&<AnalyticsView rows={rows}/>}
+      {tab==='Ontology'&&<OntologyView/>}
+      {tab==='Data Health'&&<HealthView rows={rows}/>}
+      {tab==='Audit'&&<AuditView audit={audit} onClear={()=>{setAudit([]);saveLS(LS_AUDIT,[]);}}/>}
+      {tab==='Connect'&&<ConnectView onInMemory={()=>{setDs(new InMemoryDataSource(loadLS(LS_ROWS,null)||buildSeed()));toast('Using in-memory data','ok');}} onConnect={cfg=>{const d=new FoundryDataSource(cfg);d.list().then(rs=>{setDs(d);setRows(rs);toast('Connected to Foundry ('+rs.length+' objects)','ok');}).catch(e=>toast('Connect failed: '+e.message,'err'));}} onReset={()=>{const s=buildSeed();saveLS(LS_ROWS,s);setDs(new InMemoryDataSource(s));toast('Sample data reset','ok');}}/>}
+    </div>
+
+    {drawer&&<div className='drawer'>
+      <div style={{display:'flex',justifyContent:'space-between'}}><h3>{drawer.pathway_id}</h3><button className='mini' onClick={()=>setDrawer(null)}>Close</button></div>
+      <div className='muted' style={{marginBottom:8}}>Pathway object &middot; <Chip v={drawer.rag_status}/></div>
+      {[['Patient (pseudo)','patient_pseudo_id'],['Trust','trust_code'],['Specialty','specialty_name'],['Specialty code','specialty_code'],['Referral date','referral_date'],['Weeks waited','weeks_waited'],['Wait band','wait_band'],['Status','pathway_status'],['Review status','review_status'],['Triage note','triage_note']].map(([l,k])=><div className='prop' key={k}><span className='k'>{l}</span><span>{k==='trust_code'?trust(drawer.trust_code).trust_name:(drawer[k]===''||drawer[k]==null?'-':String(drawer[k]))}</span></div>)}
+      <div className='card' style={{marginTop:12}}><b>Linked Trust</b><div className='foot' style={{marginTop:4}}>{trust(drawer.trust_code).trust_name} &middot; {trust(drawer.trust_code).region} &middot; {rows.filter(r=>r.trust_code===drawer.trust_code).length} pathways</div></div>
+      <div className='actions' style={{justifyContent:'flex-start',flexWrap:'wrap'}}>
+        <button className='mini primary' onClick={()=>setModal({t:'triage',row:drawer})}>Triage</button>
+        <button className='mini' onClick={()=>setModal({t:'edit',row:drawer})}>Edit</button>
+        <button className='mini' onClick={()=>setModal({t:'reassign',row:drawer})}>Reassign</button>
+        <button className='mini' onClick={()=>{doDischarge(drawer.pathway_id);setDrawer(null);}}>Discharge</button>
+        <button className='mini danger' onClick={()=>{setModal({t:'del',row:drawer});}}>Delete</button>
+      </div>
+    </div>}
+
+    {modal&&modal.t==='new'&&<Modal title='New pathway' onClose={()=>setModal(null)}><PathwayForm isNew initial={{pathway_id:'',trust_code:'TR001',specialty_name:'Cardiology',referral_date:'2025-01-31',weeks_waited:0,pathway_status:'Active',review_status:'',triage_note:''}} onCancel={()=>setModal(null)} onSave={p=>{doCreate(p);setModal(null);}}/></Modal>}
+    {modal&&modal.t==='edit'&&<Modal title={'Edit '+modal.row.pathway_id} onClose={()=>setModal(null)}><PathwayForm initial={modal.row} onCancel={()=>setModal(null)} onSave={p=>{doUpdate(modal.row.pathway_id,p);setModal(null);setDrawer(null);}}/></Modal>}
+    {modal&&modal.t==='triage'&&<Modal title='Triage Pathway' onClose={()=>setModal(null)}><TriageForm row={modal.row} onCancel={()=>setModal(null)} onSave={(s,n)=>{doTriage(modal.row.pathway_id,s,n);setModal(null);setDrawer(null);}}/></Modal>}
+    {modal&&modal.t==='reassign'&&<Modal title='Reassign trust' onClose={()=>setModal(null)}><ReassignForm row={modal.row} onCancel={()=>setModal(null)} onSave={tc=>{doReassign(modal.row.pathway_id,tc);setModal(null);setDrawer(null);}}/></Modal>}
+    {modal&&modal.t==='bulktriage'&&<Modal title={'Bulk triage '+sel.size+' pathways'} onClose={()=>setModal(null)}><BulkTriage onCancel={()=>setModal(null)} onSave={(s,n)=>{bulk([...sel],id=>ds.triage(id,s,n),'Triaged');setModal(null);}}/></Modal>}
+    {modal&&modal.t==='del'&&<Modal title='Delete pathway' onClose={()=>setModal(null)}><p>Remove <b>{modal.row.pathway_id}</b> ({trust(modal.row.trust_code).trust_name})? In production this maps to a soft-delete action, preserving the immutable audit trail.</p><div className='actions'><button onClick={()=>setModal(null)}>Cancel</button><button className='danger' onClick={()=>{doDelete(modal.row.pathway_id);setModal(null);setDrawer(null);}}>Delete</button></div></Modal>}
+
+    <div className='toasts'>{toasts.map(t=><div key={t.id} className={'toast '+(t.kind||'')}>{t.msg}</div>)}</div>
+  </div>;
+}
+
+function ReassignForm({row,onSave,onCancel}){const [tc,setTc]=useState(row.trust_code);return <div><div className='field'><label>Move pathway {row.pathway_id} to trust</label><select value={tc} onChange={e=>setTc(e.target.value)}>{TRUSTS0.map(t=><option key={t.trust_code} value={t.trust_code}>{t.trust_name}</option>)}</select></div><div className='actions'><button onClick={onCancel}>Cancel</button><button className='primary' onClick={()=>onSave(tc)}>Reassign</button></div></div>;}
+function BulkTriage({onSave,onCancel}){const [s,setS]=useState('Validated');const [n,setN]=useState('');return <div><div className='field'><label>Review status</label><select value={s} onChange={e=>setS(e.target.value)}>{REVIEW_OPTIONS.map(o=><option key={o}>{o}</option>)}</select></div><div className='field'><label>Note</label><textarea rows='2' value={n} onChange={e=>setN(e.target.value)}></textarea></div><div className='actions'><button onClick={onCancel}>Cancel</button><button className='primary' onClick={()=>onSave(s,n)}>Apply to all</button></div></div>;}
+
+function TrustsView({rows,onOpen}){
+  const stats=TRUSTS0.map(t=>{const a=rows.filter(r=>r.trust_code===t.trust_code&&r.pathway_status==='Active');const within=a.filter(r=>r.weeks_waited<=TARGET).length;return {...t,n:a.length,pct:a.length?Math.round(1000*within/a.length)/10:0,b52:a.filter(r=>r.is_52w_breach).length,b65:a.filter(r=>r.is_65w_breach).length};});
+  return <div><h2>Trusts</h2><p class='muted'>Provider organisations delivering RTT pathways. Click a trust to open its PTL.</p>
+    <table><thead><tr><th>Trust</th><th>Region</th><th>Type</th><th>Beds</th><th>Active PTL</th><th>% within 18w</th><th>52w</th><th>65w</th><th></th></tr></thead>
+    <tbody>{stats.map(t=><tr key={t.trust_code}><td><b>{t.trust_name}</b><div className='foot' style={{margin:0}}>{t.trust_code}</div></td><td>{t.region}</td><td>{t.trust_type}</td><td>{t.beds}</td><td>{t.n}</td><td><span className={'chip '+(t.pct>=92?'GREEN':t.pct>=75?'AMBER':'RED')}>{t.pct}%</span></td><td>{t.b52}</td><td>{t.b65}</td><td><button className='mini' onClick={()=>onOpen(t.trust_code)}>Open PTL</button></td></tr>)}</tbody></table></div>;
+}
+
+function AnalyticsView({rows}){
+  const active=rows.filter(r=>r.pathway_status==='Active');
+  const bands=['0-18','19-26','27-39','40-51','52-64','65+'];
+  const bandData=bands.map(b=>({label:b,value:active.filter(r=>r.wait_band===b).length,color:b==='65+'?'#e03131':b==='52-64'?'#f76707':b==='0-18'?'#12b886':'#0072CE'}));
+  const trustData=TRUSTS0.map(t=>({label:t.trust_code,value:active.filter(r=>r.trust_code===t.trust_code&&r.is_breach_18w).length,color:'#e64980'}));
+  const specData=SPECIALTIES.map(s=>({label:s.specialty_code,value:active.filter(r=>r.specialty_name===s.specialty_name).length,color:'#0072CE'}));
+  const within=active.filter(r=>r.weeks_waited<=TARGET).length;const pct=active.length?Math.round(1000*within/active.length)/10:0;
+  return <div><h2>Analytics</h2>
+    <div className='card'><b>Constitutional standard</b><div style={{marginTop:10}}><Gauge pct={pct}/></div></div>
+    <div className='grid'>
+      <div className='card'><b>Wait-band distribution (active)</b><BarChart data={bandData}/></div>
+      <div className='card'><b>18-week breaches by trust</b><BarChart data={trustData}/></div>
+      <div className='card'><b>Pathways by specialty</b><BarChart data={specData}/></div>
+    </div>
+  </div>;
+}
+
+function OntologyView(){
+  const P=[['pathway_id','string','Primary key'],['patient_pseudo_id','string','pseudonymised - no NHS number'],['trust_code','string','FK -> Trust'],['specialty_name','string',''],['specialty_code','string',''],['referral_date','date',''],['weeks_waited','long','prominent'],['pathway_status','string',''],['is_breach_18w','boolean',''],['is_52w_breach','boolean',''],['is_65w_breach','boolean',''],['wait_band','string',''],['rag_status','string','RAG conditional formatting'],['review_status','string','edit-only'],['triage_note','string','edit-only']];
+  const T=[['trust_code','string','Primary key'],['trust_name','string','title'],['region','string',''],['trust_type','string',''],['beds','long',''],['contact_email','string','']];
+  const Row=({r})=><div className='prop'><span className='k'>{r[0]}</span><span><span className='badge'>{r[1]}</span> {r[2]?<span className='muted' style={{marginLeft:6}}>{r[2]}</span>:null}</span></div>;
+  return <div><h2>Ontology Explorer</h2><p className='muted'>What the pipeline surfaces to applications. Mirrors Ontology Manager.</p>
+    <div className='grid'>
+      <div className='card'><b>&#128203; Pathway</b> <span className='tag'>RttPathway</span><div className='foot' style={{marginTop:4}}>PK pathway_id &middot; backing <code>rtt_patient_pseudonymised</code></div>{P.map((r,i)=><Row r={r} key={i}/>)}</div>
+      <div className='card'><b>&#127973; Trust</b> <span className='tag'>RttTrust</span><div className='foot' style={{marginTop:4}}>PK trust_code &middot; backing <code>provider_reference</code></div>{T.map((r,i)=><Row r={r} key={i}/>)}
+        <div style={{marginTop:12}}><b>Links</b><div className='foot' style={{margin:'4px 0'}}>Pathway &rarr; Trust (many-to-one, via trust_code)</div><b>Actions</b><div className='foot' style={{margin:'4px 0'}}>&#9889; Triage Pathway (review_status + triage_note)</div></div>
+      </div>
+    </div>
+    <div className='card'><b>RIDs</b>
+      <div className='prop'><span className='k'>Pathway object</span><code>ri.ontology.main.object-type.921abe22-...</code></div>
+      <div className='prop'><span className='k'>Trust object</span><code>ri.ontology.main.object-type.da8bc071-...</code></div>
+      <div className='prop'><span className='k'>Pathway&rarr;Trust link</span><code>ri.ontology.main.relation.dcefe330-...</code></div>
+      <div className='prop'><span className='k'>Triage action</span><code>ri.actions.main.action-type.897cd6d1-...</code></div>
+    </div>
+  </div>;
+}
+
+function HealthView({rows}){
+  const checks=[
+    ['clean: PK unique + non-null','FAIL','PASS'],['clean: trust_code non-null','FAIL','PASS'],['clean: specialty mapped','FAIL','PASS'],['clean: weeks in [0,520]','FAIL','PASS'],
+    ['raw: pathway_id present','WARN','PASS'],['P9 schema drift: required cols','FAIL','PASS'],['P9 unexpected cols','WARN','PASS'],
+    ['P43 freshness <= 45 days','WARN','TRIGGERED (541d stale)'],['metrics: wait_band computed','FAIL','PASS'],['ptl: PK unique','FAIL','PASS'],['minimised: PK preserved','FAIL','PASS'],['patient: PK unique','FAIL','PASS'],
+  ];
+  return <div><h2>Data Health</h2><p className='muted'>Data Expectations from the pipeline (FAIL blocks the build; WARN signals). Reconciliation proves no silent row loss.</p>
+    <div className='card'><b>Reconciliation (pipeline build)</b>
+      <div className='prop'><span className='k'>typed_count</span><span>1,215</span></div>
+      <div className='prop'><span className='k'>clean_count</span><span>1,205</span></div>
+      <div className='prop'><span className='k'>reject_count</span><span>10</span></div>
+      <div className='prop'><span className='k'>reconciled</span><span className='badge ok'>true &middot; 1205+10=1215</span></div>
+      <div className='prop'><span className='k'>app rows (current)</span><span>{rows.length}</span></div>
+    </div>
+    <table><thead><tr><th>Check</th><th>Severity</th><th>Status</th></tr></thead>
+    <tbody>{checks.map((c,i)=><tr key={i}><td>{c[0]}</td><td><span className={'badge '+(c[1]==='FAIL'?'on':'warn')}>{c[1]}</span></td><td>{c[2].startsWith('PASS')?<span className='badge ok'>{c[2]}</span>:<span className='badge warn'>{c[2]}</span>}</td></tr>)}</tbody></table>
+  </div>;
+}
+
+function AuditView({audit,onClear}){
+  return <div><h2>Audit trail</h2><p className='muted'>Every action you take in this session (in-memory). In Foundry this is the object edit history + immutable transactions.</p>
+    <div className='bar'><button className='mini' onClick={()=>download('rtt_audit.json',JSON.stringify(audit,null,2),'application/json')}>Export JSON</button><button className='mini danger' onClick={onClear}>Clear</button><span className='spacer'></span><span className='muted'>{audit.length} entries</span></div>
+    <table><thead><tr><th>When</th><th>Action</th><th>Target</th><th>Detail</th></tr></thead>
+    <tbody>{audit.map((e,i)=><tr key={i}><td className='muted'>{e.ts.replace('T',' ').slice(0,19)}</td><td><span className='badge'>{e.action}</span></td><td>{e.target}</td><td className='muted'>{e.detail}</td></tr>)}
+    {audit.length===0&&<tr><td colSpan='4' className='foot' style={{textAlign:'center',padding:18}}>No actions yet - try creating or triaging a pathway.</td></tr>}</tbody></table>
+  </div>;
+}
+
+function ConnectView({onInMemory,onConnect,onReset}){
+  const [cfg,setCfg]=useState({host:'https://jinesh.euw-3.palantirfoundry.co.uk',ontology:'ri.ontology.main.ontology.b31cb1df-52ef-4612-9a6d-fdf042f6f609',token:''});
+  const set=(k,v)=>setCfg({...cfg,[k]:v});
+  return <div><h2>Connect</h2><p className='muted'>Run offline on sample data, or connect to your live Foundry ontology via the OSDK / Ontology REST API.</p>
+    <div className='card'><b>Data source</b>
+      <div className='bar'><button className='primary' onClick={onInMemory}>Use in-memory (sample)</button><button className='mini' onClick={onReset}>Reset sample data</button></div>
+    </div>
+    <div className='card'><b>Foundry live (Ontology REST / OSDK)</b>
+      <div className='field'><label>Foundry host</label><input value={cfg.host} onChange={e=>set('host',e.target.value)}/></div>
+      <div className='field'><label>Ontology RID or API name</label><input value={cfg.ontology} onChange={e=>set('ontology',e.target.value)}/></div>
+      <div className='field'><label>Bearer token (OAuth / service user)</label><input type='password' value={cfg.token} onChange={e=>set('token',e.target.value)} placeholder='paste token'/></div>
+      <div className='actions'><button className='primary' disabled={!cfg.token} onClick={()=>onConnect(cfg)}>Connect &amp; load pathways</button></div>
+      <div className='foot'>GET <code>/api/v2/ontologies/&#123;ontology&#125;/objects/RttPathway</code> &middot; POST <code>/actions/rtt-triage-pathway/apply</code>. From <code>file://</code> the browser may block cross-origin calls (CORS) - host the app inside Foundry (OSDK app) for production. Create/Update/Delete need matching Action types.</div>
+    </div>
+    <div className='card'><b>Generate the typed OSDK (recommended)</b>
+      <pre>{`import { createClient } from '@osdk/client';
+import { RttPathway, rttTriagePathway } from '@rtt/sdk';
+const client = createClient(HOST, ONTOLOGY_RID, () => token);
+const page = await client(RttPathway).fetchPage({ pageSize: 200 });
+await client(rttTriagePathway).applyAction({ pathway: id, reviewStatus, triageNote });`}</pre>
+      <div className='foot'>Generate the SDK in Developer Console &rarr; Generate SDK, then replace <code>FoundryDataSource</code> with the typed client. See docs/DEPLOYMENT.</div>
+    </div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
