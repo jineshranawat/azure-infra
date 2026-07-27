@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palantir FDE Playbook &mdash; Build the RTT Programme end-to-end</title>
+<style>
+:root{--nhs:#005EB8;--nhs2:#0072CE;--ink:#0b1220;--panel:#111a2b;--panel2:#0f1626;--line:#22304a;--txt:#e7eef7;--mut:#9fb2c9;--grn:#12b886;--amb:#f59f00;--red:#e03131;--code:#0a1120;--pur:#8a63d2}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(180deg,#0a1220,#0b1526);color:var(--txt);font:15px/1.65 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:#7db4ff;text-decoration:none}a:hover{text-decoration:underline}
+.layout{display:flex;min-height:100vh}
+aside{width:290px;flex:0 0 290px;position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:rgba(9,16,30,.8);padding:14px 10px}
+aside .brand{display:flex;gap:10px;align-items:center;margin:6px 8px 12px}
+aside .brand .logo{width:30px;height:30px;border-radius:7px;background:var(--nhs);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px}
+aside .grp{color:var(--mut);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;margin:12px 10px 3px}
+aside a{display:block;color:#c6d5ea;padding:5px 10px;border-radius:6px;font-size:12.8px}
+aside a:hover{background:var(--panel);color:#fff;text-decoration:none}
+aside a.on{background:var(--nhs);color:#fff}
+main{flex:1;max-width:1000px;margin:0 auto;padding:24px 34px 120px}
+h1{font-size:27px;margin:0 0 4px}
+h2{font-size:22px;border-left:4px solid var(--nhs);padding-left:12px;margin:34px 0 8px;scroll-margin-top:14px}
+h3{font-size:17px;color:#cfe0f5;margin:20px 0 6px}
+h4{font-size:14px;margin:14px 0 4px;color:#e7eef7;text-transform:uppercase;letter-spacing:.04em}
+p{color:#d7e2f0}
+.lead{color:var(--mut);font-size:15.5px}
+.hero{background:linear-gradient(135deg,#0b2b52,#0b1526);border:1px solid var(--line);border-radius:16px;padding:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px}
+.card h4{margin:0 0 6px}.card p{margin:0;color:var(--mut);font-size:13px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:13px;overflow:auto;font:12.5px/1.55 SFMono-Regular,Consolas,monospace;color:#d6e6ff}
+code{background:var(--code);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-family:SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#a9c7ff}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+th{background:var(--panel2);color:#cfe0f5}
+.callout{border:1px solid var(--nhs);background:#0072ce14;border-radius:10px;padding:12px 14px;margin:12px 0}
+.callout.warn{border-color:#f59f0066;background:#f59f0014}
+.callout.good{border-color:#12b88666;background:#12b88614}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid var(--line);color:var(--mut)}
+.pill.s{background:#231a3a;border-color:#8a63d2;color:#ead9ff}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps>li{counter-increment:s;position:relative;padding:10px 12px 10px 48px;border:1px solid var(--line);border-radius:10px;margin:8px 0;background:var(--panel)}
+.steps>li::before{content:counter(s);position:absolute;left:11px;top:10px;width:26px;height:26px;border-radius:50%;background:var(--nhs);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.node{border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12.5px;background:var(--panel);white-space:nowrap}
+.node.d{border-color:#12b886;color:#d6ffe9}.node.t{border-color:#8a63d2;color:#ead9ff}.node.o{border-color:#ff922b;color:#ffe3c2}.node.q{border-color:#e03131;color:#ffd9d9}.node.a{border-color:#e64980;color:#ffd9ec}
+.arrow{color:var(--mut)}
+details{border:1px solid var(--line);border-radius:10px;margin:8px 0;background:var(--panel2)}
+details>summary{cursor:pointer;padding:10px 14px;font-weight:600;color:#cfe0f5;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"\25B8 ";color:var(--mut)}
+details[open]>summary::before{content:"\25BE "}
+details .body{padding:0 14px 12px}
+.chk{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:13.5px}
+.chk input{margin-top:3px}
+.muted{color:var(--mut)}
+.tag{font-size:10.5px;color:var(--mut);border:1px dashed var(--line);border-radius:6px;padding:1px 6px}
+footer{border-top:1px solid var(--line);color:var(--mut);padding:20px 0;font-size:12.5px;margin-top:30px}
+.top{position:sticky;top:0;z-index:9;background:rgba(9,16,30,.92);border-bottom:1px solid var(--line);padding:8px 34px;display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--mut)}
+.top b{color:#fff}
+@media(max-width:860px){aside{display:none}main{padding:18px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside id="toc">
+  <div class="brand"><div class="logo">FDE</div><div><b>Palantir FDE Playbook</b><div style="color:var(--mut);font-size:10.5px">Build RTT end-to-end</div></div></div>
+  <div class="grp">Foundations</div>
+  <a href="#use">How to use</a>
+  <a href="#model">0 &middot; Mental model</a>
+  <a href="#glossary-top">0 &middot; Vocabulary</a>
+  <a href="#setup">1 &middot; Project + branching</a>
+  <div class="grp">Data layer</div>
+  <a href="#connect">2 &middot; Data Connection</a>
+  <a href="#datasets">3 &middot; Datasets + transactions</a>
+  <a href="#repo">4 &middot; Code repo + transforms</a>
+  <a href="#medallion">5 &middot; Medallion build</a>
+  <a href="#tests">6 &middot; Expectations + pytest + CI</a>
+  <div class="grp">The 50 problems</div>
+  <a href="#dq">7 &middot; Data quality</a>
+  <a href="#incr">8 &middot; Incremental + streaming</a>
+  <a href="#perf">9 &middot; Performance</a>
+  <a href="#cost">10 &middot; Cost</a>
+  <a href="#sec">11 &middot; Security + governance</a>
+  <a href="#vis">12 &middot; Visibility + docs</a>
+  <a href="#auto">13 &middot; Automation</a>
+  <div class="grp">Ontology &amp; apps</div>
+  <a href="#onto">14 &middot; Ontology</a>
+  <a href="#workshop">15 &middot; Workshop</a>
+  <a href="#osdk">16 &middot; OSDK React app</a>
+  <a href="#aip">17 &middot; AIP (Logic + Agents)</a>
+  <div class="grp">Ship it</div>
+  <a href="#ship">18 &middot; PR, merge, deploy</a>
+  <a href="#matrix">19 &middot; 50-problem matrix</a>
+  <a href="#pathway">20 &middot; Do it in YOUR project</a>
+  <a href="#pitfalls">Pitfalls &amp; glossary</a>
+</aside>
+
+<main>
+<div class="top">Scenario: <b>NHS RTT Programme</b> &middot; user <b>Clare</b> (RTT ops) &middot; IG <b>Nitin</b> &middot; <span class="tag">self-contained &middot; offline &middot; no dependencies</span></div>
+
+<section id="use">
+  <div class="hero">
+    <h1>The Palantir FDE Playbook</h1>
+    <p class="lead">One page that teaches <b>every concept</b> used to build "The 50 Problems, Solved" reference implementation &mdash; and the exact <b>step-by-step pathway</b> so any senior engineer can rebuild it in their own project. Concepts are taught as: <b>Concept &rarr; Why &rarr; How (code / UI) &rarr; RTT example &rarr; Do it in your project.</b></p>
+  </div>
+  <div class="grid">
+    <div class="card"><h4>Who</h4><p>Senior FDEs who want the full Foundry + AIP surface applied to one coherent, tested, production-grade build.</p></div>
+    <div class="card"><h4>How to read</h4><p>Top-to-bottom is a build order. Use the left rail to jump. Tick the checklist in &sect;20 as you go (saved in your browser).</p></div>
+    <div class="card"><h4>Golden rule</h4><p>Every design choice traces to a constraint: <b>legal/PII, performance, cost, or user need</b>. No castles in the air. Executable + tested or it didn&rsquo;t happen.</p></div>
+  </div>
+</section>
+
+<section id="model">
+  <h2>0 &middot; The mental model</h2>
+  <p>Foundry is a stack of layers. Master the layers and everything else is detail.</p>
+  <div class="flow">
+    <span class="node">Source systems</span><span class="arrow">&rarr;</span>
+    <span class="node t">Connectors / Syncs</span><span class="arrow">&rarr;</span>
+    <span class="node d">Datasets</span><span class="arrow">&rarr;</span>
+    <span class="node t">Transforms</span><span class="arrow">&rarr;</span>
+    <span class="node d">Clean datasets</span><span class="arrow">&rarr;</span>
+    <span class="node o">Ontology (objects/links/actions)</span><span class="arrow">&rarr;</span>
+    <span class="node a">Apps (Workshop / OSDK) + AIP</span>
+  </div>
+  <table>
+    <tr><th>Layer</th><th>What lives there</th><th>You build with</th></tr>
+    <tr><td>Data</td><td>Datasets, media sets, streams, views, restricted views</td><td>Data Connection, Code Repositories (transforms), Pipeline Builder</td></tr>
+    <tr><td>Ontology</td><td>Object types, link types, properties, Actions, Functions, Interfaces</td><td>Ontology Manager, Functions (TS/Python/AIP Logic)</td></tr>
+    <tr><td>Applications</td><td>Operational UIs, write-back</td><td>Workshop (no-code), OSDK React apps, custom widgets</td></tr>
+    <tr><td>AIP</td><td>LLM-powered functions, agents, evals</td><td>AIP Logic, Agent Studio, Evals</td></tr>
+    <tr><td>Cross-cutting</td><td>Lineage, Data Health, Markings/Security, Schedules/Automate, Branches</td><td>Native platform features</td></tr>
+  </table>
+</section>
+
+<section id="glossary-top">
+  <h2>0 &middot; Vocabulary you must own</h2>
+  <div class="grid">
+    <div class="card"><h4>Dataset / Transaction</h4><p>A versioned table. Every build is an immutable transaction &rarr; time-travel + rollback for free.</p></div>
+    <div class="card"><h4>Transform</h4><p>Code (Python/SQL/Java) turning inputs &rarr; outputs. Lightweight (Polars/DuckDB, single node) or Spark (distributed).</p></div>
+    <div class="card"><h4>Data Expectation / Check</h4><p>Assertion embedded in a transform. <b>FAIL</b> blocks the build; <b>WARN</b> signals. Publishes to Data Health.</p></div>
+    <div class="card"><h4>Ontology object / link / action</h4><p>Rows&rarr;objects, joins&rarr;links, permitted mutations&rarr;actions (audited).</p></div>
+    <div class="card"><h4>Function</h4><p>Server-side logic (TS v1/v2, Python, AIP Logic). Powers computed properties, function-backed actions/columns.</p></div>
+    <div class="card"><h4>OSDK</h4><p>Typed SDK generated from the Ontology so external React apps read objects &amp; run actions.</p></div>
+    <div class="card"><h4>Marking / Restricted View</h4><p>Marking = access control that propagates downstream. RV = row-level policy over a dataset.</p></div>
+    <div class="card"><h4>Branch / Proposal</h4><p>Isolated workspace; merge via a Proposal (PR) after checks. Global branches span code + ontology.</p></div>
+  </div>
+</section>
+
+<section id="setup">
+  <h2>1 &middot; Project structure &amp; branching</h2>
+  <h4>Concept</h4><p>Keep logic (repos) separate from data (datasets/objects) so security propagates cleanly. Work on short-lived branches; merge to master via a proposal after CI is green.</p>
+  <h4>RTT layout</h4>
+<pre>/RTT-Programme
+  /reference   provider_reference, specialty_reference, sae_column_rules
+  /raw         trust_fdp_rtt_pathways_raw            (Bronze)
+  /clean       typed, clean, minimised, metrics + incremental (Silver)
+  /marts       trust_specialty_perf, ptl, perf_*, cost_*  (Gold)
+  /quarantine  rejects, schema_drift_report
+  /audit       recon_control_totals, sae_audit_log, freshness_report
+  /ontology-backing  patient_pseudonymised (PII-free)
+  /code/rtt-transforms  (the Python repo)</pre>
+  <h4>Do it in your project</h4>
+  <ol class="steps">
+    <li>Create a Project under your namespace; add medallion folders (<code>/raw /clean /marts /quarantine /audit /reference /ontology-backing /code</code>).</li>
+    <li>Create a <b>Python transforms</b> code repository in <code>/code</code>.</li>
+    <li>Cut a feature branch: <code>ai-fde/&lt;you&gt;/&lt;feature&gt;</code> (global branch if the change spans ontology + code).</li>
+    <li>Every commit &rarr; CI runs. Open a <b>Proposal</b> when done; merge to master when green.</li>
+  </ol>
+</section>
+
+<section id="connect">
+  <h2>2 &middot; Data Connection &amp; ingestion</h2>
+  <h4>Concept &amp; why</h4><p>Bring source data in via a <b>connector</b> + <b>sync</b>. Batch &rarr; datasets; streaming/CDC &rarr; streams; media &rarr; media sets. Credentials live in <b>encrypted secrets</b>, never code. Configure <b>retry + throttle</b> on the sync (Problem 17).</p>
+  <h4>RTT example</h4><p>In this reference build the 4 sources are <b>seeded deterministically</b> from a transform (self-contained + replayable, Problem 19) instead of a live connector &mdash; but in production you&rsquo;d point a JDBC/S3 connector at the trust extract with an incremental high-water on <code>source_load_ts</code>.</p>
+  <h4>Do it in your project</h4>
+  <ol class="steps">
+    <li>Data Connection &rarr; add a Source (JDBC/S3/REST/&hellip;); store creds as a <b>secret</b>; set an egress policy if needed.</li>
+    <li>Create a <b>batch sync</b> (incremental, high-water column) or <b>streaming/CDC</b> sync; set <code>maxRetries</code> + backoff + throttle.</li>
+    <li>Land into <code>/raw</code> as an all-string Bronze table so typing/validation happens in-pipeline.</li>
+  </ol>
+</section>
+
+<section id="datasets">
+  <h2>3 &middot; Datasets &amp; the transaction model</h2>
+  <p>Datasets are immutable-transaction tables. This gives you <b>disaster recovery</b> (Problem 50): roll back to a prior transaction, or rebuild deterministically from the seed. Branches give point-in-time snapshots. Schemas are inferred/declared; prefer explicit types at the typing stage.</p>
+</section>
+
+<section id="repo">
+  <h2>4 &middot; Code repository &amp; transform types</h2>
+  <h4>Repo layout (tested + reusable)</h4>
+<pre>transforms-python/src/myproject/
+  paths.py           # single source of truth for dataset paths
+  lib/               # pure, unit-tested helpers (engine-agnostic)
+  datasets/          # medallion stages (seed, raw_ingest, clean_silver, ...)
+    problems/        # one module per category (dq, perf, incremental, security, cost)
+src/test/            # pytest mirroring lib/ (positive + negative)</pre>
+  <h4>Decorators you will use</h4>
+  <table>
+    <tr><th>Decorator</th><th>Engine</th><th>When</th></tr>
+    <tr><td><code>@transform.using(...)</code></td><td>Lightweight (Polars)</td><td>Small/medium data (default). Inputs <code>LightweightInput.polars()</code>.</td></tr>
+    <tr><td><code>@transform.spark.using(ctx, ...)</code></td><td>Spark</td><td>Genuine distributed shuffle. <code>.dataframe()</code> / <code>.write_dataframe(partition_cols, bucket_cols,&hellip;)</code>.</td></tr>
+    <tr><td><code>@lightweight(cpu_cores, memory_gb)</code> + <code>@transform</code></td><td>Lightweight, pinned size</td><td>Right-size a small job (cost).</td></tr>
+    <tr><td><code>@incremental(v2_semantics=True, snapshot_inputs=[...])</code></td><td>either (goes above <code>@transform&hellip;</code>)</td><td>Process only new rows; read modes <code>added/current/previous</code>.</td></tr>
+    <tr><td><code>@configure(profile=[...])</code></td><td>Spark profile</td><td>Right-sized executors / AQE.</td></tr>
+  </table>
+  <h4>Principle</h4><p>Put logic in <code>lib/</code> as <b>pure functions</b> (deterministic, testable), then call them from transforms. The unit test that proves the function also proves the pipeline column.</p>
+</section>
+
+<section id="medallion">
+  <h2>5 &middot; The medallion build (Bronze &rarr; Silver &rarr; Gold)</h2>
+  <div class="flow">
+    <span class="node d">raw</span><span class="arrow">&rarr;</span><span class="node t">raw_ingest (type)</span><span class="arrow">&rarr;</span><span class="node d">typed</span><span class="arrow">&rarr;</span><span class="node t">clean_silver (canonicalise+quarantine)</span><span class="arrow">&rarr;</span><span class="node d">clean</span>
+    <span class="arrow">+</span><span class="node q">rejects</span><span class="arrow">+</span><span class="node d">recon</span>
+  </div>
+  <div class="flow">
+    <span class="node d">clean</span><span class="arrow">&rarr;</span><span class="node t">sae_minimise (IG)</span><span class="arrow">&rarr;</span><span class="node d">minimised</span><span class="arrow">&rarr;</span><span class="node t">metrics</span><span class="arrow">&rarr;</span><span class="node d">metrics</span><span class="arrow">&rarr;</span><span class="node t">marts</span><span class="arrow">&rarr;</span><span class="node d">PTL / perf</span>
+  </div>
+  <details><summary>Bronze &mdash; typed ingest (Problem 6, 10): reuse tested parsers</summary><div class="body">
+<pre>@transform.using(src=Input(paths.RTT_PATHWAYS_RAW), out=Output(paths.RTT_PATHWAYS_TYPED,
+    checks=[Check(E.col("pathway_id").non_null(), "raw pk present", on_error="WARN")]))
+def compute(src, out):
+    df = src.polars().with_columns([
+      pl.col("weeks_waited").map_elements(C.to_int, return_dtype=pl.Int64).alias("weeks_waited"),
+      pl.col("referral_date").map_elements(C.parse_date, return_dtype=pl.Date).alias("referral_date"),
+    ])
+    out.write_table(df)   # bad casts -> null + flagged; nothing dropped in Bronze</pre>
+  </div></details>
+  <details><summary>Silver &mdash; canonicalise + quarantine (Problems 1,8,34,35,40,41,42) with recon</summary><div class="body">
+<pre># lib/dq_rules.py  (one tested place for the whole quarantine policy)
+reason = (pl.when(pk_null_or_blank).then(pl.lit("null_pathway_id"))
+  .when(is_dup_pk).then(pl.lit("duplicate_pathway_id"))
+  .when(~trust_in_ref).then(pl.lit("orphan_trust_code"))
+  .when(specialty_unmapped).then(pl.lit("unmapped_specialty"))
+  .when(weeks_null).then(pl.lit("weeks_waited_unparseable"))
+  .when(weeks_lt_0).then(pl.lit("weeks_waited_negative"))
+  .when(weeks_gt_max).then(pl.lit("weeks_waited_out_of_range"))
+  .when(referral_null).then(pl.lit("referral_date_unparseable"))
+  .when(referral_future).then(pl.lit("referral_date_in_future"))
+  .otherwise(pl.lit(None)))
+clean   = df.filter(reason.is_null())
+rejects = df.filter(reason.is_not_null())   # /quarantine + reject_reason
+# recon proves: typed_count == clean_count + reject_count  (no silent loss)</pre>
+  </div></details>
+  <details><summary>SAE minimisation (Problems 29,31) &mdash; metadata-driven, build-failing guard</summary><div class="body">
+<pre>drop = sae_minimiser.columns_to_drop(rules.to_dicts(), "rtt_pathways")  # sex, age, source_load_ts
+minimised = clean.select([c for c in clean.columns if c not in drop])
+assert not (set(minimised.columns) &amp; {"sex","age_at_referral","source_load_ts"}), "banned column leaked"</pre>
+  </div></details>
+  <details><summary>Gold &mdash; metrics + marts (PTL for Clare, 92% standard)</summary><div class="body">
+<pre># metrics: is_breach_18w, is_52w_breach, is_65w_breach, wait_band, rag_status
+# marts: group by trust x specialty -&gt; pct_within_18w, meets 92% standard; PTL = active pathways, longest first</pre>
+  </div></details>
+  <div class="callout good">Verified control totals on the real build: <b>typed 1,215 = clean 1,205 + rejects 10</b> (reconciled), PK unique, SAE removed 3 columns, no <code>nhs_number</code> downstream.</div>
+</section>
+
+<section id="tests">
+  <h2>6 &middot; Data Expectations, pytest &amp; CI</h2>
+  <h4>FAIL vs WARN &mdash; a deliberate choice</h4>
+  <p><b>FAIL</b> anything that would corrupt keys/joins/metrics (PK, range, ref-integrity, schema contract). <b>WARN</b> quality signals (raw nulls, freshness, unexpected columns). Bad rows are quarantined, so the FAIL checks on <code>clean</code> stay green <i>because</i> the policy works.</p>
+<pre>from myproject.lib import rtt_metrics as M
+def test_wait_band():
+    assert M.wait_band(18)=="0-18" and M.wait_band(65)=="65+"
+    assert M.wait_band(-1) is None            # negative case: invalid -&gt; no band
+def test_is_breach():
+    assert M.is_breach(19) is True and M.is_breach(18) is False</pre>
+  <ol class="steps">
+    <li>Enable the pytest plugin in <code>build.gradle</code>: <code>apply plugin: 'com.palantir.transforms.lang.pytest-defaults'</code>.</li>
+    <li>Write pure helpers in <code>lib/</code>; mirror with tests in <code>src/test/</code> (each rule gets a negative test).</li>
+    <li>Embed <code>Check(E&hellip;, on_error="FAIL"|"WARN")</code> in transform Outputs.</li>
+    <li>CI (<code>ci/foundry-publish</code>) runs pytest + validates transforms on every commit; merge only when green. Target &lt; 10 min, trunk-based.</li>
+  </ol>
+</section>
+
+<section id="dq">
+  <h2>7 &middot; Data Quality &amp; Consistency <span class="pill">1,6,8,9,10,34,35,40,41,42,43</span></h2>
+  <table>
+    <tr><th>Problem</th><th>Pattern</th><th>Foundry surface</th></tr>
+    <tr><td>1 Duplicates</td><td>de-dup by PK (first wins)</td><td>lib.dq_rules + Check primary_key</td></tr>
+    <tr><td>6 Type validation</td><td>cast at ingest; bad&rarr;null</td><td>raw_ingest + tested parsers</td></tr>
+    <tr><td>8 Nulls</td><td>mandatory-field rule</td><td>Expectation non_null (FAIL)</td></tr>
+    <tr><td>9 Schema drift</td><td>column contract</td><td>lib.schema_contract + drift report</td></tr>
+    <tr><td>10 Date formats</td><td>multi-format parse</td><td>lib.canonicalise.parse_date</td></tr>
+    <tr><td>34 Orphans</td><td>anti-join to reference</td><td>lib.dq_rules orphan_trust_code</td></tr>
+    <tr><td>35 Range/domain</td><td>bounds check</td><td>Expectation gte/lte (FAIL)</td></tr>
+    <tr><td>40 Canonicalise</td><td>synonym map</td><td>lib.canonicalise.canonical_specialty</td></tr>
+    <tr><td>41 Cross-field</td><td>referral &le; snapshot</td><td>lib.dq_checks.referral_not_after</td></tr>
+    <tr><td>42 PK uniqueness</td><td>primary key</td><td>Check E.primary_key (FAIL)</td></tr>
+    <tr><td>43 Freshness</td><td>staleness monitor</td><td>lib.freshness + Data Health</td></tr>
+  </table>
+  <p class="muted">Proof pattern: crafted-frame pytest injects each failure and asserts the right <code>reject_reason</code>; <code>recon_control_totals</code> shows nothing is dropped.</p>
+</section>
+
+<section id="incr">
+  <h2>8 &middot; Incremental &amp; Streaming <span class="pill">2,3,14,15,18,19,20,21,36,37,44</span></h2>
+  <ul>
+    <li><b>@incremental</b> (2) processes only new rows; <b>watermark</b> (3) on <code>source_load_ts</code> via read mode <code>added</code>.</li>
+    <li><b>CDC</b> (14): compare <code>current</code> vs the output&rsquo;s <code>previous</code> &rarr; INSERT/UPDATE/DELETE feed. (Guard the first build: previous is schemaless &rarr; treat as empty.)</li>
+    <li><b>Dedup latest-wins</b> (15) + <b>late/out-of-order</b> (20): keep max event-ts per key.</li>
+    <li><b>SCD Type 2</b> (18): accumulate snapshots (<code>snapshot_inputs</code>) then effective-date into valid_from/valid_to/is_current.</li>
+    <li><b>Windowing</b> (21): rank longest waiters per trust. <b>Idempotent replay/backfill</b> (19,44): deterministic seed + bounded reprocessing.</li>
+  </ul>
+</section>
+
+<section id="perf">
+  <h2>9 &middot; Performance &amp; Scalability <span class="pill">4,5,11,12,13,22,23,24,25,45,46</span></h2>
+  <p>Reach for Spark <b>only when a distributed shuffle is warranted</b>. One Spark transform demonstrates them all:</p>
+<pre>spark.conf.set("spark.sql.adaptive.enabled","true")            # 4 AQE
+joined = salted.join(F.broadcast(dims), on="trust_code")        # 5 broadcast; 22 salting via pmod(hash)
+joined = joined.cache()                                          # 24 caching
+out.write_dataframe(final.coalesce(1), partition_cols=["region"])# 11 partition; 12 compaction; 25 sizing
+out2.write_dataframe(facts, bucket_cols=["trust_code"], bucket_count=8) # 23 bucketing; 13 pruning via early select</pre>
+  <p><b>45/46</b>: Polars &amp; DuckDB for small workloads &mdash; the whole medallion runs lightweight here.</p>
+</section>
+
+<section id="cost">
+  <h2>10 &middot; Cost Optimization <span class="pill">26,27,28</span></h2>
+  <p>Right-size (26) with <code>@lightweight(cpu_cores=1, memory_gb=2)</code> or a small Spark profile; warm pools / scale-to-zero (27) come from lightweight; pick the cheapest correct engine (28) &mdash; lightweight vs Spark. Rule: don&rsquo;t pay for a cluster to sort 1,200 rows.</p>
+</section>
+
+<section id="sec">
+  <h2>11 &middot; Security &amp; Governance <span class="pill">29,30,31,47,48</span></h2>
+  <ul>
+    <li><b>In-pipeline (29,31):</b> SHA-256 <b>pseudonymise</b> <code>nhs_number</code> and drop it before the Ontology layer (build-failing post-condition guards it).</li>
+    <li><b>Markings (29):</b> apply e.g. "NHS Patient PII" to every dataset still carrying <code>nhs_number</code>; it propagates downstream automatically.</li>
+    <li><b>Restricted Views (30):</b> row-level policy (e.g. by region). <b>Property security (31):</b> column-level. <b>Encrypted secrets (47):</b> Data Connection.</li>
+    <li><b>Audit (48):</b> SAE log + recon + Action edit history + immutable transactions.</li>
+  </ul>
+  <h4>UI steps (Markings)</h4>
+  <ol class="steps">
+    <li>Control Panel &rarr; Markings &rarr; create/choose the marking.</li>
+    <li>Dataset &rarr; &middot;&middot;&middot; &rarr; Manage &rarr; Markings &rarr; Add. Verify a user without it is denied.</li>
+  </ol>
+</section>
+
+<section id="vis">
+  <h2>12 &middot; Visibility &amp; Documentation <span class="pill">32,33,49,50</span></h2>
+  <p><b>32</b> Lineage is automatic (source&rarr;Ontology). <b>33</b> Put a description on every asset. <b>49</b> Every Check publishes to Data Health &mdash; build a dashboard. <b>50</b> DR = immutable transactions (rollback / rebuild from seed).</p>
+</section>
+
+<section id="auto">
+  <h2>13 &middot; Automation &amp; Orchestration <span class="pill">7,16,17,38,39</span></h2>
+  <p>No cron/Airflow. <b>Schedules</b> build the graph (7) in dependency order (39). <b>Automate</b> event/condition triggers (16) &amp; SLA alerts (38). Connector retry/throttle (17) on the sync.</p>
+  <ol class="steps">
+    <li>Dataset (e.g. PTL) &rarr; &middot;&middot;&middot; &rarr; Schedules &rarr; New &rarr; Time trigger, "build required inputs".</li>
+    <li>Automate &rarr; New automation &rarr; trigger "new transaction on raw" &rarr; effect "build PTL"; add a freshness/SLA notification.</li>
+  </ol>
+</section>
+
+<section id="onto">
+  <h2>14 &middot; Ontology &mdash; from tables to an operational app</h2>
+  <h4>Concept</h4><p>Object types (rows), properties (columns, typed), link types (joins, cardinality), <b>Actions</b> (audited mutations), <b>Functions</b> (computed props / function-backed actions), <b>Interfaces</b> (polymorphism). Back objects on a <b>PII-free</b> dataset.</p>
+  <div class="flow"><span class="node o">Trust</span><span class="arrow">1&mdash;&lt;</span><span class="node o">Pathway</span><span class="arrow">&middot;</span><span class="node a">Action: Triage Pathway</span></div>
+  <h4>UI steps</h4>
+  <ol class="steps">
+    <li>Ontology Manager &rarr; New object type &rarr; pick backing dataset &rarr; set primary key &rarr; map properties (match column types: Int64&rarr;long, Date&rarr;date, bool&rarr;boolean).</li>
+    <li>Add a link type (many-to-one via the FK property). Add <b>conditional formatting</b> (RAG traffic-lights).</li>
+    <li>Enable edits + add <b>edit-only</b> properties (e.g. review_status, triage_note).</li>
+    <li>Create an <b>Action</b> (modifyObject) with allowed-value parameters &rarr; writes edit-only props without touching source data.</li>
+  </ol>
+  <div class="callout warn">Gotcha: ontologies have an <b>object-type cap</b> (e.g. 60). If near it, model extra entities as <b>properties</b> rather than new objects (we folded Specialty/Patient into Pathway).</div>
+</section>
+
+<section id="workshop">
+  <h2>15 &middot; Workshop (no-code app)</h2>
+  <p>Fastest operational UI. Build the <b>RTT Command Centre</b>: KPI header (% within 18w vs 92%, 52/65-week counts), a PTL Object Table on Pathway (RAG formatting, filters), a detail panel with the <b>Triage Pathway</b> action button, and a Trust drill-down. Widgets + variables + events wire it together. Choose Workshop for speed; OSDK when you need full control / Git / tests.</p>
+</section>
+
+<section id="osdk">
+  <h2>16 &middot; OSDK React app (full control)</h2>
+  <h4>UI steps (Developer Console)</h4>
+  <ol class="steps">
+    <li>Developer Console &rarr; + New application &rarr; <b>Client-facing</b>; select object types + actions; <b>Generate SDK</b>.</li>
+    <li>Set redirect URL <code>http://localhost:8080/auth/callback</code>; add that origin to <b>CORS</b> (Control Panel) <i>before</i> local dev.</li>
+    <li>Create the bootstrapped code repository (React + TS + Vite + OAuth) &rarr; open in VS Code / Work locally; set the <code>VITE_FOUNDRY_*</code> env vars.</li>
+    <li>Query + act with the typed client:</li>
+  </ol>
+<pre>import { createClient } from "@osdk/client";
+const page = await client(RttPathway).fetchPage({ $pageSize: 200 });
+await client(rttTriagePathway).applyAction({ pathway: id, reviewStatus, triageNote });</pre>
+  <ol class="steps" start="5">
+    <li><code>npm run lint &amp;&amp; test &amp;&amp; build</code> &rarr; <code>git tag</code> &rarr; Website hosting deploys <code>dist/</code> &rarr; Share.</li>
+  </ol>
+  <div class="callout warn">Gotchas: regenerate the SDK on any Ontology change; default CSP blocks non-Foundry URLs (check F12); hosting is static-only (server logic &rarr; Functions); redirect URL must match in <code>.env</code>, <code>index.html</code>, Developer Console. If your build environment has <b>no internet</b>, a CDN-based single-file React page will be blank &mdash; ship a bundled build (Vite) or a dependency-free vanilla page.</div>
+</section>
+
+<section id="aip">
+  <h2>17 &middot; AIP &mdash; controlled, human-in-the-loop</h2>
+  <p>LLM steps must be <b>constrained</b>, never free-roaming on reportable data.</p>
+  <ul>
+    <li><b>AIP Logic</b> to standardise messy specialty free-text: <b>constrained enum output</b> (10 canonical names or <code>UNMAPPED</code>) + <b>confidence gate</b>; a human promotes suggestions. Never writes reportable fields directly.</li>
+    <li><b>Agent</b> as a read-only triage assistant: object-set search over Pathway, drafts a note, but a <b>human submits</b> the audited Triage action.</li>
+    <li><b>Evals</b>: golden-set test cases + evaluators to keep LLM outputs in spec.</li>
+  </ul>
+</section>
+
+<section id="ship">
+  <h2>18 &middot; Branch &rarr; PR &rarr; merge &rarr; deploy</h2>
+  <ol class="steps">
+    <li>Commit on the feature branch; CI green.</li>
+    <li>Open a <b>Proposal</b> (global branch): review ontology + code diff.</li>
+    <li>Merge/Deploy to main &rarr; object types + datasets deploy; dataset builds run on master.</li>
+    <li>Apply the PII <b>Markings</b>; set a <b>Schedule</b>; verify lineage + Data Health.</li>
+  </ol>
+  <div class="callout">Ontology <b>write</b> actions require the object types deployed/indexed on <b>master</b> &mdash; merge first, then test the action.</div>
+</section>
+
+<section id="matrix">
+  <h2>19 &middot; The 50-problem matrix (coverage proof)</h2>
+  <table>
+    <tr><th>Category</th><th>Problems</th><th>How Foundry does it natively (vs the stitched stack)</th></tr>
+    <tr><td>Data Quality</td><td>1,6,8,9,10,34,35,40,41,42,43</td><td>Data Expectations + quarantine + Data Health (vs Great Expectations bolt-on)</td></tr>
+    <tr><td>Performance</td><td>4,5,11,12,13,22,23,24,25,45,46</td><td>Spark config + write API + lightweight engines in one place</td></tr>
+    <tr><td>Incremental</td><td>2,3,14,15,18,19,20,21,36,37,44</td><td><code>@incremental</code> framework (vs hand-rolled watermarks)</td></tr>
+    <tr><td>Automation</td><td>7,16,17,38,39</td><td>Schedules + Automate (vs Airflow/cron)</td></tr>
+    <tr><td>Cost</td><td>26,27,28</td><td>Right-sized profiles + lightweight vs Spark</td></tr>
+    <tr><td>Security</td><td>29,30,31,47,48</td><td>Markings, Restricted Views, property security, audit (vs secrets mgr + IAM glue)</td></tr>
+    <tr><td>Visibility</td><td>32,33,49,50</td><td>Automatic lineage, resource docs, Data Health, immutable transactions (vs catalog)</td></tr>
+  </table>
+</section>
+
+<section id="pathway">
+  <h2>20 &middot; Do it in YOUR project &mdash; master checklist</h2>
+  <p class="lead">The condensed end-to-end pathway. Tick as you go (saved in your browser).</p>
+  <div id="checklist"></div>
+  <p class="muted" style="margin-top:8px"><span id="chkcount"></span> &middot; <a href="#" onclick="localStorage.removeItem('fdePlaybook');location.reload();return false">reset checklist</a></p>
+</section>
+
+<section id="pitfalls">
+  <h2>Pitfalls &amp; glossary</h2>
+  <h4>Top pitfalls (learned the hard way)</h4>
+  <ul>
+    <li><b>Ontology cap:</b> plan object types; model extras as properties.</li>
+    <li><b>Ontology writes need master:</b> merge the proposal before testing actions.</li>
+    <li><b>OSDK offline:</b> CDN React blanks with no internet &rarr; bundle (Vite) or ship dependency-free.</li>
+    <li><b>Incremental first build:</b> reading a not-yet-built output&rsquo;s <code>previous</code> throws &rarr; guard as empty.</li>
+    <li><b>Spark types:</b> Polars Int64 &rarr; Foundry <code>long</code> (not <code>integer</code>) when mapping ontology properties.</li>
+    <li><b>Don&rsquo;t drop rows silently:</b> always quarantine + reconcile.</li>
+  </ul>
+  <h4>Glossary</h4>
+  <table>
+    <tr><td>PTL</td><td>Patient Tracking List &mdash; live incomplete pathways</td></tr>
+    <tr><td>SAE</td><td>IG data-minimisation rules (drop sex/age/watermark)</td></tr>
+    <tr><td>RAG</td><td>Red/Amber/Green status</td></tr>
+    <tr><td>SCD2</td><td>Slowly Changing Dimension type 2 (effective-dated history)</td></tr>
+    <tr><td>CDC</td><td>Change Data Capture (INSERT/UPDATE/DELETE feed)</td></tr>
+    <tr><td>AQE</td><td>Adaptive Query Execution (Spark self-tunes)</td></tr>
+    <tr><td>OSDK</td><td>Ontology SDK (typed client for apps)</td></tr>
+  </table>
+</section>
+
+<footer>Palantir FDE Playbook &middot; NHS RTT scenario &middot; self-contained &amp; offline &middot; verify SDK/UI names against your current tenant.</footer>
+</main>
+</div>
+
+<script>
+/* Dependency-free: TOC scrollspy + master checklist persistence. No external libraries. */
+(function(){
+  var links=[].slice.call(document.querySelectorAll('#toc a[href^="#"]'));
+  var map={};links.forEach(function(a){var id=a.getAttribute('href').slice(1);var s=document.getElementById(id);if(s)map[id]=a;});
+  function spy(){var y=window.scrollY+120,cur=null;Object.keys(map).forEach(function(id){var s=document.getElementById(id);if(s&&s.offsetTop<=y)cur=id;});links.forEach(function(a){a.classList.remove('on');});if(cur&&map[cur])map[cur].classList.add('on');}
+  window.addEventListener('scroll',spy);spy();
+
+  var STEPS=[
+    "Create Project + medallion folders (/raw /clean /marts /quarantine /audit /reference /ontology-backing /code)",
+    "Create a Python transforms code repository; cut a feature branch",
+    "Enable the pytest plugin; add lib/ + src/test/ scaffolding",
+    "Ingest: connector + sync (secret creds, retry/throttle) OR seed sources deterministically",
+    "Bronze: raw all-string landing -> raw_ingest typed (tested parsers), WARN checks",
+    "Silver: clean_silver canonicalise + quarantine via lib.dq_rules; write rejects + recon",
+    "SAE minimise: drop IG columns (metadata-driven) + build-failing guard + audit log",
+    "Metrics: breach flags / bands / RAG via tested lib.rtt_metrics",
+    "Gold marts: trust x specialty performance (92% standard) + PTL",
+    "Add DQ monitors: schema-drift contract + freshness",
+    "Add FAIL/WARN Data Expectations on outputs; write positive + negative pytest",
+    "Incremental: @incremental append + watermark; CDC feed; SCD2 history; windowing",
+    "Performance: one Spark transform (AQE, broadcast, salting, partition, bucket, compaction)",
+    "Cost: @lightweight right-sizing; lightweight vs Spark policy",
+    "Security: pseudonymise + drop nhs_number -> PII-free ontology backing; plan Markings/RV/property security",
+    "Visibility: set descriptions on every asset; Data Health dashboard from checks",
+    "Ontology: object types + link + conditional formatting + edit-only props + Action",
+    "App: Workshop module OR OSDK React app (Developer Console -> Generate SDK -> deploy)",
+    "AIP: constrained Logic (specialty standardiser) + guard-railed triage assistant + Evals",
+    "Automation: Schedule the graph; Automate event/SLA triggers",
+    "Ship: commit -> CI green -> Proposal -> merge to master -> apply Markings -> verify lineage"
+  ];
+  var saved={};try{saved=JSON.parse(localStorage.getItem('fdePlaybook')||'{}');}catch(e){}
+  var root=document.getElementById('checklist');
+  root.innerHTML=STEPS.map(function(s,i){return '<label class="chk"><input type="checkbox" data-i="'+i+'"'+(saved[i]?' checked':'')+'><span>'+s+'</span></label>';}).join('');
+  function count(){var n=root.querySelectorAll('input:checked').length;document.getElementById('chkcount').textContent=n+' / '+STEPS.length+' done';}
+  root.addEventListener('change',function(e){var i=e.target.getAttribute('data-i');if(i!=null){saved[i]=e.target.checked;localStorage.setItem('fdePlaybook',JSON.stringify(saved));count();}});
+  count();
+})();
+</script>
+</body>
+</html>

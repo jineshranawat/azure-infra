@@ -36,3 +36,6 @@ shared-adf-lab/enterprise-de/out/
 
 # Genie lab local outputs (agent state + question results)
 shared-adf-lab/genie-lab/out/
+
+# Nested Foundry Code Repository clone (own .git; clone via Foundry stemma URL)
+rtt-transforms/
