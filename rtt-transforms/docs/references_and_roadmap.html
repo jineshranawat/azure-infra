@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>References &amp; Roadmap &mdash; documented vs implemented</title>
+<style>
+:root{--nhs:#005EB8;--panel:#111a2b;--panel2:#0f1626;--line:#22304a;--txt:#e7eef7;--mut:#9fb2c9;--grn:#12b886;--amb:#f59f00;--red:#e03131;--code:#0a1120}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(180deg,#0a1220,#0b1526);color:var(--txt);font:15px/1.6 -apple-system,Segoe UI,Roboto,Arial,sans-serif}
+a{color:#7db4ff}
+header{position:sticky;top:0;z-index:9;background:rgba(9,16,30,.92);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;gap:12px;align-items:center}
+header .logo{width:32px;height:32px;border-radius:8px;background:var(--nhs);display:flex;align-items:center;justify-content:center;font-weight:800}
+header h1{font-size:16px;margin:0}header .sub{color:var(--mut);font-size:12px}
+nav{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}nav a{color:var(--mut);font-size:12px;padding:4px 8px;border-radius:6px}nav a:hover{background:var(--panel);color:#fff;text-decoration:none}
+main{max-width:1040px;margin:0 auto;padding:24px 22px 90px}
+h2{font-size:22px;border-left:4px solid var(--nhs);padding-left:12px;margin:30px 0 8px;scroll-margin-top:66px}
+h3{font-size:16px;color:#cfe0f5}
+p{color:#d7e2f0}.lead{color:var(--mut)}
+.hero{background:linear-gradient(135deg,#0b2b52,#0b1526);border:1px solid var(--line);border-radius:16px;padding:22px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:13px;overflow:auto;font:12.5px/1.55 SFMono-Regular,Consolas,monospace;color:#d6e6ff}
+code{background:var(--code);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-family:SFMono-Regular,Consolas,monospace;font-size:12px;color:#a9c7ff}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+th{background:var(--panel2);color:#cfe0f5}
+.st{font-weight:800;font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.done{color:#63e6be;background:#12b88622;border:1px solid #12b88655}
+.part{color:#ffd43b;background:#f59f0022;border:1px solid #f59f0055}
+.pend{color:#ff8787;background:#e0313122;border:1px solid #e0313155}
+.ref{font-family:SFMono-Regular,Consolas,monospace;font-size:11.5px;color:#9fb2c9}
+footer{border-top:1px solid var(--line);color:var(--mut);padding:18px 0;font-size:12.5px;margin-top:26px}
+</style>
+</head>
+<body>
+<header><div class="logo">R+</div><div><h1>References &amp; Roadmap</h1><div class="sub">what the Palantir docs describe &middot; what we implemented &middot; what is pending</div></div>
+<nav><a href="#refs">References</a><a href="#new">Newly implemented</a><a href="#matrix">Implemented vs Pending</a><a href="#exp">Expectation catalog</a></nav></header>
+<main>
+
+<section id="refs">
+  <div class="hero">
+    <h2 style="border:none;padding:0;margin:0 0 6px">Grounded in the documentation</h2>
+    <p class="lead">This page cites the Palantir documentation pages read for this build, then implements documented Data Expectations we had not yet used, and finally tracks every documented capability as <span class="st done">Implemented</span> <span class="st part">Partial</span> or <span class="st pend">Pending</span> with its doc reference.</p>
+  </div>
+  <h3>Documentation pages referenced</h3>
+  <table>
+    <tr><th>Topic</th><th>Doc page (path)</th></tr>
+    <tr><td>Unit tests + Data Expectations (catalog, severity, gotchas)</td><td class="ref">foundry/transforms-python/unit-tests</td></tr>
+    <tr><td>Datasets &amp; transaction types (SNAPSHOT/APPEND/UPDATE/DELETE)</td><td class="ref">foundry/data-integration/datasets</td></tr>
+    <tr><td>Branching model &amp; fallback</td><td class="ref">foundry/data-integration/branching</td></tr>
+    <tr><td>Build lifecycle &amp; staleness</td><td class="ref">foundry/data-integration/builds</td></tr>
+    <tr><td>Schedules &amp; triggers (time/event/compound)</td><td class="ref">foundry/data-integration/schedules</td></tr>
+    <tr><td>Python transforms anatomy &amp; resources</td><td class="ref">foundry/transforms-python/transforms</td></tr>
+    <tr><td>Project structure</td><td class="ref">foundry/transforms-python/project-structure</td></tr>
+    <tr><td>Compute-engine selection (Polars/DuckDB/pandas/Spark)</td><td class="ref">foundry/transforms-python/compute-engines</td></tr>
+    <tr><td>Transforms versioning / TLLV</td><td class="ref">foundry/transforms-common/transforms-versions</td></tr>
+    <tr><td>Development best practices</td><td class="ref">foundry/building-pipelines/development-best-practices</td></tr>
+    <tr><td>Incremental transforms</td><td class="ref">foundry/data-integration/incremental</td></tr>
+    <tr><td>OSDK React applications</td><td class="ref">foundry/ontology-sdk-react-applications/overview</td></tr>
+  </table>
+</section>
+
+<section id="new">
+  <h2>Newly implemented from the docs</h2>
+  <p>The core pipeline used only <code>primary_key</code>, <code>non_null</code>, <code>gte/lte/gt</code>, <code>equals</code>, <code>all</code>. New transform <code>datasets/problems/expectations_showcase.py</code> &rarr; <code>rtt_clean_certified</code> now implements the documented but previously-unused expectations:</p>
+<pre>E.schema().contains({"pathway_id": pl.String, "trust_code": pl.String, "weeks_waited": pl.Int64})  # schema
+E.group_by("pathway_id").is_unique()                       # composite uniqueness
+E.col("trust_code").is_in("TR001","TR002","TR003","TR004","TR005")   # membership (FAILS on null)
+E.col("specialty_code").rlike(r"^SP\d{2}$")               # regex
+E.when(E.col("pathway_status").equals("Active"), E.col("weeks_waited").gte(0)).otherwise(E.true())  # conditional
+E.col("weeks_waited").has_type(pl.Int64)                   # column type
+E.col("nhs_number").null_percentage().lt(0.01)             # aggregate
+E.group_by().count().gt(0)                                  # row count
+E.col("specialty_name").exists()                            # column existence</pre>
+  <p class="lead">Reference: <span class="ref">foundry/transforms-python/unit-tests &rarr; Expectation types quick reference</span>. Each is annotated in-code with its doc reference.</p>
+  <h3>Round 2 - previously Pending/Partial, now implemented (built &amp; green)</h3>
+  <ul>
+    <li><b>Foreign key + cross-column + freshness</b> &rarr; <code>problems/referential_checks.py</code> &rarr; <code>rtt_clean_ri_checked</code>:
+      <code>is_in_foreign_col</code> (trust_code &rarr; provider_reference), <code>is_before_col</code> (referral before load), <code>is_after</code> (parsed timestamp).</li>
+    <li><b>Advanced @incremental</b> &rarr; <code>problems/incremental_advanced.py</code> &rarr; <code>rtt_pathways_delta</code>:
+      <code>semantic_version</code>, <code>ctx.abort_job()</code> no-data pattern, <code>.with_resources(cpu_cores, memory_gb)</code>, idempotency-key stamping.</li>
+  </ul>
+  <p class="lead">Gotcha learned &amp; fixed via CI: <code>E.dataset_ref(...)</code> takes the transform&rsquo;s <b>input parameter name</b> (e.g. <code>"providers"</code>), not the dataset path.</p>
+</section>
+
+<section id="matrix">
+  <h2>Implemented vs Pending (documented capabilities)</h2>
+  <table>
+    <tr><th>Capability (from docs)</th><th>Status</th><th>Where / note</th><th>Reference</th></tr>
+    <tr><td>Lightweight transforms (Polars/DuckDB)</td><td><span class="st done">Implemented</span></td><td>whole medallion + perf DuckDB</td><td class="ref">compute-engines</td></tr>
+    <tr><td>Data Expectations catalog (schema, is_in, rlike, group_by, null_pct, when, has_type, count, exists)</td><td><span class="st done">Implemented</span></td><td>expectations_showcase.py (new)</td><td class="ref">unit-tests</td></tr>
+    <tr><td>pytest unit tests (positive + negative)</td><td><span class="st done">Implemented</span></td><td>12 test modules</td><td class="ref">unit-tests</td></tr>
+    <tr><td>@incremental: append, watermark, CDC, SCD2, windowing</td><td><span class="st done">Implemented</span></td><td>problems/incremental.py</td><td class="ref">incremental</td></tr>
+    <tr><td>Spark: AQE, broadcast, salting, bucketing, partitioning, compaction</td><td><span class="st done">Implemented</span></td><td>problems/perf.py</td><td class="ref">transforms / compute-engines</td></tr>
+    <tr><td>Branching + Proposal + merge to master</td><td><span class="st done">Implemented</span></td><td>merged to master</td><td class="ref">branching / builds</td></tr>
+    <tr><td>Ontology object types + link + action + conditional formatting</td><td><span class="st done">Implemented</span></td><td>Trust, Pathway, Triage</td><td class="ref">ontology-*</td></tr>
+    <tr><td>PII: in-pipeline pseudonymisation + drop</td><td><span class="st done">Implemented</span></td><td>problems/security.py</td><td class="ref">best-practices</td></tr>
+    <tr><td>Column profiling / observability</td><td><span class="st done">Implemented</span></td><td>problems/advanced.py (A4)</td><td class="ref">unit-tests / Data Health</td></tr>
+    <tr><td>OSDK React application</td><td><span class="st part">Partial</span></td><td>source in osdk-app/; hosting = UI step</td><td class="ref">osdk overview</td></tr>
+    <tr><td>Markings applied on PII datasets</td><td><span class="st part">Partial</span></td><td>pseudonymised in-pipeline; marking apply = UI</td><td class="ref">datasets / governance</td></tr>
+    <tr><td>Single-node resources .with_resources(); Spark profiles @configure</td><td><span class="st done">Implemented</span></td><td>with_resources in incremental_advanced; Spark tuned via runtime spark.conf</td><td class="ref">transforms</td></tr>
+    <tr><td>Incremental: semantic_version + ctx.abort_job + snapshot_inputs</td><td><span class="st done">Implemented</span></td><td>incremental_advanced.py -> rtt_pathways_delta (retention/require_incremental still pending)</td><td class="ref">incremental</td></tr>
+    <tr><td>Foreign-key expectation is_in_foreign_col</td><td><span class="st done">Implemented</span></td><td>rtt_clean_ri_checked (cross-dataset count still pending: counts differ by design)</td><td class="ref">unit-tests</td></tr>
+    <tr><td>Timestamp freshness expectation (is_after / timestamp_offset_to_current_time)</td><td><span class="st part">Partial</span></td><td>is_after implemented (rtt_clean_ri_checked); offset-to-now pending</td><td class="ref">unit-tests</td></tr>
+    <tr><td>Cross-column expectations (is_before_col)</td><td><span class="st done">Implemented</span></td><td>rtt_clean_ri_checked (referral_date before source_load_date)</td><td class="ref">unit-tests</td></tr>
+    <tr><td>Test coverage enforcement (pytest-cov, --cov-fail-under) + PEP8/pylint/antipattern linters</td><td><span class="st pend">Pending</span></td><td>plugins documented; not enabled</td><td class="ref">unit-tests</td></tr>
+    <tr><td>Real Data Connection sync (batch/CDC/stream) + Force Build</td><td><span class="st pend">Pending</span></td><td>sources seeded deterministically instead</td><td class="ref">datasets / schedules</td></tr>
+    <tr><td>Retention / DELETE transactions + allow_retention</td><td><span class="st pend">Pending</span></td><td>immutable transactions relied on</td><td class="ref">datasets</td></tr>
+    <tr><td>Schedules (time/event/compound AND-OR) + Automate</td><td><span class="st pend">Pending</span></td><td>spec in SPECS.md</td><td class="ref">schedules</td></tr>
+    <tr><td>Restricted Views (row-level) + property security</td><td><span class="st pend">Pending</span></td><td>spec in SPECS.md</td><td class="ref">governance</td></tr>
+    <tr><td>Ontology Interfaces / computed properties / function-backed actions</td><td><span class="st pend">Pending</span></td><td>not modelled</td><td class="ref">ontology-interfaces</td></tr>
+    <tr><td>AIP Logic / Agent / Evals (live)</td><td><span class="st pend">Pending</span></td><td>spec in SPECS.md</td><td class="ref">aip-*</td></tr>
+    <tr><td>Pipeline Builder equivalent</td><td><span class="st pend">Pending</span></td><td>code used instead</td><td class="ref">building-pipelines</td></tr>
+    <tr><td>Media sets / unstructured data</td><td><span class="st pend">N/A</span></td><td>not required for RTT</td><td class="ref">data-integration</td></tr>
+  </table>
+</section>
+
+<section id="exp">
+  <h2>Documented snippets kept for the roadmap</h2>
+  <h3>Foreign-key / referential integrity (experimental, expensive)</h3>
+<pre>E.col("trust_code").is_in_foreign_col(E.dataset_ref(paths.PROVIDER_REFERENCE).col("trust_code"))
+E.count().equals(E.dataset_ref(paths.RTT_PATHWAYS_TYPED).count())   # cross-dataset row-count</pre>
+  <h3>Freshness (native)</h3>
+<pre>from datetime import timedelta
+E.col("event_ts").timestamp_offset_to_current_time().lt(timedelta(hours=24))   # data within 24h</pre>
+  <h3>Coverage enforcement (build.gradle / pytest.ini)</h3>
+<pre>apply plugin: 'com.palantir.transforms.lang.pytest-defaults'
+# src/pytest.ini:  addopts = --cov=myproject --cov-fail-under=80</pre>
+  <p class="lead">Each snippet is copied from the referenced doc page and is ready to wire when the corresponding capability is prioritised.</p>
+</section>
+
+<footer>References &amp; Roadmap &middot; extends "The 50 Problems, Solved" &middot; self-contained/offline &middot; verify SDK/UI names against your tenant.</footer>
+</main>
+</body>
+</html>

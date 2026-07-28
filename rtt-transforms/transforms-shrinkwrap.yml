@@ -10,11 +10,26 @@ mappings:
   - "BUILD"
   path: "/deprecated-field"
   rid: "ri.foundry.main.dataset.a49bdf77-ff80-4e5e-a17c-f5a2d6ae6501"
+- alias: "/JINESH-161f69/Training/RTT-Programme/audit/rtt_data_profile"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.3bf0c8a6-756f-465c-9a1f-78307abe8ae5"
 - alias: "/JINESH-161f69/Training/RTT-Programme/audit/sae_audit_log"
   modes:
   - "BUILD"
   path: "/deprecated-field"
   rid: "ri.foundry.main.dataset.aca6c0ec-d3f0-4c44-827d-e27bea02dfbf"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_clean_certified"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.58438657-037b-4720-815e-db676ac0c474"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_clean_ri_checked"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.32c41b2e-872b-4772-9b3c-595fc6741483"
 - alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_pathways_appended"
   modes:
   - "BUILD"
@@ -31,6 +46,11 @@ mappings:
   - "READ"
   path: "/deprecated-field"
   rid: "ri.foundry.main.dataset.a0a82863-8b8c-4cc5-9f91-31399baef9e7"
+- alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_pathways_delta"
+  modes:
+  - "BUILD"
+  path: "/deprecated-field"
+  rid: "ri.foundry.main.dataset.25999068-e509-47e4-be32-52743deaf603"
 - alias: "/JINESH-161f69/Training/RTT-Programme/clean/rtt_pathways_metrics"
   modes:
   - "BUILD"

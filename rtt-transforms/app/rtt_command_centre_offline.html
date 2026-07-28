@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTT Command Centre (offline)</title>
+<style>
+:root{--nhs:#005EB8;--panel:#111a2b;--panel2:#0f1626;--line:#22304a;--txt:#e7eef7;--mut:#9fb2c9;--grn:#12b886;--amb:#f59f00;--red:#e03131}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0a1220,#0b1526);color:var(--txt);font:14px/1.5 -apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.top{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:rgba(9,16,30,.92);position:sticky;top:0;z-index:6}
+.logo{width:34px;height:34px;border-radius:8px;background:var(--nhs);display:flex;align-items:center;justify-content:center;font-weight:800}
+.top h1{font-size:16px;margin:0}.sub{color:var(--mut);font-size:12px}.spacer{margin-left:auto}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel2);position:sticky;top:59px;z-index:5}
+.tab{padding:7px 13px;border-radius:8px;color:var(--mut);cursor:pointer;font-size:13px;border:1px solid transparent}
+.tab:hover{color:#fff;background:var(--panel)}.tab.on{color:#fff;background:var(--nhs);font-weight:700}
+.wrap{max-width:1200px;margin:0 auto;padding:16px 20px 70px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:6px 0 14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi .l{color:var(--mut);font-size:11px;letter-spacing:.06em;text-transform:uppercase}.kpi .v{font-size:25px;font-weight:800;margin-top:4px}.kpi .d{color:var(--mut);font-size:11px;margin-top:2px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+select,input,textarea,button{font:inherit}
+select,input,textarea{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 9px}
+button{cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--txt);padding:7px 12px}
+button.primary{background:var(--nhs);font-weight:700}button.danger{background:#e0313122;border-color:#e0313166;color:#ffc9c9}
+button.mini{padding:4px 8px;font-size:12px}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;white-space:nowrap}
+th{background:var(--panel2);color:#cfe0f5;font-size:11px;text-transform:uppercase;cursor:pointer;user-select:none}
+tr:hover td{background:#0e1930}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800}
+.GREEN{background:#12b88622;color:#63e6be}.AMBER{background:#f59f0022;color:#ffd43b}.RED{background:#e0313122;color:#ff8787}
+.badge{display:inline-block;padding:1px 7px;border-radius:6px;font-size:10.5px;font-weight:700;border:1px solid var(--line);color:var(--mut)}
+.badge.on{background:#e0313122;color:#ff8787;border-color:#e0313166}.badge.ok{background:#12b88622;color:#8ce99a}
+.overlay{position:fixed;inset:0;background:rgba(3,8,18,.6);display:flex;align-items:center;justify-content:center;z-index:30}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(520px,92vw);max-height:88vh;overflow:auto}
+.modal h3{margin:0 0 12px}.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}.field label{font-size:12px;color:var(--mut)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.foot{color:var(--mut);font-size:12px;margin-top:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.bars{display:flex;gap:8px;align-items:flex-end;height:180px}.barcol{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end}
+.bartrack{width:100%;height:130px;display:flex;align-items:flex-end;background:#0f1626;border-radius:6px}.barfill{width:100%;border-radius:6px 6px 0 0;min-height:2px}
+.barlbl{font-size:10px;color:var(--mut);margin-top:5px;text-align:center}.barval{font-size:11px;font-weight:800}
+.gtrack{position:relative;height:16px;background:#0f1626;border-radius:999px;border:1px solid var(--line);overflow:hidden}.gfill{height:100%}.gmark{position:absolute;top:-3px;width:2px;height:22px;background:#fff}
+.muted{color:var(--mut)}.prop{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}.prop .k{color:var(--mut)}
+.toast{position:fixed;bottom:18px;right:18px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--grn);border-radius:8px;padding:10px 14px;font-size:13px;z-index:40}
+a{color:#7db4ff}
+</style>
+</head>
+<body>
+<div class="top"><div class="logo">RTT</div><div><h1>RTT Command Centre</h1><div class="sub">offline build &middot; vanilla JS &middot; no internet / CDN / npm needed</div></div><div class="spacer"></div><span class="badge">local sample data</span></div>
+<div class="tabs" id="tabs"></div>
+<div class="wrap" id="view"></div>
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+<script>
+(function(){
+"use strict";
+var TARGET=18;
+function waitBand(w){return w<0?"-":w<=18?"0-18":w<=26?"19-26":w<=39?"27-39":w<=51?"40-51":w<=64?"52-64":"65+";}
+function rag(w){return w<0?"-":w<=18?"GREEN":w<52?"AMBER":"RED";}
+function derive(p){p.weeks_waited=+p.weeks_waited;p.wait_band=waitBand(p.weeks_waited);p.rag_status=rag(p.weeks_waited);p.is_breach_18w=p.weeks_waited>18;p.is_52w_breach=p.weeks_waited>=52;p.is_65w_breach=p.weeks_waited>=65;return p;}
+var TRUSTS=[
+ {c:"TR001",n:"Northfield University Hospital NHS Trust",r:"North West"},
+ {c:"TR002",n:"Westgate General Hospital NHS Trust",r:"South West"},
+ {c:"TR003",n:"Eastbrook District General NHS Trust",r:"East of England"},
+ {c:"TR004",n:"Southmead Health Services NHS Trust",r:"South East"},
+ {c:"TR005",n:"Central Mercia Teaching Hospitals NHS Trust",r:"Midlands"}];
+var SPECS=["Trauma and Orthopaedics","General Surgery","Ophthalmology","Cardiology","Gastroenterology","Ear Nose and Throat","Urology","Neurology","Dermatology","Rheumatology"];
+var REVIEW=["Validated","Needs escalation","Data query","Removed in error"];
+function tName(c){for(var i=0;i<TRUSTS.length;i++){if(TRUSTS[i].c===c)return TRUSTS[i].n;}return c;}
+var HAND=[
+ ["PW00580","TR004","Neurology","2024-09-25",23,"Active"],["PW00134","TR002","Trauma and Orthopaedics","2024-04-05",15,"Active"],
+ ["PW00106","TR001","Ophthalmology","2024-06-24",59,"Active"],["PW00771","TR005","Ear Nose and Throat","2025-01-14",14,"Discharged"],
+ ["PW00900","TR003","General Surgery","2025-01-13",85,"Active"],["PW00259","TR002","Rheumatology","2024-04-25",95,"Active"],
+ ["PW00661","TR003","Gastroenterology","2025-01-14",38,"Active"],["PW00251","TR005","General Surgery","2024-03-22",28,"Active"],
+ ["PW00435","TR003","Trauma and Orthopaedics","2024-02-03",53,"Active"],["PW00295","TR004","Trauma and Orthopaedics","2023-11-01",100,"Active"],
+ ["PW00503","TR004","General Surgery","2023-05-14",34,"Active"],["PW00155","TR001","Cardiology","2024-02-12",44,"Active"],
+ ["PW00756","TR002","Cardiology","2024-07-12",50,"Active"],["PW00037","TR001","General Surgery","2024-08-30",69,"Active"],
+ ["PW00364","TR004","Rheumatology","2024-04-16",13,"Discharged"],["PW00353","TR004","Trauma and Orthopaedics","2023-12-08",153,"Active"],
+ ["PW00812","TR002","Gastroenterology","2025-01-13",98,"Active"],["PW00095","TR004","Dermatology","2024-03-07",45,"Active"],
+ ["PW00538","TR001","Trauma and Orthopaedics","2024-08-17",148,"Active"],["PW00613","TR005","Ophthalmology","2024-08-09",73,"Active"],
+ ["PW00268","TR001","General Surgery","2024-08-24",34,"Active"],["PW00233","TR002","Gastroenterology","2023-09-09",18,"Discharged"],
+ ["PW00610","TR003","Rheumatology","2023-04-19",95,"Discharged"],["PW00042","TR005","General Surgery","2024-05-27",30,"Active"]];
+var rows=HAND.map(function(r){return derive({pathway_id:r[0],trust_code:r[1],specialty_name:r[2],referral_date:r[3],weeks_waited:r[4],pathway_status:r[5],patient_pseudo_id:"ps_"+r[0].toLowerCase(),review_status:"",triage_note:""});});
+var seed=42;function rnd(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;}
+var tw=["TR005","TR005","TR005","TR001","TR002","TR003","TR004"];
+for(var i=0;i<36;i++){var id="PW0"+(2000+i);var w=Math.floor(Math.min(160,Math.abs(rnd()*rnd()*230)));rows.push(derive({pathway_id:id,trust_code:tw[Math.floor(rnd()*tw.length)],specialty_name:SPECS[Math.floor(rnd()*SPECS.length)],referral_date:"2024-06-01",weeks_waited:w,pathway_status:rnd()<0.8?"Active":"Discharged",patient_pseudo_id:"ps_"+id.toLowerCase(),review_status:"",triage_note:""}));}
+
+var S={tab:"Command Centre",f:{status:"Active",trust:"",specialty:"",rag:""},q:"",sortK:"weeks_waited",sortDir:-1,modal:null,focusQ:false};
+var TABS=["Command Centre","Analytics","Ontology","Data Health"];
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function el(id){return document.getElementById(id);}
+function toast(m){var r=el("toastRoot");r.innerHTML='<div class="toast">'+esc(m)+'</div>';setTimeout(function(){r.innerHTML="";},2500);}
+
+function filtered(){return rows.filter(function(r){return (!S.f.status||r.pathway_status===S.f.status)&&(!S.f.trust||r.trust_code===S.f.trust)&&(!S.f.specialty||r.specialty_name===S.f.specialty)&&(!S.f.rag||r.rag_status===S.f.rag)&&(!S.q||(r.pathway_id+" "+r.specialty_name+" "+r.trust_code).toLowerCase().indexOf(S.q.toLowerCase())>=0);});}
+function sortRows(a){var k=S.sortK,d=S.sortDir;return a.slice().sort(function(x,y){return (x[k]>y[k]?1:x[k]<y[k]?-1:0)*d;});}
+function kpis(){var a=rows.filter(function(r){return r.pathway_status==="Active";});var w=a.filter(function(r){return r.weeks_waited<=TARGET;}).length;return {n:a.length,pct:a.length?Math.round(1000*w/a.length)/10:0,b52:a.filter(function(r){return r.is_52w_breach;}).length,b65:a.filter(function(r){return r.is_65w_breach;}).length};}
+function opt(v,cur,label){return '<option value="'+esc(v)+'"'+(cur===v?" selected":"")+'>'+esc(label==null?v:label)+'</option>';}
+function th(k,l){return '<th data-sort="'+k+'">'+l+(S.sortK===k?(S.sortDir>0?" \u25B2":" \u25BC"):"")+'</th>';}
+
+function rowHtml(r){
+ var breach=r.is_65w_breach?'<span class="badge on">65w</span>':r.is_52w_breach?'<span class="badge on">52w</span>':'<span class="badge">-</span>';
+ var rev=r.review_status?'<span class="badge ok">'+esc(r.review_status)+'</span>':'<span class="badge">-</span>';
+ return '<tr><td><b>'+esc(r.pathway_id)+'</b></td><td>'+esc(tName(r.trust_code))+'</td><td>'+esc(r.specialty_name)+'</td><td><b>'+r.weeks_waited+'</b></td><td>'+r.wait_band+'</td><td><span class="chip '+r.rag_status+'">'+r.rag_status+'</span></td><td>'+breach+'</td><td>'+esc(r.pathway_status)+'</td><td>'+rev+'</td><td><button class="mini" data-act="triage" data-id="'+esc(r.pathway_id)+'">Triage</button> <button class="mini" data-act="edit" data-id="'+esc(r.pathway_id)+'">Edit</button> <button class="mini danger" data-act="del" data-id="'+esc(r.pathway_id)+'">Del</button></td></tr>';
+}
+
+function viewCommand(){
+ var k=kpis();var list=sortRows(filtered());
+ return '<div class="kpis">'
+ +'<div class="kpi"><div class="l">Active PTL</div><div class="v">'+k.n+'</div><div class="d">incomplete pathways</div></div>'
+ +'<div class="kpi"><div class="l">% within 18 weeks</div><div class="v" style="color:'+(k.pct>=92?"var(--grn)":"var(--amb)")+'">'+k.pct+'%</div><div class="d">'+(k.pct>=92?"meets":"below")+' 92% standard</div></div>'
+ +'<div class="kpi"><div class="l">52-week breaches</div><div class="v" style="color:var(--red)">'+k.b52+'</div></div>'
+ +'<div class="kpi"><div class="l">65-week breaches</div><div class="v" style="color:var(--red)">'+k.b65+'</div></div>'
+ +'<div class="kpi"><div class="l">Total pathways</div><div class="v">'+rows.length+'</div></div></div>'
+ +'<div class="bar">'
+ +'<select id="fStatus"><option value="">All statuses</option>'+opt("Active",S.f.status)+opt("Discharged",S.f.status)+'</select>'
+ +'<select id="fTrust"><option value="">All trusts</option>'+TRUSTS.map(function(t){return opt(t.c,S.f.trust,t.n);}).join("")+'</select>'
+ +'<select id="fSpec"><option value="">All specialties</option>'+SPECS.map(function(s){return opt(s,S.f.specialty);}).join("")+'</select>'
+ +'<select id="fRag"><option value="">All RAG</option>'+opt("GREEN",S.f.rag)+opt("AMBER",S.f.rag)+opt("RED",S.f.rag)+'</select>'
+ +'<input id="fQ" placeholder="Search id / specialty / trust..." value="'+esc(S.q)+'" style="min-width:220px">'
+ +'<span class="spacer"></span><button class="mini" id="btnCsv">Export CSV</button><button class="primary" id="btnNew">+ New pathway</button></div>'
+ +'<table><thead><tr>'+th("pathway_id","Pathway")+th("trust_code","Trust")+th("specialty_name","Specialty")+th("weeks_waited","Weeks")+th("wait_band","Band")+th("rag_status","RAG")+'<th>Breach</th>'+th("pathway_status","Status")+'<th>Review</th><th>Actions</th></tr></thead><tbody>'
+ +(list.length?list.slice(0,200).map(rowHtml).join(""):'<tr><td colspan="10" class="foot" style="text-align:center;padding:20px">No pathways match.</td></tr>')
+ +'</tbody></table><div class="foot">'+list.length+' rows &middot; fully offline (vanilla JS, no external libraries).</div>';
+}
+
+function barChart(data){var max=1;data.forEach(function(d){if(d.v>max)max=d.v;});return '<div class="bars">'+data.map(function(d){return '<div class="barcol"><div class="barval">'+d.v+'</div><div class="bartrack"><div class="barfill" style="height:'+(d.v/max*100)+'%;background:'+(d.color||"#0072CE")+'"></div></div><div class="barlbl">'+esc(d.l)+'</div></div>';}).join("")+'</div>';}
+function viewAnalytics(){
+ var a=rows.filter(function(r){return r.pathway_status==="Active";});
+ var bands=["0-18","19-26","27-39","40-51","52-64","65+"];
+ var bandData=bands.map(function(b){return {l:b,v:a.filter(function(r){return r.wait_band===b;}).length,color:b==="65+"?"#e03131":b==="52-64"?"#f76707":b==="0-18"?"#12b886":"#0072CE"};});
+ var trustData=TRUSTS.map(function(t){return {l:t.c,v:a.filter(function(r){return r.trust_code===t.c&&r.is_breach_18w;}).length,color:"#e64980"};});
+ var within=a.filter(function(r){return r.weeks_waited<=TARGET;}).length;var pct=a.length?Math.round(1000*within/a.length)/10:0;
+ return '<h2 style="font-size:19px">Analytics</h2>'
+ +'<div class="card"><b>Constitutional standard</b><div style="margin-top:10px"><div class="gtrack"><div class="gfill" style="width:'+Math.min(100,pct)+'%;background:'+(pct>=92?"var(--grn)":"var(--amb)")+'"></div><div class="gmark" style="left:92%"></div></div><div class="foot" style="margin-top:6px">'+pct+'% within 18 weeks &middot; target 92%</div></div></div>'
+ +'<div class="grid"><div class="card"><b>Wait-band distribution (active)</b>'+barChart(bandData)+'</div><div class="card"><b>18-week breaches by trust</b>'+barChart(trustData)+'</div></div>';
+}
+function viewOntology(){
+ var P=[["pathway_id","string","Primary key"],["patient_pseudo_id","string","pseudonymised (no NHS number)"],["trust_code","string","FK -> Trust"],["specialty_name","string",""],["referral_date","date",""],["weeks_waited","long","prominent"],["pathway_status","string",""],["wait_band","string",""],["rag_status","string","RAG formatting"],["is_65w_breach","boolean",""],["review_status","string","edit-only"],["triage_note","string","edit-only"]];
+ function pr(r){return '<div class="prop"><span class="k">'+r[0]+'</span><span><span class="badge">'+r[1]+'</span> '+(r[2]?'<span class="muted">'+r[2]+'</span>':"")+'</span></div>';}
+ return '<h2 style="font-size:19px">Ontology</h2><div class="grid"><div class="card"><b>Pathway</b> <span class="badge">RttPathway</span><div class="foot" style="margin-top:4px">PK pathway_id &middot; backing rtt_patient_pseudonymised</div>'+P.map(pr).join("")+'</div><div class="card"><b>Trust</b> <span class="badge">RttTrust</span><div class="foot" style="margin-top:4px">PK trust_code &middot; backing provider_reference</div>'+TRUSTS.map(function(t){return '<div class="prop"><span class="k">'+t.c+'</span><span>'+esc(t.n)+' &middot; '+t.r+'</span></div>';}).join("")+'<div style="margin-top:12px"><b>Link</b><div class="foot">Pathway &rarr; Trust (many-to-one)</div><b>Action</b><div class="foot">Triage Pathway (review_status + triage_note)</div></div></div></div>';
+}
+function viewHealth(){
+ var checks=[["clean: PK unique + non-null","FAIL","PASS"],["clean: weeks in [0,520]","FAIL","PASS"],["clean: specialty mapped","FAIL","PASS"],["clean: trust ref-integrity","FAIL","PASS"],["P9 schema drift","FAIL","PASS"],["P43 freshness <= 45d","WARN","STALE 541d"],["metrics: wait_band computed","FAIL","PASS"],["ptl: PK unique","FAIL","PASS"]];
+ return '<h2 style="font-size:19px">Data Health</h2><div class="card"><b>Reconciliation (pipeline build)</b><div class="prop"><span class="k">typed_count</span><span>1,215</span></div><div class="prop"><span class="k">clean_count</span><span>1,205</span></div><div class="prop"><span class="k">reject_count</span><span>10</span></div><div class="prop"><span class="k">reconciled</span><span class="badge ok">true &middot; 1205+10=1215</span></div></div>'
+ +'<table><thead><tr><th>Check</th><th>Severity</th><th>Status</th></tr></thead><tbody>'+checks.map(function(c){return '<tr><td>'+c[0]+'</td><td><span class="badge '+(c[1]==="FAIL"?"on":"")+'">'+c[1]+'</span></td><td>'+(c[2].indexOf("PASS")===0?'<span class="badge ok">'+c[2]+'</span>':'<span class="badge on">'+c[2]+'</span>')+'</td></tr>';}).join("")+'</tbody></table>';
+}
+
+function viewHtml(){switch(S.tab){case "Analytics":return viewAnalytics();case "Ontology":return viewOntology();case "Data Health":return viewHealth();default:return viewCommand();}}
+
+function modalHtml(){
+ if(!S.modal)return "";
+ var m=S.modal,r=m.id?rows.filter(function(x){return x.pathway_id===m.id;})[0]:null;
+ var body="";
+ if(m.type==="new"||m.type==="edit"){
+  var p=r||{pathway_id:"",trust_code:"TR001",specialty_name:"Cardiology",referral_date:"2025-01-31",weeks_waited:0,pathway_status:"Active"};
+  body='<div class="row2"><div class="field"><label>Pathway ID</label><input id="mId" value="'+esc(p.pathway_id)+'" '+(m.type==="edit"?"disabled":"")+' placeholder="auto if blank"></div><div class="field"><label>Status</label><select id="mStatus">'+opt("Active",p.pathway_status)+opt("Discharged",p.pathway_status)+'</select></div></div>'
+   +'<div class="row2"><div class="field"><label>Trust</label><select id="mTrust">'+TRUSTS.map(function(t){return opt(t.c,p.trust_code,t.n);}).join("")+'</select></div><div class="field"><label>Specialty</label><select id="mSpec">'+SPECS.map(function(s){return opt(s,p.specialty_name);}).join("")+'</select></div></div>'
+   +'<div class="row2"><div class="field"><label>Referral date</label><input id="mDate" type="date" value="'+esc(p.referral_date)+'"></div><div class="field"><label>Weeks waited</label><input id="mWeeks" type="number" min="0" value="'+p.weeks_waited+'"></div></div>'
+   +'<div class="actions"><button id="mCancel">Cancel</button><button class="primary" id="mSave">'+(m.type==="new"?"Create":"Save")+'</button></div>';
+  return '<div class="overlay" id="ov"><div class="modal"><h3>'+(m.type==="new"?"New pathway":"Edit "+esc(m.id))+'</h3>'+body+'</div></div>';
+ }
+ if(m.type==="triage"){
+  body='<div class="foot" style="margin-top:0;margin-bottom:10px">'+esc(r.pathway_id)+' &middot; '+esc(tName(r.trust_code))+' &middot; '+esc(r.specialty_name)+' &middot; '+r.weeks_waited+'w <span class="chip '+r.rag_status+'">'+r.rag_status+'</span></div>'
+   +'<div class="field"><label>Review status</label><select id="mReview">'+REVIEW.map(function(o){return opt(o,r.review_status||"Validated");}).join("")+'</select></div>'
+   +'<div class="field"><label>Triage note</label><textarea id="mNote" rows="3">'+esc(r.triage_note||"")+'</textarea></div>'
+   +'<div class="actions"><button id="mCancel">Cancel</button><button class="primary" id="mSaveTriage">Submit triage</button></div>';
+  return '<div class="overlay" id="ov"><div class="modal"><h3>Triage Pathway</h3>'+body+'</div></div>';
+ }
+ if(m.type==="del"){
+  return '<div class="overlay" id="ov"><div class="modal"><h3>Delete pathway</h3><p>Remove <b>'+esc(m.id)+'</b> ('+esc(tName(r.trust_code))+')?</p><div class="actions"><button id="mCancel">Cancel</button><button class="danger" id="mDel">Delete</button></div></div></div>';
+ }
+ return "";
+}
+
+function render(){
+ el("tabs").innerHTML=TABS.map(function(t){return '<div class="tab'+(S.tab===t?" on":"")+'" data-tab="'+t+'">'+t+'</div>';}).join("");
+ el("view").innerHTML=viewHtml();
+ el("modalRoot").innerHTML=modalHtml();
+ wire();
+ if(S.focusQ){var q=el("fQ");if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length);}S.focusQ=false;}
+}
+
+function getById(id){return rows.filter(function(x){return x.pathway_id===id;})[0];}
+function exportCsv(){
+ var cols=["pathway_id","patient_pseudo_id","trust_code","specialty_name","referral_date","weeks_waited","wait_band","rag_status","is_52w_breach","is_65w_breach","pathway_status","review_status","triage_note"];
+ var body=sortRows(filtered()).map(function(r){return cols.map(function(c){return JSON.stringify(r[c]==null?"":r[c]);}).join(",");}).join("\n");
+ var blob=new Blob([cols.join(",")+"\n"+body],{type:"text/csv"});var u=URL.createObjectURL(blob);var a=document.createElement("a");a.href=u;a.download="rtt_ptl.csv";a.click();URL.revokeObjectURL(u);
+}
+
+function wire(){
+ var t=el("tabs");
+ Array.prototype.forEach.call(t.querySelectorAll(".tab"),function(node){node.onclick=function(){S.tab=node.getAttribute("data-tab");S.modal=null;render();};});
+ // command centre controls
+ var fStatus=el("fStatus");if(fStatus)fStatus.onchange=function(){S.f.status=this.value;render();};
+ var fTrust=el("fTrust");if(fTrust)fTrust.onchange=function(){S.f.trust=this.value;render();};
+ var fSpec=el("fSpec");if(fSpec)fSpec.onchange=function(){S.f.specialty=this.value;render();};
+ var fRag=el("fRag");if(fRag)fRag.onchange=function(){S.f.rag=this.value;render();};
+ var fQ=el("fQ");if(fQ)fQ.oninput=function(){S.q=this.value;S.focusQ=true;render();};
+ var btnNew=el("btnNew");if(btnNew)btnNew.onclick=function(){S.modal={type:"new"};render();};
+ var btnCsv=el("btnCsv");if(btnCsv)btnCsv.onclick=exportCsv;
+ Array.prototype.forEach.call(el("view").querySelectorAll("th[data-sort]"),function(node){node.onclick=function(){var k=node.getAttribute("data-sort");if(S.sortK===k)S.sortDir=-S.sortDir;else{S.sortK=k;S.sortDir=1;}render();};});
+ Array.prototype.forEach.call(el("view").querySelectorAll("button[data-act]"),function(node){node.onclick=function(){S.modal={type:node.getAttribute("data-act"),id:node.getAttribute("data-id")};render();};});
+ // modal controls
+ var ov=el("ov");if(ov)ov.onclick=function(e){if(e.target===ov){S.modal=null;render();}};
+ var mCancel=el("mCancel");if(mCancel)mCancel.onclick=function(){S.modal=null;render();};
+ var mSave=el("mSave");if(mSave)mSave.onclick=function(){
+  var isNew=S.modal.type==="new";var id=isNew?(el("mId").value.trim()||("PW"+Math.floor(10000+Math.random()*89999))):S.modal.id;
+  var patch={pathway_id:id,trust_code:el("mTrust").value,specialty_name:el("mSpec").value,referral_date:el("mDate").value,weeks_waited:el("mWeeks").value,pathway_status:el("mStatus").value};
+  if(isNew){rows.unshift(derive(Object.assign({patient_pseudo_id:"ps_"+id.toLowerCase(),review_status:"",triage_note:""},patch)));toast("Created "+id);}
+  else{var r=getById(id);Object.assign(r,patch);derive(r);toast("Saved "+id);}
+  S.modal=null;render();
+ };
+ var mSaveTriage=el("mSaveTriage");if(mSaveTriage)mSaveTriage.onclick=function(){var r=getById(S.modal.id);r.review_status=el("mReview").value;r.triage_note=el("mNote").value;toast("Triaged "+r.pathway_id);S.modal=null;render();};
+ var mDel=el("mDel");if(mDel)mDel.onclick=function(){var id=S.modal.id;rows=rows.filter(function(x){return x.pathway_id!==id;});toast("Deleted "+id);S.modal=null;render();};
+}
+
+render();
+})();
+</script>
+</body>
+</html>

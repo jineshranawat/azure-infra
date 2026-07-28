@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Advanced Patterns &mdash; beyond the 50 (code flow + API)</title>
+<style>
+:root{--nhs:#005EB8;--panel:#111a2b;--panel2:#0f1626;--line:#22304a;--txt:#e7eef7;--mut:#9fb2c9;--grn:#12b886;--amb:#f59f00;--red:#e03131;--code:#0a1120;--pur:#8a63d2}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(180deg,#0a1220,#0b1526);color:var(--txt);font:15px/1.6 -apple-system,Segoe UI,Roboto,Arial,sans-serif}
+a{color:#7db4ff;text-decoration:none}a:hover{text-decoration:underline}
+header{position:sticky;top:0;z-index:9;background:rgba(9,16,30,.92);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;gap:12px;align-items:center}
+header .logo{width:32px;height:32px;border-radius:8px;background:var(--nhs);display:flex;align-items:center;justify-content:center;font-weight:800}
+header h1{font-size:16px;margin:0}header .sub{color:var(--mut);font-size:12px}
+nav{display:flex;flex-wrap:wrap;gap:5px;margin-left:auto;max-width:60%}
+nav a{color:var(--mut);font-size:11.5px;padding:4px 8px;border:1px solid transparent;border-radius:6px}
+nav a:hover{color:#fff;border-color:var(--line);background:var(--panel);text-decoration:none}
+main{max-width:1000px;margin:0 auto;padding:24px 22px 90px}
+h2{font-size:22px;border-left:4px solid var(--nhs);padding-left:12px;margin:30px 0 8px;scroll-margin-top:70px}
+h3{font-size:16px;color:#cfe0f5;margin:18px 0 6px}
+p{color:#d7e2f0}.lead{color:var(--mut)}
+.hero{background:linear-gradient(135deg,#0b2b52,#0b1526);border:1px solid var(--line);border-radius:16px;padding:22px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:13px;overflow:auto;font:12.5px/1.55 SFMono-Regular,Consolas,monospace;color:#d6e6ff}
+code{background:var(--code);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-family:SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#a9c7ff}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.node{border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12.5px;background:var(--panel);white-space:nowrap}
+.node.t{border-color:#8a63d2;color:#ead9ff}.node.d{border-color:#12b886;color:#d6ffe9}.node.l{border-color:#0072CE;color:#cfe6ff}
+.arrow{color:var(--mut)}
+.pat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.pat .sig{font-family:SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#ffd9a8;background:#1a1204;border:1px solid #4a3410;border-radius:8px;padding:8px 10px;overflow:auto}
+.pat h3{margin:0 0 6px}
+.io{display:grid;grid-template-columns:90px 1fr;gap:4px 10px;margin:8px 0;font-size:13px}
+.io .k{color:var(--mut);text-align:right;font-weight:700}
+.ref{color:#8ce99a;font-size:12px;margin-top:6px}
+.tag{font-size:10.5px;color:var(--mut);border:1px dashed var(--line);border-radius:6px;padding:1px 6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:12px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}.card h4{margin:0 0 6px;font-size:13px}.card p{margin:0;color:var(--mut);font-size:12.5px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}th,td{border:1px solid var(--line);padding:7px 9px;text-align:left}th{background:var(--panel2);color:#cfe0f5}
+footer{border-top:1px solid var(--line);color:var(--mut);padding:18px 0;font-size:12.5px;margin-top:26px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">A+</div>
+  <div><h1>Advanced Patterns &mdash; beyond the 50</h1><div class="sub">Extra data-engineering patterns &middot; code flow + full API (inputs/outputs/references)</div></div>
+  <nav>
+    <a href="#why">Why</a><a href="#flow">Flow</a>
+    <a href="#a1">A1</a><a href="#a2">A2</a><a href="#a3">A3</a><a href="#a4">A4</a><a href="#a5">A5</a><a href="#a6">A6</a><a href="#a7">A7</a><a href="#a8">A8</a><a href="#a9">A9</a><a href="#a10">A10</a><a href="#a11">A11</a>
+    <a href="#tests">Tests</a><a href="#run">Run</a>
+  </nav>
+</header>
+<main>
+
+<section id="why">
+  <div class="hero">
+    <h2 style="border:none;padding:0;margin:0 0 6px">Extra problems, solved &amp; documented</h2>
+    <p class="lead">The core build covers the 50 problems. This module adds <b>11 advanced patterns</b> (A1&ndash;A11) that senior teams hit in real programmes but which aren&rsquo;t always spelled out: SCD1, CDC tombstones, content de-dup, column profiling, format-preserving PII, allowed-lateness, per-partition recon, schema evolution, backoff, as-of joins, idempotency. Each is a <b>pure, unit-tested</b> function in <code>lib/advanced_patterns.py</code> with a full docstring on <b>every method</b> &mdash; INPUT (Args), OUTPUT (Returns), Raises, and a Reference.</p>
+  </div>
+  <div class="grid">
+    <div class="card"><h4>Where</h4><p><code>transforms-python/src/myproject/lib/advanced_patterns.py</code> &middot; tests in <code>src/test/test_advanced_patterns.py</code> &middot; live demo <code>datasets/problems/advanced.py</code>.</p></div>
+    <div class="card"><h4>How documented</h4><p>Each method: one-line summary, description, <b>Args=inputs</b>, <b>Returns=output</b>, Raises, and a <b>Reference</b> to the Palantir surface + DE pattern.</p></div>
+    <div class="card"><h4>Proven</h4><p>Every function has positive <i>and</i> negative pytest cases; CI runs them on each commit.</p></div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2>Code flow</h2>
+  <p>Pure helpers are the tested core; transforms call them. Example: the A4 profiler.</p>
+  <div class="flow">
+    <span class="node l">lib/advanced_patterns.py<br><span class="tag">pure + tested</span></span>
+    <span class="arrow">&rarr; imported by &rarr;</span>
+    <span class="node t">problems/advanced.py<br>data_profile()</span>
+    <span class="arrow">reads</span>
+    <span class="node d">rtt_pathways_clean</span>
+    <span class="arrow">&rarr;</span>
+    <span class="node d">rtt_data_profile</span>
+  </div>
+<pre>@transform.using(clean=Input(paths.RTT_PATHWAYS_CLEAN), out=Output(paths.RTT_DATA_PROFILE))
+def data_profile(clean, out):
+    df = clean.polars()
+    rows = [ {"column": c, **A.profile_column(df[c].to_list())} for c in df.columns ]  # A4 reused
+    out.write_table(pl.DataFrame(rows))   # one row per column: count/nulls/null_pct/distinct/min/max</pre>
+  <p class="lead">The same &ldquo;test the pure function, reuse it in the transform&rdquo; discipline as the core build &mdash; the test that proves <code>profile_column</code> proves the profile dataset&rsquo;s numbers.</p>
+</section>
+
+<section id="a1">
+  <div class="pat"><h3>A1 &middot; <code>scd1_latest</code> <span class="tag">SCD Type 1</span></h3>
+  <div class="sig">scd1_latest(records: Sequence[Mapping], key: str, order: str) -&gt; List[dict]</div>
+  <p>Keep only the latest row per key (overwrite history). Contrast with SCD2 which keeps effective-dated history.</p>
+  <div class="io"><span class="k">INPUT</span><span><code>records</code> rows; <code>key</code> natural-key field; <code>order</code> recency field (higher=newer)</span>
+  <span class="k">OUTPUT</span><span><code>List[dict]</code> &mdash; one newest row per key, first-seen key order</span></div>
+  <div class="ref">Reference: incremental transforms / dimension modelling &middot; DE: SCD Type 1</div></div>
+</section>
+
+<section id="a2">
+  <div class="pat"><h3>A2 &middot; <code>classify_cdc_with_tombstones</code> <span class="tag">CDC + deletes</span></h3>
+  <div class="sig">classify_cdc_with_tombstones(current: Mapping, previous: Mapping, tombstones: Sequence=None) -&gt; Dict[key,str]</div>
+  <p>Classify every key as INSERT / UPDATE / UNCHANGED / DELETE, honouring explicit source hard-delete tombstones as well as implicit deletes.</p>
+  <div class="io"><span class="k">INPUT</span><span><code>current</code> key&rarr;value (new); <code>previous</code> key&rarr;value (old); <code>tombstones</code> keys deleted at source</span>
+  <span class="k">OUTPUT</span><span><code>Dict[key,str]</code> &mdash; op per key</span></div>
+  <div class="ref">Reference: @incremental change feeds / CDC syncs &middot; DE: CDC + tombstone deletes</div></div>
+</section>
+
+<section id="a3">
+  <div class="pat"><h3>A3 &middot; <code>content_hash</code> / <code>dedupe_by_hash</code> <span class="tag">content de-dup</span></h3>
+  <div class="sig">content_hash(row: Mapping, cols: Sequence[str]) -&gt; str
+dedupe_by_hash(rows: Sequence[Mapping], cols: Sequence[str]) -&gt; List[dict]</div>
+  <p>De-duplicate by CONTENT (selected columns), catching &ldquo;same record, different PK&rdquo; duplicates a PK-only dedupe misses. First occurrence wins.</p>
+  <div class="io"><span class="k">INPUT</span><span><code>rows</code> records; <code>cols</code> columns defining identity</span>
+  <span class="k">OUTPUT</span><span><code>content_hash</code>&rarr; SHA-1 hex; <code>dedupe_by_hash</code>&rarr; unique rows (first-seen order)</span></div>
+  <div class="ref">Reference: Data Expectations + Silver cleanse &middot; DE: content-addressable de-duplication</div></div>
+</section>
+
+<section id="a4">
+  <div class="pat"><h3>A4 &middot; <code>profile_column</code> <span class="tag">observability</span></h3>
+  <div class="sig">profile_column(values: Sequence) -&gt; dict</div>
+  <p>Column health: count, nulls, null%, distinct, min, max &mdash; automatic profiling without a separate tool. This is the pattern surfaced live as <code>rtt_data_profile</code>.</p>
+  <div class="io"><span class="k">INPUT</span><span><code>values</code> &mdash; all values of one column (Nones allowed)</span>
+  <span class="k">OUTPUT</span><span><code>dict</code> {count, nulls, null_pct (0..1|None), distinct, min, max}</span></div>
+  <div class="ref">Reference: Data Health / expectations &middot; DE: column profiling / observability</div></div>
+</section>
+
+<section id="a5">
+  <div class="pat"><h3>A5 &middot; <code>tokenize_preserving</code> <span class="tag">format-preserving PII</span></h3>
+  <div class="sig">tokenize_preserving(value: str|None, key: str) -&gt; str|None</div>
+  <p>Format-preserving pseudonymisation: keeps character classes/length (digit&rarr;digit, upper&rarr;upper, punctuation kept) so format checks still pass while the real value is hidden. Deterministic per <code>key</code>. Complements one-way <code>lib.pii.pseudonymise</code>.</p>
+  <div class="io"><span class="k">INPUT</span><span><code>value</code> e.g. 'NHS1000580'; <code>key</code> secret salt (stable joins)</span>
+  <span class="k">OUTPUT</span><span><code>str|None</code> token with identical shape e.g. 'NHS7413926'</span></div>
+  <div class="ref">Reference: property security / Markings + in-pipeline PII &middot; DE: FPE tokenisation</div></div>
+</section>
+
+<section id="a6">
+  <div class="pat"><h3>A6 &middot; <code>within_allowed_lateness</code> <span class="tag">late data</span></h3>
+  <div class="sig">within_allowed_lateness(event_ts: date|None, watermark: date|None, allowed_days: int) -&gt; bool|None</div>
+  <p>Decide whether a late/out-of-order event is still inside the allowed-lateness window relative to the stream watermark.</p>
+  <div class="io"><span class="k">INPUT</span><span><code>event_ts</code> event date; <code>watermark</code> current progress; <code>allowed_days</code> tolerance</span>
+  <span class="k">OUTPUT</span><span><code>bool|None</code> True=accept, False=too late, None=unknown</span></div>
+  <div class="ref">Reference: streaming / @incremental watermarking &middot; DE: allowed lateness window</div></div>
+</section>
+
+<section id="a7">
+  <div class="pat"><h3>A7 &middot; <code>reconcile_by_partition</code> <span class="tag">recon</span></h3>
+  <div class="sig">reconcile_by_partition(source_counts: Mapping, target_counts: Mapping) -&gt; dict</div>
+  <p>Per-partition variance + a global balanced flag &mdash; catches a partition that gained rows while another lost them (a single total wouldn&rsquo;t).</p>
+  <div class="io"><span class="k">INPUT</span><span><code>source_counts</code>/<code>target_counts</code> partition-key &rarr; row count</span>
+  <span class="k">OUTPUT</span><span><code>dict</code> {variances: {key: target-source}, balanced: bool}</span></div>
+  <div class="ref">Reference: recon control totals / audit &middot; DE: partition-level reconciliation</div></div>
+</section>
+
+<section id="a8">
+  <div class="pat"><h3>A8 &middot; <code>merge_schemas</code> <span class="tag">schema evolution</span></h3>
+  <div class="sig">merge_schemas(cols_a: Sequence[str], cols_b: Sequence[str]) -&gt; List[str]</div>
+  <p>Order-preserving column superset for a fan-in union of frames with differing schemas (missing columns then null-filled). Safe additive schema drift.</p>
+  <div class="io"><span class="k">INPUT</span><span><code>cols_a</code>, <code>cols_b</code> &mdash; the two column lists</span>
+  <span class="k">OUTPUT</span><span><code>List[str]</code> cols_a then columns only in cols_b</span></div>
+  <div class="ref">Reference: transforms fan-in / union; schema drift &middot; DE: schema evolution</div></div>
+</section>
+
+<section id="a9">
+  <div class="pat"><h3>A9 &middot; <code>backoff_schedule</code> <span class="tag">resilience</span></h3>
+  <div class="sig">backoff_schedule(max_retries: int, base=1.0, factor=2.0, cap=30.0) -&gt; List[float]</div>
+  <p>Exponential backoff delays (seconds), each capped &mdash; the retry policy for a flaky connector.</p>
+  <div class="io"><span class="k">INPUT</span><span><code>max_retries</code>(&ge;0), <code>base</code>(&gt;0), <code>factor</code>(&ge;1), <code>cap</code></span>
+  <span class="k">OUTPUT</span><span><code>List[float]</code> delay before each attempt</span>
+  <span class="k">RAISES</span><span><code>ValueError</code> on invalid params</span></div>
+  <div class="ref">Reference: Data Connection sync retry/throttle &middot; DE: exponential backoff</div></div>
+</section>
+
+<section id="a10">
+  <div class="pat"><h3>A10 &middot; <code>as_of_join_pick</code> <span class="tag">point-in-time</span></h3>
+  <div class="sig">as_of_join_pick(fact_ts: date, dim_versions: Sequence[(date,value)]) -&gt; value|None</div>
+  <p>Return the dimension value effective at <code>fact_ts</code> (latest valid_from &le; fact_ts). Prevents joining today&rsquo;s dimension onto a historical fact.</p>
+  <div class="io"><span class="k">INPUT</span><span><code>fact_ts</code> fact date; <code>dim_versions</code> list of (valid_from, value)</span>
+  <span class="k">OUTPUT</span><span><code>value|None</code> effective value, or None if none applies</span></div>
+  <div class="ref">Reference: SCD2 + link resolution &middot; DE: as-of / point-in-time join</div></div>
+</section>
+
+<section id="a11">
+  <div class="pat"><h3>A11 &middot; <code>idempotency_key</code> <span class="tag">exactly-once</span></h3>
+  <div class="sig">idempotency_key(parts: Sequence) -&gt; str</div>
+  <p>Deterministic key from the components that define one logical write &mdash; replay-safe / exactly-once writes on top of immutable transactions.</p>
+  <div class="io"><span class="k">INPUT</span><span><code>parts</code> e.g. [source, batch_id, pk]</span>
+  <span class="k">OUTPUT</span><span><code>str</code> stable 24-char hex; identical inputs =&gt; identical key</span></div>
+  <div class="ref">Reference: immutable transactions + idempotent replay (Problem 19) &middot; DE: idempotency key</div></div>
+</section>
+
+<section id="tests">
+  <h2>Test coverage</h2>
+  <p>Every function has positive and negative pytest cases in <code>src/test/test_advanced_patterns.py</code> (e.g. backoff rejects bad params; as-of returns None before any version; content-dedupe drops a different-PK duplicate; empty column profiles safely). CI runs them on every commit.</p>
+</section>
+
+<section id="run">
+  <h2>Where &amp; how to run</h2>
+  <table>
+    <tr><th>Artifact</th><th>Path</th></tr>
+    <tr><td>Library (A1&ndash;A11)</td><td><code>transforms-python/src/myproject/lib/advanced_patterns.py</code></td></tr>
+    <tr><td>Tests</td><td><code>transforms-python/src/test/test_advanced_patterns.py</code></td></tr>
+    <tr><td>Live demo transform (A4)</td><td><code>transforms-python/src/myproject/datasets/problems/advanced.py</code> &rarr; <code>/audit/rtt_data_profile</code></td></tr>
+    <tr><td>This page</td><td><code>docs/advanced_patterns.html</code> (self-contained, offline)</td></tr>
+  </table>
+  <p class="lead">Build <code>rtt_data_profile</code> to see A4 live; the rest are proven by the test suite and reusable in any transform. Open this file directly, or serve with the others: <code>http://localhost:8899/docs/advanced_patterns.html</code>.</p>
+</section>
+
+<footer>Advanced Patterns &middot; extends "The 50 Problems, Solved" &middot; self-contained &amp; offline &middot; verify SDK/UI names against your tenant.</footer>
+</main>
+</body>
+</html>

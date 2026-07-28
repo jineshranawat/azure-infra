@@ -23,6 +23,9 @@ LONGEST_WAITERS_BY_TRUST = f"{BASE}/marts/rtt_longest_waiters_by_trust"
 # --- marts (gold) ---
 RTT_TRUST_SPECIALTY_PERF = f"{BASE}/marts/rtt_trust_specialty_perf"
 RTT_PTL = f"{BASE}/marts/rtt_ptl"
+RTT_CLEAN_CERTIFIED = f"{BASE}/clean/rtt_clean_certified"  # documented Data Expectations showcase
+RTT_PATHWAYS_DELTA = f"{BASE}/clean/rtt_pathways_delta"    # advanced @incremental (semantic_version/abort_job)
+RTT_CLEAN_RI_CHECKED = f"{BASE}/clean/rtt_clean_ri_checked"  # FK / cross-column / freshness expectations
 
 # --- performance demonstrations ---
 PERF_TRUST_REGION = f"{BASE}/marts/rtt_perf_trust_region"          # partitioned by region
@@ -36,6 +39,7 @@ SCHEMA_DRIFT_REPORT = f"{BASE}/quarantine/schema_drift_report"
 SAE_AUDIT_LOG = f"{BASE}/audit/sae_audit_log"
 RECON_CONTROL_TOTALS = f"{BASE}/audit/recon_control_totals"
 FRESHNESS_REPORT = f"{BASE}/audit/freshness_report"
+RTT_DATA_PROFILE = f"{BASE}/audit/rtt_data_profile"     # advanced A4: column observability
 
 # --- ontology-backing ---
 PATIENT_PSEUDONYMISED = f"{BASE}/ontology-backing/rtt_patient_pseudonymised"

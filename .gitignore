@@ -36,3 +36,7 @@ shared-adf-lab/enterprise-de/out/
 
 # Genie lab local outputs (agent state + question results)
 shared-adf-lab/genie-lab/out/
+
+# Temp Foundry re-clone workspace
+_rtt_fresh_clone/
+
